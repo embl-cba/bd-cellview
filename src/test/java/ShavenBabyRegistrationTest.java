@@ -24,13 +24,14 @@ public class ShavenBabyRegistrationTest
 		ImageJ imagej = new ImageJ();
 		imagej.ui().showUI();
 
-		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby-Iso4um.zip" ).getFile();
+		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby.zip" ).getFile();
 
 		final ImagePlus imp = IJ.openImage( path );
 		double[] calibration = Utils.getCalibration( imp );
 		final RandomAccessibleInterval< T > input = ImageJFunctions.wrap( imp );
 
 		ShavenBabyRegistrationSettings settings = new ShavenBabyRegistrationSettings();
+		settings.resolutionDuringRegistration = 10;
 		settings.showIntermediateResults = true;
 
 		ShavenBabyRegistration registration = new ShavenBabyRegistration( settings );

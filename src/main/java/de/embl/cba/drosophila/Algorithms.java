@@ -6,7 +6,6 @@ import net.imglib2.algorithm.neighborhood.Neighborhood;
 import net.imglib2.algorithm.neighborhood.Shape;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.RealViews;
@@ -14,15 +13,13 @@ import net.imglib2.realtransform.Scale;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
-import net.imglib2.view.RandomAccessibleOnRealRandomAccessible;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static de.embl.cba.drosophila.Transforms.copyAsArrayImg;
 import static de.embl.cba.drosophila.Transforms.createTransformedInterval;
-import static de.embl.cba.drosophila.Transforms.createTransformedRaView;
 
 public class Algorithms
 {
@@ -32,8 +29,37 @@ public class Algorithms
 	{
 		assert scalingFactors.length == input.numDimensions();
 
-		ImgFactory< T > imgFactory = new ArrayImgFactory( input.randomAccess().get()  );
+		/*
+		 * Blur image
+		 */
 
+		RandomAccessibleInterval< T > blurred = createOptimallyBlurredArrayImg( input, scalingFactors );
+
+		/*
+		 * Sample values from blurred image
+		 */
+
+		final RandomAccessibleInterval< T > downscaled = createSubsampledArrayImg( blurred, scalingFactors );
+
+		return downscaled;
+	}
+
+	private static < T extends RealType< T > & NativeType< T > >
+	RandomAccessibleInterval< T > createSubsampledArrayImg( RandomAccessibleInterval< T > input, double[] scalingFactors )
+	{
+		// TODO: is there a simple way to do this?
+
+		Scale scale = new Scale( scalingFactors );
+		RealRandomAccessible< T > rra = Views.interpolate( Views.extendBorder( input ), new NearestNeighborInterpolatorFactory<>() );
+		rra = RealViews.transform( rra, scale );
+		final RandomAccessible< T > raster = Views.raster( rra );
+		final RandomAccessibleInterval< T > output = Views.interval( raster, createTransformedInterval( input, scale ) );
+
+		return Transforms.copyAsArrayImg( output  );
+	}
+
+	private static < T extends RealType< T > & NativeType< T > > RandomAccessibleInterval< T > createOptimallyBlurredArrayImg( RandomAccessibleInterval< T > input, double[] scalingFactors )
+	{
 		final long[] inputDimensions = Intervals.dimensionsAsLongArray( input );
 		final double[] sigmas = new double[ inputDimensions.length ];
 
@@ -42,25 +68,12 @@ public class Algorithms
 			sigmas[ d ] = 0.5 / scalingFactors[ d ]; // From Saalfeld
 		}
 
+		ImgFactory< T > imgFactory = new ArrayImgFactory( input.randomAccess().get()  );
 		RandomAccessibleInterval< T > blurred = Views.translate( imgFactory.create( inputDimensions ), Intervals.minAsLongArray( input )  ) ;
 
 		Gauss3.gauss( sigmas, Views.extendBorder( input ), blurred ) ;
 
-		/*
-		 * Sample pixel values from the blurred image
-		 *
-		 * TODO: is there a simpler way to code this?
-		 */
-
-		Scale scale = new Scale( scalingFactors );
-
-		RealRandomAccessible< T > rra = Views.interpolate( Views.extendBorder( blurred ), new NearestNeighborInterpolatorFactory<>() );
-		rra = RealViews.transform( rra, scale );
-		final RandomAccessible< T > raster = Views.raster( rra );
-		final FinalInterval transformedInterval = createTransformedInterval( blurred, scale );
-		final RandomAccessibleInterval< T > downscaled = Views.interval( raster, transformedInterval );
-
-		return downscaled;
+		return blurred;
 	}
 
 

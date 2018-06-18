@@ -13,6 +13,8 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
 import net.imglib2.algorithm.morphology.distance.DistanceTransform;
 
+import java.util.Arrays;
+
 import static de.embl.cba.drosophila.Transforms.getDownScalingFactors;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 
@@ -37,22 +39,25 @@ public class ShavenBabyRegistration
 
 		/**
 		 *  Axial calibration correction and scaling to isotropic (down-sampled) resolution
-		 *
 		 */
 
 		Utils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
-		final RandomAccessibleInterval< T > scaled = Algorithms.createDownscaledArrayImg( input, getDownScalingFactors( calibration, settings.resolutionDuringRegistration ) );
+		final RandomAccessibleInterval< T > downscaled = Algorithms.createDownscaledArrayImg( input, getDownScalingFactors( calibration, settings.resolutionDuringRegistration ) );
+
+		final double[] calibrationDuringRegistration = getCalibrationDuringRegistration();
+
+		if ( settings.showIntermediateResults ) show( downscaled, "downscaled", null, calibrationDuringRegistration, false );
 
 
 		/**
 		 * Threshold
 		 *
-		 * TODO: Distance transform seems to only work for 255 and 0 (s.b.)
+		 * TODO: Distance transform seems to only work for pixel values 255 and 0 (s.b.)
 		 */
 
 		final RandomAccessibleInterval< UnsignedByteType > binary = Converters.convert(
-				scaled, ( i, o ) -> o.set( i.getRealDouble() > settings.threshold ? 255 : 0 ), new UnsignedByteType() );
+				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.threshold ? 255 : 0 ), new UnsignedByteType() );
 
 		if ( settings.showIntermediateResults ) show( binary, "binary", null, calibration, false );
 
@@ -72,5 +77,12 @@ public class ShavenBabyRegistration
 
 		return registration;
 
+	}
+
+	private double[] getCalibrationDuringRegistration()
+	{
+		double[] calibrationDuringRegistration = new double[3];
+		Arrays.fill( calibrationDuringRegistration, settings.resolutionDuringRegistration );
+		return calibrationDuringRegistration;
 	}
 }
