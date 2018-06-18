@@ -59,6 +59,22 @@ public class Utils
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
+	RandomAccessibleInterval< T > createGaussFilteredArrayImg( RandomAccessibleInterval< T > rai, double[] sigmas )
+	{
+		ImgFactory< T > imgFactory = new ArrayImgFactory( rai.randomAccess().get()  );
+
+		RandomAccessibleInterval< T > blurred = imgFactory.create( Intervals.dimensionsAsLongArray( rai ) );
+
+		blurred = Views.translate( blurred, Intervals.minAsLongArray( rai ) );
+
+		Gauss3.gauss( sigmas, Views.extendBorder( rai ), blurred ) ;
+
+		return blurred;
+	}
+
+
+
+	public static < T extends RealType< T > & NativeType< T > >
 	RandomAccessibleInterval< T > createAverageProjection(
 			RandomAccessibleInterval< T > rai, int d, double min, double max, double scaling )
 	{

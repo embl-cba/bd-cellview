@@ -1,22 +1,19 @@
 package de.embl.cba.drosophila.shavenbaby;
 
-import de.embl.cba.drosophila.Transforms;
+import de.embl.cba.drosophila.Algorithms;
 import de.embl.cba.drosophila.Utils;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converters;
-import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.logic.BoolType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
 import net.imglib2.algorithm.morphology.distance.DistanceTransform;
 
-import static de.embl.cba.drosophila.Transforms.copyAsArrayImg;
+import static de.embl.cba.drosophila.Transforms.getDownScalingFactors;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 
 
@@ -41,21 +38,17 @@ public class ShavenBabyRegistration
 		/**
 		 *  Axial calibration correction and scaling to isotropic (down-sampled) resolution
 		 *
-		 *  TODO: replace below code by an averaging down-sampling, using Gaussian blurring
-		 *
 		 */
 
 		Utils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
-		AffineTransform3D scalingToIsotropicRegistrationResolution = Transforms.getTransformToIsotropicRegistrationResolution( settings.resolutionDuringRegistrationInMicrometer, calibration );
-
-		final RandomAccessibleInterval< T > scaledView = Transforms.createTransformedView( input, scalingToIsotropicRegistrationResolution );
-
-		final RandomAccessibleInterval< T > scaled = copyAsArrayImg( scaledView );
+		final RandomAccessibleInterval< T > scaled = Algorithms.createDownscaledArrayImg( input, getDownScalingFactors( calibration, settings.resolutionDuringRegistration ) );
 
 
 		/**
 		 * Threshold
+		 *
+		 * TODO: Distance transform seems to only work for 255 and 0 (s.b.)
 		 */
 
 		final RandomAccessibleInterval< UnsignedByteType > binary = Converters.convert(

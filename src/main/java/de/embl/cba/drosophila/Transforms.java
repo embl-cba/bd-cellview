@@ -1,6 +1,5 @@
 package de.embl.cba.drosophila;
 
-import de.embl.cba.drosophila.Translation1D;
 import net.imglib2.*;
 import net.imglib2.concatenate.Concatenable;
 import net.imglib2.concatenate.PreConcatenable;
@@ -49,7 +48,7 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 	RandomAccessibleInterval createTransformedView( RandomAccessibleInterval< T > rai,
 													InvertibleRealTransform combinedTransform )
 	{
-		final RandomAccessible transformedRA = getTransformedRaView( rai, combinedTransform );
+		final RandomAccessible transformedRA = createTransformedRaView( rai, combinedTransform );
 		final FinalInterval transformedInterval = createTransformedInterval( rai, combinedTransform );
 		final RandomAccessibleInterval< T > transformedIntervalView = Views.interval( transformedRA, transformedInterval );
 
@@ -85,7 +84,7 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 	}
 
 	public static < T extends NumericType< T > >
-	RandomAccessible getTransformedRaView( RandomAccessibleInterval< T > rai, InvertibleRealTransform combinedTransform )
+	RandomAccessible createTransformedRaView( RandomAccessibleInterval< T > rai, InvertibleRealTransform combinedTransform )
 	{
 		RealRandomAccessible rra = Views.interpolate( Views.extendZero( rai ), new NLinearInterpolatorFactory() );
 		rra = RealViews.transform( rra, combinedTransform );
@@ -163,6 +162,21 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 
 		return scalingTransform;
 	}
+
+
+	public static double[] getDownScalingFactors( double[] calibration, double targetResolution )
+	{
+
+		double[] downScaling = new double[ calibration.length ];
+
+		for ( int d = 0; d < calibration.length; ++d )
+		{
+			downScaling[ d ] = calibration[ d ] / targetResolution;
+		}
+
+		return downScaling;
+	}
+
 
 	public static AffineTransform3D createScalingTransform( double[] calibration )
 	{
