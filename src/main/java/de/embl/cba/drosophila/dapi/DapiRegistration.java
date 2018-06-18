@@ -1,9 +1,11 @@
-package de.embl.cba.drosophila.dapigut;
+package de.embl.cba.drosophila.dapi;
 
+import de.embl.cba.drosophila.Algorithms;
+import de.embl.cba.drosophila.Utils;
 import de.embl.cba.drosophila.geometry.EllipsoidParameterComputer;
-import de.embl.cba.drosophila.geometry.EllipsoidParameters;
-import de.embl.cba.registration.algorithm.Algorithms;
-import de.embl.cba.registration.utils.Transforms;
+import de.embl.cba.drosophila.geometry.Ellipsoid3dParameters;
+import de.embl.cba.drosophila.algorithm.Algorithms;
+import de.embl.cba.drosophila.utils.Transforms;
 import io.scif.services.DatasetIOService;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
@@ -21,9 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static de.embl.cba.registration.bdv.BdvImageViewer.show;
-import static de.embl.cba.registration.utils.Constants.*;
-import static de.embl.cba.registration.utils.Transforms.createArrayCopy;
+import static de.embl.cba.drosophila.bdv.BdvImageViewer.show;
+import static de.embl.cba.drosophila.utils.Constants.*;
+import static de.embl.cba.drosophila.utils.Transforms.createArrayCopy;
 import static java.lang.Math.*;
 
 public class DapiRegistration
@@ -43,7 +45,7 @@ public class DapiRegistration
 
 		if ( settings.showIntermediateResults ) show( dapiRaw, "raw input data", null, calibration, false );
 
-		DrosophilaRegistrationUtils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
+		Utils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
 		if ( settings.showIntermediateResults ) show( dapiRaw, "calibration corrected view on raw input data", null, calibration, false );
 
@@ -66,9 +68,9 @@ public class DapiRegistration
 
 		if ( settings.showIntermediateResults ) show( binaryImage, "binary", null, calibration, false );
 
-		final EllipsoidParameters ellipsoidParameters = EllipsoidParameterComputer.compute( binaryImage );
+		final Ellipsoid3dParameters ellipsoid3dParameters = EllipsoidParameterComputer.compute( binaryImage );
 
-		registration.preConcatenate( DrosophilaRegistrationUtils.createEllipsoidAlignmentTransform( binned, ellipsoidParameters ) );
+		registration.preConcatenate( DrosophilaRegistrationUtils.createEllipsoidAlignmentTransform( binned, ellipsoid3dParameters ) );
 
 		if ( settings.showIntermediateResults ) show( Transforms.view( binned, registration ), "ellipsoid aligned", null, calibration, false );
 

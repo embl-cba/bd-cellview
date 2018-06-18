@@ -1,8 +1,8 @@
-package de.embl.cba.drosophila.dapigut;
+package de.embl.cba.drosophila.dapi;
 
 import bdv.util.*;
-import de.embl.cba.registration.utils.ImagePlusUtils;
-import de.embl.cba.registration.utils.Transforms;
+import de.embl.cba.drosophila.utils.ImagePlusUtils;
+import de.embl.cba.drosophila.utils.Transforms;
 import ij.IJ;
 import ij.ImagePlus;
 import net.imagej.DatasetService;

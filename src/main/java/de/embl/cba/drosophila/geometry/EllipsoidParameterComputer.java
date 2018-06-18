@@ -13,7 +13,7 @@ import static java.lang.Math.*;
 public class EllipsoidParameterComputer
 {
 
-	public static EllipsoidParameters compute( RandomAccessibleInterval< BitType > binaryImg )
+	public static Ellipsoid3dParameters compute( RandomAccessibleInterval< BitType > binaryImg )
 	{
 
 		double[] sums = new double[ 3 ];
@@ -27,17 +27,17 @@ public class EllipsoidParameterComputer
 
 		final Matrix momentsMatrix = getMomentsMatrix( moments );
 
-		EllipsoidParameters ellipsoidParameters = new EllipsoidParameters();
+		Ellipsoid3dParameters ellipsoid3dParameters = new Ellipsoid3dParameters();
 
-		ellipsoidParameters.center = center;
+		ellipsoid3dParameters.center = center;
 
 		SingularValueDecomposition svd = new SingularValueDecomposition( momentsMatrix );
 
-		ellipsoidParameters.radii = computeRadii( svd.getS() );
+		ellipsoid3dParameters.radii = computeRadii( svd.getS() );
 
-		ellipsoidParameters.anglesInDegrees = computeAngles( svd.getU() );
+		ellipsoid3dParameters.anglesInDegrees = computeAngles( svd.getU() );
 
-		return ellipsoidParameters;
+		return ellipsoid3dParameters;
 
 	}
 
@@ -171,9 +171,9 @@ public class EllipsoidParameterComputer
 			phi     = 0;
 		}
 
-		angles[ EllipsoidParameters.PHI ] = toDegrees( phi );
-		angles[ EllipsoidParameters.THETA ] = toDegrees( theta );
-		angles[ EllipsoidParameters.PSI ] = toDegrees( psi );
+		angles[ Ellipsoid3dParameters.PHI ] = toDegrees( phi );
+		angles[ Ellipsoid3dParameters.THETA ] = toDegrees( theta );
+		angles[ Ellipsoid3dParameters.PSI ] = toDegrees( psi );
 
 		return angles;
 	}

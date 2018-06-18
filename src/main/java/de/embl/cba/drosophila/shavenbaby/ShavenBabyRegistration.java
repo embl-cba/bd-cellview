@@ -1,9 +1,9 @@
 package de.embl.cba.drosophila.shavenbaby;
 
-import de.embl.cba.registration.algorithm.Algorithms;
-import de.embl.cba.registration.geometry.EllipsoidParameterComputer;
-import de.embl.cba.registration.geometry.EllipsoidParameters;
-import de.embl.cba.registration.utils.Transforms;
+import de.embl.cba.drosophila.algorithm.Algorithms;
+import de.embl.cba.drosophila.geometry.EllipsoidParameterComputer;
+import de.embl.cba.drosophila.geometry.EllipsoidParameters;
+import de.embl.cba.drosophila.utils.Transforms;
 import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -14,9 +14,9 @@ import net.imglib2.type.numeric.RealType;
 
 import java.util.List;
 
-import static de.embl.cba.registration.bdv.BdvImageViewer.show;
-import static de.embl.cba.registration.utils.Constants.*;
-import static de.embl.cba.registration.utils.Transforms.createArrayCopy;
+import static de.embl.cba.drosophila.bdv.BdvImageViewer.show;
+import static de.embl.cba.drosophila.utils.Constants.*;
+import static de.embl.cba.drosophila.utils.Transforms.createArrayCopy;
 
 public class ShavenBabyRegistration
 {

@@ -1,9 +1,8 @@
 package de.embl.cba.drosophila;
 
-import de.embl.cba.drosophila.geometry.EllipsoidParameters;
-import de.embl.cba.registration.geometry.EllipsoidParameters;
-import de.embl.cba.registration.plotting.Plots;
-import de.embl.cba.registration.projection.Projection;
+import de.embl.cba.drosophila.geometry.Ellipsoid3dParameters;
+import de.embl.cba.drosophila.Plots;
+import de.embl.cba.drosophila.projection.Projection;
 import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
 import net.imglib2.Cursor;
@@ -24,8 +23,8 @@ import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-import static de.embl.cba.registration.geometry.EllipsoidParameters.*;
-import static de.embl.cba.registration.utils.Constants.*;
+import static de.embl.cba.drosophila.geometry.EllipsoidParameters.*;
+import static de.embl.cba.drosophila.utils.Constants.*;
 import static java.lang.Math.*;
 
 public class Utils
@@ -64,17 +63,17 @@ public class Utils
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
-	AffineTransform3D createEllipsoidAlignmentTransform( RandomAccessibleInterval< T > rai, EllipsoidParameters ellipsoidParameters )
+	AffineTransform3D createEllipsoidAlignmentTransform( RandomAccessibleInterval< T > rai, Ellipsoid3dParameters ellipsoid3dParameters )
 	{
 
 		AffineTransform3D translation = new AffineTransform3D();
-		translation.translate( ellipsoidParameters.center  );
+		translation.translate( ellipsoid3dParameters.center  );
 		translation = translation.inverse();
 
 		AffineTransform3D rotation = new AffineTransform3D();
-		rotation.rotate( Z, - toRadians( ellipsoidParameters.anglesInDegrees[ PHI ] ) );
-		rotation.rotate( Y, - toRadians( ellipsoidParameters.anglesInDegrees[ THETA ] ) );
-		rotation.rotate( X, - toRadians( ellipsoidParameters.anglesInDegrees[ PSI ] ) );
+		rotation.rotate( Z, - toRadians( ellipsoid3dParameters.anglesInDegrees[ PHI ] ) );
+		rotation.rotate( Y, - toRadians( ellipsoid3dParameters.anglesInDegrees[ THETA ] ) );
+		rotation.rotate( X, - toRadians( ellipsoid3dParameters.anglesInDegrees[ PSI ] ) );
 
 		AffineTransform3D combinedTransform = translation.preConcatenate( rotation );
 

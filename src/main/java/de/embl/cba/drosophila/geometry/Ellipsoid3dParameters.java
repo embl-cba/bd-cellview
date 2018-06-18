@@ -1,6 +1,6 @@
 package de.embl.cba.drosophila.geometry;
 
-public class EllipsoidParameters
+public class Ellipsoid3dParameters
 {
 
 	public static final int PHI = 0, THETA = 1, PSI = 2;

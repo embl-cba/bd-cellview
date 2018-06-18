@@ -15,27 +15,6 @@ public class Algorithms
 {
 
 	public static < T extends RealType< T > & NativeType< T > >
-	List< RealPoint > findMaxima( RandomAccessibleInterval< T > rai, Shape shape )
-	{
-		List< RealPoint > points = new ArrayList<>();
-
-		RandomAccessible<Neighborhood<T>> neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendBorder( rai ) );
-		RandomAccessibleInterval<Neighborhood<T>> neighborhoodsInterval = Views.interval( neighborhoods, rai );
-
-		LoopBuilder.setImages( neighborhoodsInterval, rai ).forEachPixel(
-				(neighborhood, center) -> {
-					if( isCenterLargest( center, neighborhood ) )
-					{
-						points.add( new RealPoint( neighborhood ) );
-					}
-				}
-		);
-
-		return points;
-	}
-
-
-	public static < T extends RealType< T > & NativeType< T > >
 	Point findMaximum( RandomAccessibleInterval< T > rai, double[] calibration )
 	{
 		Cursor< T > cursor = Views.iterable( rai ).localizingCursor();
@@ -83,4 +62,27 @@ public class Algorithms
 
 		return centerIsLargest;
 	}
+
+	public static < T extends RealType< T > & NativeType< T > >
+	List< RealPoint > findMaxima( RandomAccessibleInterval< T > rai, Shape shape )
+	{
+		List< RealPoint > points = new ArrayList<>();
+
+		RandomAccessible<Neighborhood<T>> neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendBorder( rai ) );
+		RandomAccessibleInterval<Neighborhood<T>> neighborhoodsInterval = Views.interval( neighborhoods, rai );
+
+		LoopBuilder.setImages( neighborhoodsInterval, rai ).forEachPixel(
+				(neighborhood, center) -> {
+					if( isCenterLargest( center, neighborhood ) )
+					{
+						points.add( new RealPoint( neighborhood ) );
+					}
+				}
+		);
+
+		return points;
+	}
+
+
+
 }
