@@ -1,99 +1,81 @@
 package de.embl.cba.drosophila.shavenbaby;
 
-import de.embl.cba.drosophila.algorithm.Algorithms;
-import de.embl.cba.drosophila.geometry.EllipsoidParameterComputer;
-import de.embl.cba.drosophila.geometry.EllipsoidParameters;
-import de.embl.cba.drosophila.utils.Transforms;
-import net.imglib2.Point;
+import de.embl.cba.drosophila.Transforms;
+import de.embl.cba.drosophila.Utils;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
+import net.imglib2.converter.Converters;
+import net.imglib2.img.array.ArrayImg;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.logic.BitType;
+import net.imglib2.type.logic.BoolType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Intervals;
+import net.imglib2.algorithm.morphology.distance.DistanceTransform;
 
-import java.util.List;
+import static de.embl.cba.drosophila.Transforms.copyAsArrayImg;
+import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 
-import static de.embl.cba.drosophila.bdv.BdvImageViewer.show;
-import static de.embl.cba.drosophila.utils.Constants.*;
-import static de.embl.cba.drosophila.utils.Transforms.createArrayCopy;
 
 public class ShavenBabyRegistration
 {
 
+	final ShavenBabyRegistrationSettings settings;
+
+	public ShavenBabyRegistration( ShavenBabyRegistrationSettings settings )
+	{
+		this.settings = settings;
+	}
 
 	public < T extends RealType< T > & NativeType< T > >
-	AffineTransform3D computeRegistration( RandomAccessibleInterval< T > dapiRaw, double[] calibration  )
+	AffineTransform3D computeRegistration( RandomAccessibleInterval< T > input, double[] calibration  )
 	{
+
+		if ( settings.showIntermediateResults ) show( input, "input data", null, calibration, false );
 
 		AffineTransform3D registration = new AffineTransform3D();
 
-		if ( settings.showIntermediateResults ) show( dapiRaw, "raw input data", null, calibration, false );
+		/**
+		 *  Axial calibration correction and scaling to isotropic (down-sampled) resolution
+		 *
+		 *  TODO: replace below code by an averaging down-sampling, using Gaussian blurring
+		 *
+		 */
 
-		correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
+		Utils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
-		if ( settings.showIntermediateResults ) show( dapiRaw, "calibration corrected view on raw input data", null, calibration, false );
+		AffineTransform3D scalingToIsotropicRegistrationResolution = Transforms.getTransformToIsotropicRegistrationResolution( settings.resolutionDuringRegistrationInMicrometer, calibration );
+
+		final RandomAccessibleInterval< T > scaledView = Transforms.createTransformedView( input, scalingToIsotropicRegistrationResolution );
+
+		final RandomAccessibleInterval< T > scaled = copyAsArrayImg( scaledView );
 
 
-		AffineTransform3D scalingTransform3D = new AffineTransform3D();
-		scalingTransform3D.scale( 0.5 );
+		/**
+		 * Threshold
+		 */
 
-		AffineTransform3D scalingToRegistrationResolution = getScalingTransform( settings.resolutionDuringRegistrationInMicrometer, calibration );
+		final RandomAccessibleInterval< UnsignedByteType > binary = Converters.convert(
+				scaled, ( i, o ) -> o.set( i.getRealDouble() > settings.threshold ? 255 : 0 ), new UnsignedByteType() );
 
-		final RandomAccessibleInterval< T > binnedView = Transforms.view( dapiRaw, scalingToRegistrationResolution );
+		if ( settings.showIntermediateResults ) show( binary, "binary", null, calibration, false );
 
-		final RandomAccessibleInterval< T > binned = createArrayCopy( binnedView );
 
-		calibration = getIsotropicCalibration( settings.resolutionDuringRegistrationInMicrometer );
 
-		if ( settings.showIntermediateResults ) show( binned, "binned copy ( " + settings.resolutionDuringRegistrationInMicrometer + " um )", null, calibration, false );
+		/**
+		 *  Distance transform
+		 *
+		 *  TODO: what kind of input image does the distance transform expect? for BoolType and UnsignedByteType with 1 and 0 I don't get anything sensible...
+		 */
 
-		correctIntensityAlongZ( binned, calibration[ Z ] );
+		final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( binary ) );
 
-		final RandomAccessibleInterval< BitType > binaryImage = createBinaryImage( binned, settings.threshold );
+		DistanceTransform.transform( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
 
-		if ( settings.showIntermediateResults ) show( binaryImage, "binary", null, calibration, false );
-
-		final EllipsoidParameters ellipsoidParameters = EllipsoidParameterComputer.compute( binaryImage );
-
-		registration.preConcatenate( createEllipsoidAlignmentTransform( binned, ellipsoidParameters ) );
-
-		if ( settings.showIntermediateResults ) show( Transforms.view( binned, registration ), "ellipsoid aligned", null, calibration, false );
-
-		registration.preConcatenate( createOrientationTransformation(
-				Transforms.view( binned, registration ), X,
-				settings.derivativeDeltaInMicrometer,
-				settings.resolutionDuringRegistrationInMicrometer,
-				settings.showIntermediateResults ) );
-
-		if ( settings.showIntermediateResults ) show( Transforms.view( binned, registration ), "oriented", null, calibration, false );
-
-		final RandomAccessibleInterval< T > longAxisProjection = createAverageProjection(
-				Transforms.view( binned, registration ), X,
-				settings.projectionRangeMinDistanceToCenterInMicrometer,
-				settings.projectionRangeMaxDistanceToCenterInMicrometer,
-				settings.resolutionDuringRegistrationInMicrometer);
-
-		if ( settings.showIntermediateResults ) show( longAxisProjection, "perpendicular projection", null, new double[]{ calibration[ Y ], calibration[ Z ] }, false );
-
-		final RandomAccessibleInterval< T > blurred = createBlurredRai(
-				longAxisProjection,
-				settings.sigmaForBlurringAverageProjectionInMicrometer,
-				settings.resolutionDuringRegistrationInMicrometer );
-
-		final Point maximum = Algorithms.findMaximum( blurred, new double[]{ calibration[ Y ], calibration[ Z ] });
-		final List< RealPoint > realPoints = asRealPointList( maximum );
-		realPoints.add( new RealPoint( new double[]{ 0, 0 } ) );
-
-		if ( settings.showIntermediateResults ) show( blurred, "perpendicular projection - blurred ", realPoints, new double[]{ calibration[ Y ], calibration[ Z ] }, false );
-
-		registration.preConcatenate( createRollTransform( Transforms.view( binned, registration ), maximum ) );
-
-		if ( settings.showIntermediateResults ) show( Transforms.view( binned, registration ), "registered binned dapi", null, calibration, false );
-
-		final AffineTransform3D scalingToFinalResolution = getScalingTransform( settings.finalResolutionInMicrometer / settings.resolutionDuringRegistrationInMicrometer, new double[]{ 1, 1, 1 } );
-
-		registration = scalingToRegistrationResolution.preConcatenate( registration ).preConcatenate( scalingToFinalResolution );
+		if ( settings.showIntermediateResults ) show( distance, "distance", null, calibration, false );
 
 		return registration;
 

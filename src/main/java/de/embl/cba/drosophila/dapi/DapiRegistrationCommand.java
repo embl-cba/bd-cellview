@@ -1,8 +1,8 @@
 package de.embl.cba.drosophila.dapi;
 
 import bdv.util.*;
-import de.embl.cba.drosophila.utils.ImagePlusUtils;
-import de.embl.cba.drosophila.utils.Transforms;
+import de.embl.cba.drosophila.Transforms;
+import de.embl.cba.drosophila.Utils;
 import ij.IJ;
 import ij.ImagePlus;
 import net.imagej.DatasetService;
@@ -137,14 +137,14 @@ public class DapiRegistrationCommand<T extends RealType<T> & NativeType< T > > e
 
 		DapiRegistration dapiRegistration = new DapiRegistration( settings );
 
-		final AffineTransform3D registrationTransform = dapiRegistration.computeRegistration( dapiChannel, ImagePlusUtils.getCalibration( imagePlus ) );
+		final AffineTransform3D registrationTransform = dapiRegistration.computeRegistration( dapiChannel, Utils.getCalibration( imagePlus ) );
 
 		ArrayList< RandomAccessibleInterval< T > > transformedChannels = new ArrayList<>(  );
 
 		for ( int c = 0; c < allChannels.dimension( imagePlusChannelDimension ); ++c )
 		{
 			final RandomAccessibleInterval< T > channel = Views.hyperSlice( allChannels, imagePlusChannelDimension, c );
-			transformedChannels.add( Transforms.view( channel, registrationTransform ) );
+			transformedChannels.add( Transforms.createTransformedView( channel, registrationTransform ) );
 		}
 
 		RandomAccessibleInterval< T > stack = Views.stack( transformedChannels );

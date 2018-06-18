@@ -2,7 +2,8 @@ package de.embl.cba.drosophila;
 
 import de.embl.cba.drosophila.geometry.Ellipsoid3dParameters;
 import de.embl.cba.drosophila.Plots;
-import de.embl.cba.drosophila.projection.Projection;
+import de.embl.cba.drosophila.Projection;
+import ij.ImagePlus;
 import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
 import net.imglib2.Cursor;
@@ -19,12 +20,15 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-import static de.embl.cba.drosophila.geometry.EllipsoidParameters.*;
-import static de.embl.cba.drosophila.utils.Constants.*;
+import static de.embl.cba.drosophila.Constants.*;
+import static de.embl.cba.drosophila.geometry.Ellipsoid3dParameters.PHI;
+import static de.embl.cba.drosophila.geometry.Ellipsoid3dParameters.PSI;
+import static de.embl.cba.drosophila.geometry.Ellipsoid3dParameters.THETA;
 import static java.lang.Math.*;
 
 public class Utils
@@ -170,15 +174,25 @@ public class Utils
 
 	public static double[] getCalibration( Dataset dataset )
 	{
-		double[] scalings = new double[ 3 ];
+		double[] calibration = new double[ 3 ];
 
 		for ( int d : XYZ )
 		{
-			scalings[ d ] = ( ( LinearAxis ) dataset.getImgPlus().axis( d ) ).scale();
-
+			calibration[ d ] = ( ( LinearAxis ) dataset.getImgPlus().axis( d ) ).scale();
 		}
 
-		return scalings;
+		return calibration;
+	}
+
+	public static double[] getCalibration( ImagePlus imp )
+	{
+		double[] calibration = new double[ 3 ];
+
+		calibration[ X ] = imp.getCalibration().pixelWidth;
+		calibration[ Y ] = imp.getCalibration().pixelHeight;
+		calibration[ Z ] = imp.getCalibration().pixelDepth;
+
+		return calibration;
 	}
 
 	public static void correctCalibrationForSubSampling( double[] calibration, int subSampling )
@@ -197,7 +211,6 @@ public class Utils
 	public static < T extends RealType< T > & NativeType< T > >
 	void correctIntensityAlongZ( RandomAccessibleInterval< T > rai, double zScalingInMicrometer )
 	{
-
 		for ( long z = rai.min( Z ); z < rai.max( Z ); ++z )
 		{
 			RandomAccessibleInterval< T > slice = Views.hyperSlice( rai, Z, z );

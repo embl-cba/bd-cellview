@@ -19,8 +19,7 @@ public class Algorithms
 	{
 		Cursor< T > cursor = Views.iterable( rai ).localizingCursor();
 
-		double maxValue = rai.randomAccess().get().copy().getRealDouble();
-		maxValue = Double.MIN_VALUE;
+		double maxValue = Double.MIN_VALUE;
 
 		long[] maxLoc = new long[ cursor.numDimensions() ];
 		cursor.localize( maxLoc );

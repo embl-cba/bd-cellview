@@ -8,16 +8,15 @@
 		<version>22.2.0</version>
 	</parent>
 
-	<artifactId>imglib2-introductory-workshop</artifactId>
+	<artifactId>imglib2-drosophila-registration</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 
-	<name>ImgLib2 Introductory Workshop</name>
+	<name>ImgLib2 Drosophila Registration</name>
 	<description>TODO</description>
-	<url>https://imagej.net/ImgLib2_-_Introductory_Workshop</url>
-	<inceptionYear>2009</inceptionYear>
+	<inceptionYear>2018</inceptionYear>
 	<organization>
-		<name>ImgLib2</name>
-		<url>http://imglib2.net/</url>
+		<name>EMBL</name>
+		<url>http://embl.de/</url>
 	</organization>
 	<licenses>
 		<license>
@@ -28,9 +27,8 @@
 
 	<developers>
 		<developer>
-			<id>tpietzsch</id>
-			<name>Tobias Pietzsch</name>
-			<url>http://imagej.net/User:Pietzsch</url>
+			<id>tischi</id>
+			<name>Christian Tischer</name>
 			<roles>
 				<role>lead</role>
 				<role>developer</role>
@@ -56,94 +54,77 @@
 
 
 	<scm>
-		<connection>scm:git:git://github.com/imglib/imglib2-introductory-workshop</connection>
-		<developerConnection>scm:git:git@github.com:imglib/imglib2-introductory-workshop</developerConnection>
+		<connection>scm:git:git://github.com/tischi/imglib2-drosophila-registration</connection>
+		<developerConnection>scm:git:git@github.com/tischi/imglib2-drosophila-registration</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/imglib/imglib2-introductory-workshop</url>
+		<url>https://github.com/tischi/imglib2-drosophila-registration</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub</system>
-		<url>https://github.com/imglib/imglib2-introductory-workshop/issues</url>
+		<url>https://github.com/imglib/imglib2-drosophila-registration/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>None</system>
 	</ciManagement>
 
 	<properties>
-		<package-name>net.imglib2.tutorials</package-name>
-
+		<package-name>de.embl.cba.registration</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
-		<license.projectName>ImgLib2: a general-purpose, multidimensional image processing library.</license.projectName>
-		<license.organizationName>ImgLib2 authors</license.organizationName>
-		<license.copyrightOwners>Tobias Pietzsch, Stephan Preibisch, Stephan Saalfeld,
-John Bogovic, Albert Cardona, Barry DeZonia, Christian Dietz, Jan Funke,
-Aivar Grislis, Jonathan Hale, Grant Harris, Stefan Helfrich, Mark Hiner,
-Martin Horn, Steffen Jaensch, Lee Kamentsky, Larry Lindsey, Melissa Linkert,
-Mark Longair, Brian Northan, Nick Perry, Curtis Rueden, Johannes Schindelin,
-Jean-Yves Tinevez and Michael Zinsmaier.</license.copyrightOwners>
-
-		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
-		<releaseProfiles>deploy-to-imagej</releaseProfiles>
+		<license.copyrightOwners>EMBL</license.copyrightOwners>
+		<imagej.app.directory>/Applications/Fiji.app/</imagej.app.directory>
+		<enforcer.skip>true</enforcer.skip>
 	</properties>
+
 
 	<repositories>
 		<!-- NB: for SciJava dependencies -->
 		<repository>
 			<id>imagej.public</id>
-			<url>http://maven.imagej.net/content/groups/public</url>
+			<url>https://maven.imagej.net/content/groups/public</url>
 		</repository>
 	</repositories>
 
 	<dependencies>
-		<!-- ImgLib2 dependencies -->
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-cache</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-algorithm</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-ij</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-realtransform</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-roi</artifactId>
-		</dependency>
-		<!--
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-algorithm-fft</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-algorithm-gpl</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-ui</artifactId>
-		</dependency>
-		-->
 
-		<!-- ImageJ dependencies -->
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>imagej-legacy</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej-common</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>ij</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2</artifactId>
+		</dependency>
+
+		<!-- Jama (Java Matrix package) is used for computing inertia computeRegistration -->
+		<dependency>
+			<groupId>gov.nist.math</groupId>
+			<artifactId>jama</artifactId>
+		</dependency>
+
+		<!-- phase correlation -->
+		<dependency>
+			<groupId>net.preibisch</groupId>
+			<artifactId>BigStitcher</artifactId>
+			<version>0.1.1</version>
+		</dependency>
+
 	</dependencies>
+
 </project>
 
