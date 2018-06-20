@@ -2,12 +2,17 @@ package de.embl.cba.drosophila.shavenbaby;
 
 import de.embl.cba.drosophila.Algorithms;
 import de.embl.cba.drosophila.Utils;
+import net.imagej.ImageJ;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converters;
+import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.roi.labeling.ImgLabeling;
+import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
@@ -23,10 +28,12 @@ public class ShavenBabyRegistration
 {
 
 	final ShavenBabyRegistrationSettings settings;
+	final ImageJ ij;
 
-	public ShavenBabyRegistration( ShavenBabyRegistrationSettings settings )
+	public ShavenBabyRegistration( ShavenBabyRegistrationSettings settings, ImageJ ij )
 	{
 		this.settings = settings;
+		this.ij = ij;
 	}
 
 	public < T extends RealType< T > & NativeType< T > >
@@ -45,9 +52,9 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval< T > downscaled = Algorithms.createDownscaledArrayImg( input, getDownScalingFactors( calibration, settings.resolutionDuringRegistration ) );
 
-		final double[] calibrationDuringRegistration = getCalibrationDuringRegistration();
+		calibration = getCalibrationDuringRegistration();
 
-		if ( settings.showIntermediateResults ) show( downscaled, "downscaled", null, calibrationDuringRegistration, false );
+		if ( settings.showIntermediateResults ) show( downscaled, "downscaled", null, calibration, false );
 
 
 		/**
@@ -73,10 +80,31 @@ public class ShavenBabyRegistration
 
 		DistanceTransform.transform( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
 
-		if ( settings.showIntermediateResults ) show( distance, "distance", null, calibration, false );
+		double maxDistance = Algorithms.findMaximumValue( distance );
+
+		final RandomAccessibleInterval< IntType > invertedDistance = Converters.convert( distance, ( i, o ) -> {
+			o.set( ( int ) ( maxDistance - i.get() ) );
+		}, new IntType() );
+
+		if ( settings.showIntermediateResults ) show( invertedDistance, "distance", null, calibration, false );
+
+
+		/**
+		 * Watershed
+		 */
+
+		final ImgLabeling< Integer, IntType > watershedImgLabeling = ij.op().image().watershed( invertedDistance, true, true );
+
+		final RandomAccessibleInterval< IntType > labelMask =
+				Converters.convert( ( RandomAccessibleInterval< LabelingType< Integer > > ) watershedImgLabeling,
+				( i, o ) -> {
+					o.set( i.getIndex().getInteger() );
+				}, new IntType() );
+
+
+		if ( settings.showIntermediateResults ) show( labelMask, "watershed", null, calibration, false );
 
 		return registration;
-
 	}
 
 	private double[] getCalibrationDuringRegistration()

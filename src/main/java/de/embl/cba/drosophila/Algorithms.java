@@ -78,7 +78,7 @@ public class Algorithms
 
 
 	public static < T extends RealType< T > & NativeType< T > >
-	Point findMaximum( RandomAccessibleInterval< T > rai, double[] calibration )
+	Point findMaximumLocation( RandomAccessibleInterval< T > rai, double[] calibration )
 	{
 		Cursor< T > cursor = Views.iterable( rai ).localizingCursor();
 
@@ -108,6 +108,25 @@ public class Algorithms
 		return point;
 	}
 
+
+	public static < T extends RealType< T > & NativeType< T > >
+	double findMaximumValue( RandomAccessibleInterval< T > rai )
+	{
+		Cursor< T > cursor = Views.iterable( rai ).localizingCursor();
+
+		double maxValue = Double.MIN_VALUE;
+
+		while ( cursor.hasNext() )
+		{
+			final double value = cursor.next().getRealDouble();
+			if ( value > maxValue )
+			{
+				maxValue = value;
+			}
+		}
+
+		return maxValue;
+	}
 
 	public static < T extends RealType< T > & NativeType< T > >
 	boolean isCenterLargest( T center, Neighborhood< T > neighborhood )

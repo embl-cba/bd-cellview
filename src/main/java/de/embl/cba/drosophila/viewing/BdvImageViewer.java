@@ -1,6 +1,7 @@
 package de.embl.cba.drosophila.viewing;
 
 import bdv.util.*;
+import de.embl.cba.drosophila.Algorithms;
 import net.imagej.ImgPlus;
 import net.imagej.axis.LinearAxis;
 import net.imglib2.RandomAccessibleInterval;
@@ -25,6 +26,7 @@ public class BdvImageViewer
 	void show( RandomAccessibleInterval rai, String title, List< RealPoint > points, double[] calibration, boolean resetViewTransform )
 	{
 		final Bdv bdv;
+		final BdvSource bdvSource;
 
 		if ( calibration == null )
 		{
@@ -34,12 +36,14 @@ public class BdvImageViewer
 
 		if ( rai.numDimensions() ==  2 )
 		{
-			bdv = BdvFunctions.show( rai, title, BdvOptions.options().is2D().sourceTransform( calibration ) );
+			bdvSource = BdvFunctions.show( rai, title, BdvOptions.options().is2D().sourceTransform( calibration ) );
 		}
 		else
 		{
-			bdv = BdvFunctions.show( rai, title, BdvOptions.options().sourceTransform( calibration ) );
+			bdvSource = BdvFunctions.show( rai, title, BdvOptions.options().sourceTransform( calibration ) );
 		}
+
+		bdv = bdvSource.getBdvHandle();
 
 		if ( points != null )
 		{
@@ -52,7 +56,9 @@ public class BdvImageViewer
 			resetViewTransform( bdv );
 		}
 
+		bdvSource.setDisplayRange( 0, Algorithms.findMaximumValue( rai ) );
 
+		
 	}
 
 	private static void resetViewTransform( Bdv bdv )
