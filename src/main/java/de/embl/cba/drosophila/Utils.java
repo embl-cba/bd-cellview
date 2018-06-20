@@ -1,15 +1,12 @@
 package de.embl.cba.drosophila;
 
-import de.embl.cba.drosophila.geometry.Ellipsoid3dParameters;
-import de.embl.cba.drosophila.Plots;
-import de.embl.cba.drosophila.Projection;
 import ij.ImagePlus;
 import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
-import net.imglib2.Cursor;
-import net.imglib2.FinalInterval;
-import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.*;
 import net.imglib2.algorithm.gauss3.Gauss3;
+import net.imglib2.algorithm.neighborhood.HyperSphereShape;
+import net.imglib2.algorithm.neighborhood.Shape;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -19,16 +16,16 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
-import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static de.embl.cba.drosophila.Constants.*;
-import static de.embl.cba.drosophila.geometry.Ellipsoid3dParameters.PHI;
-import static de.embl.cba.drosophila.geometry.Ellipsoid3dParameters.PSI;
-import static de.embl.cba.drosophila.geometry.Ellipsoid3dParameters.THETA;
 import static java.lang.Math.*;
 
 public class Utils
@@ -80,26 +77,6 @@ public class Utils
 	{
 		Projection< T > projection = new Projection< T >(  rai, d,  new FinalInterval( new long[]{ (long) ( min / scaling) },  new long[]{ (long) ( max / scaling ) } ) );
 		return projection.average();
-	}
-
-	public static < T extends RealType< T > & NativeType< T > >
-	AffineTransform3D createEllipsoidAlignmentTransform( RandomAccessibleInterval< T > rai, Ellipsoid3dParameters ellipsoid3dParameters )
-	{
-
-		AffineTransform3D translation = new AffineTransform3D();
-		translation.translate( ellipsoid3dParameters.center  );
-		translation = translation.inverse();
-
-		AffineTransform3D rotation = new AffineTransform3D();
-		rotation.rotate( Z, - toRadians( ellipsoid3dParameters.anglesInDegrees[ PHI ] ) );
-		rotation.rotate( Y, - toRadians( ellipsoid3dParameters.anglesInDegrees[ THETA ] ) );
-		rotation.rotate( X, - toRadians( ellipsoid3dParameters.anglesInDegrees[ PSI ] ) );
-
-		AffineTransform3D combinedTransform = translation.preConcatenate( rotation );
-
-
-		return combinedTransform;
-
 	}
 
 	public static < T extends RealType< T > & NativeType< T > > RandomAccessibleInterval< BitType > createBinaryImage(
@@ -219,28 +196,6 @@ public class Utils
 		}
 	}
 
-	public static void correctCalibrationForRefractiveIndexMismatch( double[] calibration, double correctionFactor )
-	{
-		calibration[ Z ] *= correctionFactor;
-	}
-
-	public static < T extends RealType< T > & NativeType< T > >
-	void correctIntensityAlongZ( RandomAccessibleInterval< T > rai, double zScalingInMicrometer )
-	{
-		for ( long z = rai.min( Z ); z < rai.max( Z ); ++z )
-		{
-			RandomAccessibleInterval< T > slice = Views.hyperSlice( rai, Z, z );
-
-			double intensityCorrectionFactor = getIntensityCorrectionFactorAlongZ( z, zScalingInMicrometer );
-
-//			System.out.println( z + "," + intensityCorrectionFactor );
-
-			Views.iterable( slice ).forEach( t -> t.mul( intensityCorrectionFactor )  );
-
-		}
-
-	}
-
 	public static < T extends RealType< T > & NativeType< T > >
 	double computeAverage( final RandomAccessibleInterval< T > rai )
 	{
@@ -258,38 +213,43 @@ public class Utils
 		return average;
 	}
 
-	public static double getIntensityCorrectionFactorAlongZ( long z, double zScalingInMicrometer )
+	public static < T extends RealType< T > & NativeType< T > >
+	List< RealPoint > computeMaximumLocation( RandomAccessibleInterval< T > blurred, int sigmaForBlurringAverageProjection )
 	{
+		Shape shape = new HyperSphereShape( sigmaForBlurringAverageProjection );
 
-		/*
-		f( 10 ) = 93; f( 83 ) = 30;
-		f( z1 ) = v1; f( z2 ) = v2;
-		f( z ) = A * exp( -z / d );
+		List< RealPoint > points = Algorithms.findLocalMaximumValues( blurred, shape );
 
-		=> d = ( z2 - z1 ) / ln( v1 / v2 );
-
-		> log ( 93 / 30 )
-		[1] 1.1314
-
-		=> d = 	73 / 1.1314 = 64.52172;
-
-		=> correction = 1 / exp( -z / d );
-
-		at z = 10 we want value = 93 => z0  = 10;
-
-		=> correction = 1 / exp( - ( z - 10 ) / d );
-		 */
-
-		double generalIntensityScaling = 0.3; // TODO: what to use here?
-
-		double offsetInMicrometer = 10.0D; // TODO: might differ between samples?
-
-		double intensityDecayLengthInMicrometer = 100.0D;
-
-		double zInMicrometer = z * zScalingInMicrometer - offsetInMicrometer;
-
-		double correctionFactor = generalIntensityScaling / exp( - zInMicrometer / intensityDecayLengthInMicrometer );
-
-		return correctionFactor;
+		return points;
 	}
+
+	public static List< RealPoint > asRealPointList( Point maximum )
+	{
+		List< RealPoint > realPoints = new ArrayList<>();
+		final double[] doubles = new double[ maximum.numDimensions() ];
+		maximum.localize( doubles );
+		realPoints.add( new RealPoint( doubles) );
+
+		return realPoints;
+	}
+
+	public static < T extends NumericType< T > & NativeType< T > >
+	RandomAccessibleInterval< T > copyAsArrayImg( RandomAccessibleInterval< T > rai )
+	{
+		RandomAccessibleInterval< T > copy = new ArrayImgFactory( rai.randomAccess().get() ).create( rai );
+		copy = Transforms.adjustOrigin( rai, copy );
+
+		final Cursor< T > out = Views.iterable( copy ).localizingCursor();
+		final RandomAccess< T > in = rai.randomAccess();
+
+		while( out.hasNext() )
+		{
+			out.fwd();
+			in.setPosition( out );
+			out.get().set( in.get() );
+		}
+
+		return copy;
+	}
+
 }

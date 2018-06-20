@@ -13,7 +13,6 @@ import net.imglib2.realtransform.Scale;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 import java.util.ArrayList;
@@ -55,7 +54,7 @@ public class Algorithms
 		final RandomAccessible< T > raster = Views.raster( rra );
 		final RandomAccessibleInterval< T > output = Views.interval( raster, createTransformedInterval( input, scale ) );
 
-		return Transforms.copyAsArrayImg( output  );
+		return Utils.copyAsArrayImg( output  );
 	}
 
 	private static < T extends RealType< T > & NativeType< T > > RandomAccessibleInterval< T > createOptimallyBlurredArrayImg( RandomAccessibleInterval< T > input, double[] scalingFactors )
@@ -145,7 +144,7 @@ public class Algorithms
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
-	List< RealPoint > findMaxima( RandomAccessibleInterval< T > rai, Shape shape )
+	List< RealPoint > findLocalMaximumValues( RandomAccessibleInterval< T > rai, Shape shape )
 	{
 		List< RealPoint > points = new ArrayList<>();
 

@@ -1,26 +1,36 @@
 package de.embl.cba.drosophila.shavenbaby;
 
 import de.embl.cba.drosophila.Algorithms;
+import de.embl.cba.drosophila.RefractiveIndexCorrections;
+import de.embl.cba.drosophila.Transforms;
 import de.embl.cba.drosophila.Utils;
+import de.embl.cba.drosophila.geometry.EllipsoidParameters;
+import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ImageJ;
+import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.roi.labeling.ImgLabeling;
+import net.imglib2.roi.labeling.LabelRegion;
+import net.imglib2.roi.labeling.LabelRegions;
 import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.type.NativeType;
+import net.imglib2.type.logic.BitType;
+import net.imglib2.type.logic.BoolType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
-import net.imglib2.algorithm.morphology.distance.DistanceTransform;
 
 import java.util.Arrays;
 
-import static de.embl.cba.drosophila.Transforms.getDownScalingFactors;
+import static de.embl.cba.drosophila.Constants.XYZ;
+import static de.embl.cba.drosophila.Constants.Z;
+import static de.embl.cba.drosophila.Transforms.getScalingFactors;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 
 
@@ -37,80 +47,214 @@ public class ShavenBabyRegistration
 	}
 
 	public < T extends RealType< T > & NativeType< T > >
-	AffineTransform3D computeRegistration( RandomAccessibleInterval< T > input, double[] calibration  )
+	AffineTransform3D computeRegistration( RandomAccessibleInterval< T > input, double[] inputCalibration  )
 	{
-
-		if ( settings.showIntermediateResults ) show( input, "input data", null, calibration, false );
 
 		AffineTransform3D registration = new AffineTransform3D();
 
 		/**
-		 *  Axial calibration correction and scaling to isotropic (down-sampled) resolution
+		 *  Refractive index corrections
 		 */
 
-		Utils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
+		RefractiveIndexCorrections.correctCalibration( inputCalibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
-		final RandomAccessibleInterval< T > downscaled = Algorithms.createDownscaledArrayImg( input, getDownScalingFactors( calibration, settings.resolutionDuringRegistration ) );
+		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
 
-		calibration = getCalibrationDuringRegistration();
+		RefractiveIndexCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset );
 
-		if ( settings.showIntermediateResults ) show( downscaled, "downscaled", null, calibration, false );
+		if ( settings.showIntermediateResults ) show( intensityCorrected, "input data", null, inputCalibration, false );
+
+		/**
+		 *  Down-sampling to registration resolution
+		 */
+
+		final RandomAccessibleInterval< T > downscaled = Algorithms.createDownscaledArrayImg( intensityCorrected, getScalingFactors( inputCalibration, settings.registrationResolution ) );
+
+		double[] registrationCalibration = getRegistrationCalibration();
+
+		if ( settings.showIntermediateResults ) show( downscaled, "downscaled", null, registrationCalibration, false );
 
 
 		/**
 		 * Threshold
-		 *
-		 * TODO: Distance transform seems to only work for pixel values 255 and 0 (s.b.)
 		 */
 
-		final RandomAccessibleInterval< UnsignedByteType > binary = Converters.convert(
-				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.threshold ? 255 : 0 ), new UnsignedByteType() );
+		final RandomAccessibleInterval< BoolType > mask = Converters.convert(
+				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterOffsetSubtraction ? true : false ), new BoolType() );
 
-		if ( settings.showIntermediateResults ) show( binary, "binary", null, calibration, false );
-
-
-
-		/**
-		 *  Distance transform
-		 *
-		 *  TODO: what kind of input image does the distance transform expect? for BoolType and UnsignedByteType with 1 and 0 I don't get anything sensible...
-		 */
-
-		final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( binary ) );
-
-		DistanceTransform.transform( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
-
-		double maxDistance = Algorithms.findMaximumValue( distance );
-
-		final RandomAccessibleInterval< IntType > invertedDistance = Converters.convert( distance, ( i, o ) -> {
-			o.set( ( int ) ( maxDistance - i.get() ) );
-		}, new IntType() );
-
-		if ( settings.showIntermediateResults ) show( invertedDistance, "distance", null, calibration, false );
+		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
 
 
 		/**
 		 * Watershed
 		 */
 
-		final ImgLabeling< Integer, IntType > watershedImgLabeling = ij.op().image().watershed( invertedDistance, true, true );
+		// prepare result label image
+		final Img< IntType > labelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( mask ) );
+		final ImgLabeling< Integer, IntType > labeling = new ImgLabeling<>( labelImg );
 
-		final RandomAccessibleInterval< IntType > labelMask =
-				Converters.convert( ( RandomAccessibleInterval< LabelingType< Integer > > ) watershedImgLabeling,
-				( i, o ) -> {
-					o.set( i.getIndex().getInteger() );
-				}, new IntType() );
+		ij.op().image().watershed(
+				labeling,
+				mask,
+				false,
+				false,
+				settings.minimalDistanceOfLocalMinimaForWatershed / settings.registrationResolution,
+				mask );
 
 
-		if ( settings.showIntermediateResults ) show( labelMask, "watershed", null, calibration, false );
+		if ( settings.showIntermediateResults ) show( labelImg, "watershed", null, registrationCalibration, false );
+
+		/**
+		 * Get Central Embryo
+		 */
+
+		final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( labeling );
+
+		final Img< BitType > centralObjectMask = createBitTypeMaskFromLabelRegion( centralObjectRegion, Intervals.dimensionsAsLongArray( downscaled ) );
+
+		if ( settings.showIntermediateResults ) show( centralObjectMask, "central object", null, registrationCalibration, false );
+
+		/**
+		 * Compute ellipsoid alignment
+		 */
+
+		final EllipsoidParameters ellipsoidParameters = Ellipsoids.computeParametersFromBinaryImage( centralObjectMask );
+
+		registration.preConcatenate( Ellipsoids.createAlignmentTransform( ellipsoidParameters ) );
+
+		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( downscaled, registration ), "ellipsoid aligned", null, registrationCalibration, false );
+
+		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "ellipsoid aligned", null, registrationCalibration, false );
+
+		registration = createInputToOutputResolutionTransform( inputCalibration, registration, registrationCalibration );
+
+		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( intensityCorrected, registration ), "ellipsoid aligned", null, registrationCalibration, false );
 
 		return registration;
+
 	}
 
-	private double[] getCalibrationDuringRegistration()
+	private AffineTransform3D createInputToOutputResolutionTransform( double[] inputCalibration, AffineTransform3D registration, double[] registrationCalibration )
 	{
-		double[] calibrationDuringRegistration = new double[3];
-		Arrays.fill( calibrationDuringRegistration, settings.resolutionDuringRegistration );
-		return calibrationDuringRegistration;
+		final AffineTransform3D transform =
+				Transforms.getScalingTransform( inputCalibration, settings.registrationResolution )
+				.preConcatenate( registration )
+				.preConcatenate( Transforms.getScalingTransform( registrationCalibration, settings.outputResolution ) );
+
+		return transform;
 	}
+
+	private Img< BitType > createBitTypeMaskFromLabelRegion( LabelRegion< Integer > centralObjectRegion, long[] dimensions )
+	{
+		final Img< BitType > centralObjectImg = ArrayImgs.bits( dimensions );
+
+		final Cursor< Void > regionCursor = centralObjectRegion.cursor();
+		final net.imglib2.RandomAccess< BitType > access = centralObjectImg.randomAccess();
+		while ( regionCursor.hasNext() )
+		{
+			regionCursor.fwd();
+			access.setPosition( regionCursor );
+			access.get().set( true );
+		}
+		return centralObjectImg;
+	}
+
+	private Img< UnsignedByteType > createUnsignedByteTypeMaskFromLabelRegion( LabelRegion< Integer > centralObjectRegion, long[] dimensions )
+	{
+		final Img< UnsignedByteType > centralObjectImg = ArrayImgs.unsignedBytes( dimensions );
+
+		final Cursor< Void > regionCursor = centralObjectRegion.cursor();
+		final net.imglib2.RandomAccess< UnsignedByteType > access = centralObjectImg.randomAccess();
+		while ( regionCursor.hasNext() )
+		{
+			regionCursor.fwd();
+			access.setPosition( regionCursor );
+			access.get().set( 255 );
+		}
+		return centralObjectImg;
+	}
+
+
+	private LabelRegion< Integer > getCentralObjectLabelRegion( ImgLabeling< Integer, IntType > labeling )
+	{
+		int centralLabel = getCentralLabel( labeling );
+
+		final LabelRegions< Integer > labelRegions = new LabelRegions<>( labeling );
+		return labelRegions.getLabelRegion( centralLabel );
+	}
+
+	private static int getCentralLabel( ImgLabeling< Integer, IntType > labeling )
+	{
+		final net.imglib2.RandomAccess< LabelingType< Integer > > labelingRandomAccess = labeling.randomAccess();
+		for ( int d : XYZ ) labelingRandomAccess.setPosition( labeling.dimension( d ) / 2, d );
+		int centralIndex = labelingRandomAccess.get().getIndex().getInteger();
+		return labeling.getMapping().labelsAtIndex( centralIndex ).iterator().next();
+	}
+
+	private double[] getRegistrationCalibration()
+	{
+		double[] registrationCalibration = new double[ 3 ];
+		Arrays.fill( registrationCalibration, settings.registrationResolution );
+		return registrationCalibration;
+	}
+
+	//
+	// Useful code snippets
+	//
+
+	/**
+	 *  Distance transform
+
+	 Hi Christian
+
+	 yes, it seems that you were doing the right thing (as confirmed by your
+	 visual inspection of the result). One thing to note: You should
+	 probably use a DoubleType image with 1e20 and 0 values, to make sure
+	 that f(q) is larger than any possible distance in your image. If you
+	 choose 255, your distance is effectively bounded at 255. This can be an
+	 issue for big images with sparse foreground objects. With squared
+	 Euclidian distance, 255 is already reached if a background pixels is
+	 further than 15 pixels from a foreground pixel! If you use
+	 Converters.convert to generate your image, the memory consumption
+	 remains the same.
+
+
+	 Phil
+
+	 final RandomAccessibleInterval< UnsignedByteType > binary = Converters.convert(
+	 downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterOffsetSubtraction ? 255 : 0 ), new UnsignedByteType() );
+
+	 if ( settings.showIntermediateResults ) show( binary, "binary", null, calibration, false );
+
+
+	 final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( binary ) );
+
+	 DistanceTransform.transform( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
+
+
+	 final double maxDistance = Algorithms.findMaximumValue( distance );
+
+	 final RandomAccessibleInterval< IntType > invertedDistance = Converters.convert( distance, ( i, o ) -> {
+	 o.set( ( int ) ( maxDistance - i.get() ) );
+	 }, new IntType() );
+
+	 if ( settings.showIntermediateResults ) show( invertedDistance, "distance", null, calibration, false );
+
+	 */
+
+
+	/**
+	 * Convert ImgLabelling to Rai
+
+	 final RandomAccessibleInterval< IntType > labelMask =
+	 Converters.convert( ( RandomAccessibleInterval< LabelingType< Integer > > ) watershedImgLabeling,
+	 ( i, o ) -> {
+	 o.set( i.getIndex().getInteger() );
+	 }, new IntType() );
+
+	 */
+
+
+
+
 }

@@ -26,7 +26,7 @@ public class ShavenBabyRegistrationTest
 		final RandomAccessibleInterval< T > input = ImageJFunctions.wrap( imp );
 
 		ShavenBabyRegistrationSettings settings = new ShavenBabyRegistrationSettings();
-		settings.resolutionDuringRegistration = 10;
+		settings.registrationResolution = 10;
 		settings.showIntermediateResults = true;
 
 		ShavenBabyRegistration registration = new ShavenBabyRegistration( settings, ij );

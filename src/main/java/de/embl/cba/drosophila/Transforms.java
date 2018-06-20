@@ -4,7 +4,9 @@ import net.imglib2.*;
 import net.imglib2.concatenate.Concatenable;
 import net.imglib2.concatenate.PreConcatenable;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.interpolation.InterpolatorFactory;
 import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
+import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.realtransform.*;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
@@ -46,9 +48,10 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 
     public static < T extends NumericType< T > & NativeType< T > >
 	RandomAccessibleInterval createTransformedView( RandomAccessibleInterval< T > rai,
-													InvertibleRealTransform combinedTransform )
+													InvertibleRealTransform combinedTransform,
+													InterpolatorFactory interpolatorFactory)
 	{
-		final RandomAccessible transformedRA = createTransformedRaView( rai, combinedTransform );
+		final RandomAccessible transformedRA = createTransformedRaView( rai, combinedTransform, interpolatorFactory );
 		final FinalInterval transformedInterval = createTransformedInterval( rai, combinedTransform );
 		final RandomAccessibleInterval< T > transformedIntervalView = Views.interval( transformedRA, transformedInterval );
 
@@ -57,22 +60,15 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 	}
 
 	public static < T extends NumericType< T > & NativeType< T > >
-	RandomAccessibleInterval< T > copyAsArrayImg( RandomAccessibleInterval< T > rai )
+	RandomAccessibleInterval createTransformedView( RandomAccessibleInterval< T > rai,
+													InvertibleRealTransform combinedTransform )
 	{
-		RandomAccessibleInterval< T > copy = new ArrayImgFactory( rai.randomAccess().get() ).create( rai );
-		copy = adjustOrigin( rai, copy );
+		final RandomAccessible transformedRA = createTransformedRaView( rai, combinedTransform, new NLinearInterpolatorFactory() );
+		final FinalInterval transformedInterval = createTransformedInterval( rai, combinedTransform );
+		final RandomAccessibleInterval< T > transformedIntervalView = Views.interval( transformedRA, transformedInterval );
 
-		final Cursor< T > out = Views.iterable( copy ).localizingCursor();
-		final RandomAccess< T > in = rai.randomAccess();
+		return transformedIntervalView;
 
-		while( out.hasNext() )
-		{
-			out.fwd();
-			in.setPosition( out );
-			out.get().set( in.get() );
-		}
-
-		return copy;
 	}
 
 	public static < T extends NumericType< T > > RandomAccessibleInterval< T > adjustOrigin( RandomAccessibleInterval< T > rai, RandomAccessibleInterval< T > copy )
@@ -84,9 +80,10 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 	}
 
 	public static < T extends NumericType< T > >
-	RandomAccessible createTransformedRaView( RandomAccessibleInterval< T > rai, InvertibleRealTransform combinedTransform )
+	RandomAccessible createTransformedRaView( RandomAccessibleInterval< T > rai, InvertibleRealTransform combinedTransform, InterpolatorFactory interpolatorFactory )
 	{
-		RealRandomAccessible rra = Views.interpolate( Views.extendZero( rai ), new NLinearInterpolatorFactory() );
+		RealRandomAccessible rra = Views.interpolate( Views.extendZero( rai ), interpolatorFactory );
+
 		rra = RealViews.transform( rra, combinedTransform );
 		return Views.raster( rra );
 	}
@@ -164,7 +161,7 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 	}
 
 
-	public static double[] getDownScalingFactors( double[] calibration, double targetResolution )
+	public static double[] getScalingFactors( double[] calibration, double targetResolution )
 	{
 
 		double[] downScaling = new double[ calibration.length ];
@@ -176,6 +173,20 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 
 		return downScaling;
 	}
+
+	public static AffineTransform3D getScalingTransform( double[] calibration, double targetResolution )
+	{
+
+		AffineTransform3D scaling = new AffineTransform3D();
+
+		for ( int d : XYZ )
+		{
+			scaling.set( calibration[ d ] / targetResolution, d, d );
+		}
+
+		return scaling;
+	}
+
 
 
 	public static AffineTransform3D createScalingTransform( double[] calibration )

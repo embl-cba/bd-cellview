@@ -58,7 +58,7 @@ public class BdvImageViewer
 
 		bdvSource.setDisplayRange( 0, Algorithms.findMaximumValue( rai ) );
 
-		
+
 	}
 
 	private static void resetViewTransform( Bdv bdv )

@@ -1,30 +1,24 @@
 package de.embl.cba.drosophila.dapi;
 
 import de.embl.cba.drosophila.Algorithms;
+import de.embl.cba.drosophila.RefractiveIndexCorrections;
 import de.embl.cba.drosophila.Transforms;
 import de.embl.cba.drosophila.Utils;
-import de.embl.cba.drosophila.geometry.EllipsoidParameterComputer;
-import de.embl.cba.drosophila.geometry.Ellipsoid3dParameters;
-import io.scif.services.DatasetIOService;
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
+import de.embl.cba.drosophila.geometry.Ellipsoids;
+import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
-import net.imglib2.algorithm.neighborhood.HyperSphereShape;
-import net.imglib2.algorithm.neighborhood.Shape;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static de.embl.cba.drosophila.Constants.*;
-import static de.embl.cba.drosophila.Transforms.copyAsArrayImg;
+import static de.embl.cba.drosophila.Utils.copyAsArrayImg;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 import static java.lang.Math.*;
@@ -46,7 +40,7 @@ public class DapiRegistration
 
 		if ( settings.showIntermediateResults ) show( input, "dapi input data", null, calibration, false );
 
-		Utils.correctCalibrationForRefractiveIndexMismatch( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
+		RefractiveIndexCorrections.correctCalibration( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
 		if ( settings.showIntermediateResults ) show( input, "calibration corrected createTransformedView on raw input data", null, calibration, false );
 
@@ -63,15 +57,15 @@ public class DapiRegistration
 
 		if ( settings.showIntermediateResults ) show( binned, "binned copyAsArrayImg ( " + settings.resolutionDuringRegistrationInMicrometer + " um )", null, calibration, false );
 
-		Utils.correctIntensityAlongZ( binned, calibration[ Z ] );
+		RefractiveIndexCorrections.correctIntensity( binned, calibration[ Z ], 0.0D );
 
 		final RandomAccessibleInterval< BitType > binaryImage = Utils.createBinaryImage( binned, settings.threshold );
 
 		if ( settings.showIntermediateResults ) show( binaryImage, "binary", null, calibration, false );
 
-		final Ellipsoid3dParameters ellipsoid3dParameters = EllipsoidParameterComputer.compute( binaryImage );
+		final EllipsoidParameters ellipsoidParameters = Ellipsoids.computeParametersFromBinaryImage( binaryImage );
 
-		registration.preConcatenate( Utils.createEllipsoidAlignmentTransform( binned, ellipsoid3dParameters ) );
+		registration.preConcatenate( Ellipsoids.createAlignmentTransform( ellipsoidParameters ) );
 
 		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( binned, registration ), "ellipsoid aligned", null, calibration, false );
 
@@ -97,7 +91,7 @@ public class DapiRegistration
 				settings.resolutionDuringRegistrationInMicrometer );
 
 		final Point maximum = Algorithms.findMaximumLocation( blurred, new double[]{ calibration[ Y ], calibration[ Z ] });
-		final List< RealPoint > realPoints = asRealPointList( maximum );
+		final List< RealPoint > realPoints = Utils.asRealPointList( maximum );
 		realPoints.add( new RealPoint( new double[]{ 0, 0 } ) );
 
 		if ( settings.showIntermediateResults ) show( blurred, "perpendicular projection - blurred ", realPoints, new double[]{ calibration[ Y ], calibration[ Z ] }, false );
@@ -105,9 +99,6 @@ public class DapiRegistration
 		registration.preConcatenate( createRollTransform( Transforms.createTransformedView( binned, registration ), maximum ) );
 
 		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( binned, registration ), "registered binned dapi", null, calibration, false );
-
-		// Down-sampling: Saalfeld:
-		// fiji plugins examples down-sample (bean-shell).
 
 		final AffineTransform3D scalingToFinalResolution = Transforms.getTransformToIsotropicRegistrationResolution( settings.finalResolutionInMicrometer / settings.resolutionDuringRegistrationInMicrometer, new double[]{ 1, 1, 1 } );
 
@@ -129,14 +120,14 @@ public class DapiRegistration
 	public static < T extends RealType< T > & NativeType< T > >
 	AffineTransform3D createRollTransform( RandomAccessibleInterval< T > rai, Point maximum )
 	{
-		double angleToZAxisInDegrees = getAngleToZAxis( maximum );
+		double angleToZAxisInDegrees = angleToZAxis( maximum );
 		AffineTransform3D rollTransform = new AffineTransform3D();
 		rollTransform.rotate( X, toRadians( angleToZAxisInDegrees ) );
 
 		return rollTransform;
 	}
 
-	public static double getAngleToZAxis( Point maximum )
+	public static double angleToZAxis( Point maximum )
 	{
 		final double angleToYAxis;
 
@@ -151,60 +142,6 @@ public class DapiRegistration
 
 		return angleToYAxis;
 	}
-
-	public static List< RealPoint > asRealPointList( Point maximum )
-	{
-		List< RealPoint > realPoints = new ArrayList<>();
-		final double[] doubles = new double[ maximum.numDimensions() ];
-		maximum.localize( doubles );
-		realPoints.add( new RealPoint( doubles) );
-
-		return realPoints;
-	}
-
-
-	public static < T extends RealType< T > & NativeType< T > >
-	List< RealPoint > computeMaximumLocation( RandomAccessibleInterval< T > blurred, int sigmaForBlurringAverageProjection )
-	{
-		Shape shape = new HyperSphereShape( sigmaForBlurringAverageProjection );
-
-		List< RealPoint > points = Algorithms.findMaxima( blurred, shape );
-
-		return points;
-	}
-
-
-	public static < T extends RealType< T > & NativeType< T > >
-	void main( String... args ) throws IOException
-	{
-		//		String path = "/Users/tischer/Documents/fiji-plugin-imageRegistration/src/test/resources/crocker-7-2-scale0.25-rot_z_60.zip";
-		String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/processed_images/Image 7-2 rotated.tif";
-//		String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/processed_images/Image 6-3 Dapi iso1um.tif";
-//		String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/processed_images/Image 4-3 Dapi iso1um.tif";
-
-		ImageJ imagej = new ImageJ();
-		imagej.ui().showUI();
-
-		DatasetIOService datasetIOService = imagej.scifio().datasetIO();
-
-		Dataset dataset = datasetIOService.open( path );
-
-		double[] calibration = Utils.getCalibration( dataset );
-
-		final RandomAccessibleInterval< T > dapiRaw = (RandomAccessibleInterval< T > ) dataset.getImgPlus().copy();
-		
-		DapiRegistrationSettings settings = new DapiRegistrationSettings();
-
-		settings.showIntermediateResults = true;
-
-		DapiRegistration registration = new DapiRegistration( settings );
-
-		final AffineTransform3D registrationTransform = registration.computeRegistration( dapiRaw, calibration );
-
-		show( Transforms.createTransformedView( dapiRaw, registrationTransform ), "registered input ( " + settings.finalResolutionInMicrometer + " um )", asRealPointList( new Point( 0,0,0 ) ), new double[]{ 1, 1, 1 }, false );
-
-	}
-
 
 
 }

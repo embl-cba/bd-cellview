@@ -10,10 +10,9 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 
-import static de.embl.cba.drosophila.dapi.DapiRegistration.asRealPointList;
+import static de.embl.cba.drosophila.Utils.asRealPointList;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 
 public class DapiRegistrationTest

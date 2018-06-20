@@ -4,16 +4,22 @@ import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 
 import static de.embl.cba.drosophila.Constants.*;
+import static de.embl.cba.drosophila.geometry.EllipsoidParameters.PHI;
+import static de.embl.cba.drosophila.geometry.EllipsoidParameters.PSI;
+import static de.embl.cba.drosophila.geometry.EllipsoidParameters.THETA;
 import static java.lang.Math.*;
 
-public class EllipsoidParameterComputer
+public class Ellipsoids
 {
 
-	public static Ellipsoid3dParameters compute( RandomAccessibleInterval< BitType > binaryImg )
+	public static EllipsoidParameters computeParametersFromBinaryImage( RandomAccessibleInterval< BitType > binaryImg )
 	{
 
 		double[] sums = new double[ 3 ];
@@ -27,17 +33,17 @@ public class EllipsoidParameterComputer
 
 		final Matrix momentsMatrix = getMomentsMatrix( moments );
 
-		Ellipsoid3dParameters ellipsoid3dParameters = new Ellipsoid3dParameters();
+		EllipsoidParameters ellipsoidParameters = new EllipsoidParameters();
 
-		ellipsoid3dParameters.center = center;
+		ellipsoidParameters.center = center;
 
 		SingularValueDecomposition svd = new SingularValueDecomposition( momentsMatrix );
 
-		ellipsoid3dParameters.radii = computeRadii( svd.getS() );
+		ellipsoidParameters.radii = computeRadii( svd.getS() );
 
-		ellipsoid3dParameters.anglesInDegrees = computeAngles( svd.getU() );
+		ellipsoidParameters.anglesInDegrees = computeAngles( svd.getU() );
 
-		return ellipsoid3dParameters;
+		return ellipsoidParameters;
 
 	}
 
@@ -171,16 +177,31 @@ public class EllipsoidParameterComputer
 			phi     = 0;
 		}
 
-		angles[ Ellipsoid3dParameters.PHI ] = toDegrees( phi );
-		angles[ Ellipsoid3dParameters.THETA ] = toDegrees( theta );
-		angles[ Ellipsoid3dParameters.PSI ] = toDegrees( psi );
+		angles[ EllipsoidParameters.PHI ] = toDegrees( phi );
+		angles[ EllipsoidParameters.THETA ] = toDegrees( theta );
+		angles[ EllipsoidParameters.PSI ] = toDegrees( psi );
 
 		return angles;
 	}
 
 
+	public static < T extends RealType< T > & NativeType< T > >
+	AffineTransform3D createAlignmentTransform( EllipsoidParameters ellipsoidParameters )
+	{
+
+		AffineTransform3D translation = new AffineTransform3D();
+		translation.translate( ellipsoidParameters.center  );
+		translation = translation.inverse();
+
+		AffineTransform3D rotation = new AffineTransform3D();
+		rotation.rotate( Z, - toRadians( ellipsoidParameters.anglesInDegrees[ PHI ] ) );
+		rotation.rotate( Y, - toRadians( ellipsoidParameters.anglesInDegrees[ THETA ] ) );
+		rotation.rotate( X, - toRadians( ellipsoidParameters.anglesInDegrees[ PSI ] ) );
+
+		AffineTransform3D combinedTransform = translation.preConcatenate( rotation );
 
 
+		return combinedTransform;
 
-
+	}
 }
