@@ -127,6 +127,8 @@ public class DapiRegistration
 		return rollTransform;
 	}
 
+
+
 	public static double angleToZAxis( Point maximum )
 	{
 		final double angleToYAxis;

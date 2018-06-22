@@ -1,5 +1,8 @@
 package de.embl.cba.drosophila;
 
+import bdv.util.BdvFunctions;
+import bdv.util.BdvOptions;
+import de.embl.cba.drosophila.geometry.CentroidsParameters;
 import ij.ImagePlus;
 import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
@@ -14,6 +17,7 @@ import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.LongArray;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.BooleanType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.NumericType;
@@ -26,11 +30,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static de.embl.cba.drosophila.Constants.*;
+import static de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistration.origin;
+import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 import static java.lang.Math.*;
 
 public class Utils
 {
-	public static < T extends RealType< T > & NativeType< T > > void computeAverageIntensitiesAlongAnAxis(
+	public static < T extends RealType< T > & NativeType< T > > void computeAverageIntensitiesAlongAxis(
 			RandomAccessibleInterval< T > rai, int axis, double[] averages, double[] coordinates )
 	{
 		for ( long coordinate = rai.min( axis ), i = 0; coordinate <= rai.max( axis ); ++coordinate, ++i )
@@ -39,6 +45,125 @@ public class Utils
 			averages[ (int) i ] = computeAverage( slice );
 			coordinates[ (int) i ] = coordinate;
 		}
+	}
+
+
+	public static CentroidsParameters computeCentroidsParametersAlongX(
+			RandomAccessibleInterval< BooleanType > rai,
+			double calibration )
+	{
+
+		CentroidsParameters centroidsParameters = new CentroidsParameters();
+
+		final double[] unitVectorInNegativeZDirection = new double[]{ 0, -1 };
+
+		for ( long coordinate = rai.min( X ); coordinate <= rai.max( X ); ++coordinate )
+		{
+
+			final double[] centroid = computeCentroidPerpendicularToAxis( rai, X, coordinate );
+
+			if ( centroid != null )
+			{
+				double centroidNorm = vectorNorm( centroid );
+
+				final double angle = 180 / Math.PI * acos( dotProduct( centroid, unitVectorInNegativeZDirection ) / centroidNorm );
+
+				centroidsParameters.distances.add( centroidNorm * calibration );
+				centroidsParameters.angles.add( angle );
+				centroidsParameters.axisCoordinates.add( (double) coordinate );
+				centroidsParameters.centroids.add( new RealPoint( coordinate * calibration , centroid[ 0 ] * calibration , centroid[ 1 ] * calibration  ) );
+			}
+
+		}
+
+		return centroidsParameters;
+
+	}
+
+	public static double vectorNorm( double[] vector )
+	{
+		double centroidNorm = 0;
+
+		for ( int d = 0; d < vector.length; ++d )
+		{
+			centroidNorm += vector[ d ] * vector[ d ];
+		}
+
+		centroidNorm = Math.sqrt( centroidNorm );
+
+		return centroidNorm;
+	}
+
+	public static double dotProduct( double[] vector01, double[] vector02  )
+	{
+		double dotProduct = 0;
+
+		for ( int d = 0; d < vector01.length; ++d )
+		{
+			dotProduct += vector01[ d ] * vector02[ d ];
+		}
+
+		return dotProduct;
+	}
+
+	private static double[] computeCentroidPerpendicularToAxis( RandomAccessibleInterval< BooleanType > rai, int axis, long coordinate )
+	{
+
+
+		final IntervalView< BooleanType > slice = Views.hyperSlice( rai, axis, coordinate );
+
+		int numHyperSliceDimensions = rai.numDimensions() - 1;
+
+		final double[] centroid = new double[ numHyperSliceDimensions ];
+
+		int numPoints = 0;
+
+		final Cursor< BooleanType > cursor = slice.cursor();
+
+		boolean show = true;
+
+		while( cursor.hasNext() )
+		{
+			if( cursor.next().get() )
+			{
+					if ( coordinate == -20 )
+					{
+						if ( show )
+						{
+							show( slice, "hyperslice -20", origin(), new double[]{1,1,1}, false );
+							show = false;
+						}
+
+						System.out.println( " y : " + cursor.getLongPosition( 0 ) + " ; " +
+								" z : " + cursor.getLongPosition( 1 )
+						);
+					}
+
+
+
+				for ( int d = 0; d < numHyperSliceDimensions; ++d )
+				{
+					centroid[ d ] += cursor.getLongPosition( d );
+					numPoints++;
+				}
+			}
+
+		}
+
+		if ( numPoints > 0 )
+		{
+			for ( int d = 0; d < numHyperSliceDimensions; ++d )
+			{
+				centroid[ d ] /= 1.0D * numPoints;
+			}
+			return centroid;
+		}
+		else
+		{
+			return null;
+		}
+
+
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
@@ -108,7 +233,7 @@ public class Utils
 		double[ ] averages = new double[ (int) rai.dimension( longAxisDimension ) ];
 		double[ ] coordinates = new double[ (int) rai.dimension( longAxisDimension ) ];
 
-		computeAverageIntensitiesAlongAnAxis( rai, longAxisDimension, averages, coordinates );
+		computeAverageIntensitiesAlongAxis( rai, longAxisDimension, averages, coordinates );
 
 		double[] absoluteDerivatives = computeAbsoluteDerivatives( averages, (int) (derivativeDelta / scaling ));
 

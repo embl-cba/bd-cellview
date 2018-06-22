@@ -1,14 +1,14 @@
 package de.embl.cba.drosophila.shavenbaby;
 
-import de.embl.cba.drosophila.Algorithms;
-import de.embl.cba.drosophila.RefractiveIndexCorrections;
-import de.embl.cba.drosophila.Transforms;
-import de.embl.cba.drosophila.Utils;
+import de.embl.cba.drosophila.*;
+import de.embl.cba.drosophila.geometry.CentroidsParameters;
 import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ImageJ;
 import net.imglib2.Cursor;
+import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealPoint;
 import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
@@ -26,12 +26,15 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.util.Intervals;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
+import static de.embl.cba.drosophila.Constants.X;
 import static de.embl.cba.drosophila.Constants.XYZ;
 import static de.embl.cba.drosophila.Constants.Z;
 import static de.embl.cba.drosophila.Transforms.getScalingFactors;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
+import static java.lang.Math.toRadians;
 
 
 public class ShavenBabyRegistration
@@ -115,26 +118,103 @@ public class ShavenBabyRegistration
 		if ( settings.showIntermediateResults ) show( centralObjectMask, "central object", null, registrationCalibration, false );
 
 		/**
-		 * Compute ellipsoid alignment
+		 * Compute ellipsoid (probably mainly yaw) alignment
 		 */
 
 		final EllipsoidParameters ellipsoidParameters = Ellipsoids.computeParametersFromBinaryImage( centralObjectMask );
 
 		registration.preConcatenate( Ellipsoids.createAlignmentTransform( ellipsoidParameters ) );
 
-		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( downscaled, registration ), "ellipsoid aligned", null, registrationCalibration, false );
+		final RandomAccessibleInterval yawAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
-		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "ellipsoid aligned", null, registrationCalibration, false );
+		/**
+		 * Compute roll alignment
+		 */
 
-		registration = createInputToOutputResolutionTransform( inputCalibration, registration, registrationCalibration );
+		final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongX( yawAlignedMask, settings.registrationResolution );
 
-		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( intensityCorrected, registration ), "ellipsoid aligned", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults )  Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
+		if ( settings.showIntermediateResults )  Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
+
+		if ( settings.showIntermediateResults ) show( yawAlignedMask, "yaw aligned mask", centroidsParameters.centroids, registrationCalibration, false );
+
+		final AffineTransform3D rollTransform = computeRollTransform( centroidsParameters, settings );
+
+		ArrayList< RealPoint > transformedCentroids = createTransformedCentroidPointList( centroidsParameters, rollTransform );
+
+		registration.preConcatenate( rollTransform );
+
+		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "fully aligned mask", transformedCentroids, registrationCalibration, false );
+
+		/**
+		 * Compute final registration transform
+		 */
+
+//		registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
+
+//		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( intensityCorrected, registration ), "fully aligned", origin(), registrationCalibration, false );
+
+
 
 		return registration;
 
 	}
 
-	private AffineTransform3D createInputToOutputResolutionTransform( double[] inputCalibration, AffineTransform3D registration, double[] registrationCalibration )
+	public ArrayList< RealPoint > createTransformedCentroidPointList( CentroidsParameters centroidsParameters, AffineTransform3D rollTransform )
+	{
+		final ArrayList< RealPoint > transformedRealPoints = new ArrayList<>();
+
+		for ( RealPoint realPoint : centroidsParameters.centroids )
+		{
+			final RealPoint transformedRealPoint = new RealPoint( 0, 0, 0 );
+			rollTransform.apply( realPoint, transformedRealPoint );
+			transformedRealPoints.add( transformedRealPoint );
+		}
+		return transformedRealPoints;
+	}
+
+	public static AffineTransform3D computeRollTransform( CentroidsParameters centroidsParameters, ShavenBabyRegistrationSettings settings )
+	{
+		final double rollAngle = computeRollAngle( centroidsParameters, settings.minDistanceToAxis );
+
+		AffineTransform3D rollTransform = new AffineTransform3D();
+
+		rollTransform.rotate( X, - toRadians( rollAngle ) );
+
+		return rollTransform;
+	}
+
+	public static double computeRollAngle( CentroidsParameters centroidsParameters, double minDistanceToAxis )
+	{
+		final int n = centroidsParameters.axisCoordinates.size();
+
+		double averageAngle = 0;
+		int numAngles = 0;
+
+		for ( int i = 0; i < n; ++i )
+		{
+			if ( centroidsParameters.distances.get( i ) > minDistanceToAxis )
+			{
+				averageAngle += centroidsParameters.angles.get( i );
+				++numAngles;
+			}
+		}
+
+		averageAngle /= numAngles;
+
+		averageAngle = - averageAngle;
+
+		return averageAngle;
+	}
+
+	public static ArrayList< RealPoint > origin()
+	{
+		final ArrayList< RealPoint > origin = new ArrayList<>();
+		origin.add( new RealPoint( new double[]{ 0, 0, 0 } ) );
+		return origin;
+	}
+
+	private AffineTransform3D createFinalTransform( double[] inputCalibration, AffineTransform3D registration, double[] registrationCalibration )
 	{
 		final AffineTransform3D transform =
 				Transforms.getScalingTransform( inputCalibration, settings.registrationResolution )

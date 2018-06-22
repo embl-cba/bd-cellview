@@ -51,7 +51,7 @@ public class BdvPointListOverlay extends BdvOverlay
 
 	private int getSize( final double depth )
 	{
-		return ( int ) Math.max( 1, 10 - 0.1 * Math.round( Math.abs( depth ) ) );
+		return ( int ) Math.max( 5, 20 - 0.1 * Math.round( Math.abs( depth ) ) );
 	}
 
 }
