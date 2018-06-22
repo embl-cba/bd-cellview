@@ -12,7 +12,7 @@ public abstract class RefractiveIndexCorrections
 {
 
 
-	public static double getIntensityCorrectionFactorAlongZ( long z, double zScalingInMicrometer )
+	public static double getIntensityCorrectionFactorAlongZ( long z, double zScalingToMicrometer, double intensityDecayLengthInMicrometer )
 	{
 
 		/*
@@ -38,9 +38,7 @@ public abstract class RefractiveIndexCorrections
 
 		double offsetInMicrometer = 10.0D; // TODO: might differ between samples?
 
-		double intensityDecayLengthInMicrometer = 100.0D;
-
-		double zInMicrometer = z * zScalingInMicrometer - offsetInMicrometer;
+		double zInMicrometer = z * zScalingToMicrometer - offsetInMicrometer;
 
 		double correctionFactor = generalIntensityScaling / exp( - zInMicrometer / intensityDecayLengthInMicrometer );
 
@@ -48,13 +46,13 @@ public abstract class RefractiveIndexCorrections
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
-	void correctIntensity( RandomAccessibleInterval< T > rai, double zScaling, double intensityOffset )
+	void correctIntensity( RandomAccessibleInterval< T > rai, double zCalibration, double intensityOffset, double intensityDecayLength )
 	{
 		for ( long z = rai.min( Z ); z <= rai.max( Z ); ++z )
 		{
 			RandomAccessibleInterval< T > slice = Views.hyperSlice( rai, Z, z );
 
-			double intensityCorrectionFactor = getIntensityCorrectionFactorAlongZ( z, zScaling );
+			double intensityCorrectionFactor = getIntensityCorrectionFactorAlongZ( z, zCalibration, intensityDecayLength );
 
 			Views.iterable( slice ).forEach( t ->
 					{

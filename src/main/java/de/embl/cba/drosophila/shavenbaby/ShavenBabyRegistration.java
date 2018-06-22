@@ -6,7 +6,6 @@ import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ImageJ;
 import net.imglib2.Cursor;
-import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.converter.Converters;
@@ -59,11 +58,11 @@ public class ShavenBabyRegistration
 		 *  Refractive index corrections
 		 */
 
-		RefractiveIndexCorrections.correctCalibration( inputCalibration, settings.refractiveIndexCorrectionAxialScalingFactor );
+		RefractiveIndexCorrections.correctCalibration( inputCalibration, settings.refractiveIndexSaclingCorrectionFactor );
 
 		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
 
-		RefractiveIndexCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset );
+		RefractiveIndexCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset, settings.refractiveIndexIntensityCorrectionDecayLength );
 
 		if ( settings.showIntermediateResults ) show( intensityCorrected, "input data", null, inputCalibration, false );
 
@@ -144,15 +143,15 @@ public class ShavenBabyRegistration
 
 		registration.preConcatenate( rollTransform );
 
-		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "fully aligned mask", transformedCentroids, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "yaw and roll aligned mask", transformedCentroids, registrationCalibration, false );
 
 		/**
 		 * Compute final registration transform
 		 */
 
-//		registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
+		registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
 
-//		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( intensityCorrected, registration ), "fully aligned", origin(), registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( intensityCorrected, registration ), "aligned input data ( " + settings.outputResolution + " um )", origin(), registrationCalibration, false );
 
 
 
