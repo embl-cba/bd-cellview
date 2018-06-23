@@ -63,7 +63,7 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
 
-		RefractiveIndexMismatchCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset, settings.refractiveI/;ndexIntensityCorrectionDecayLength );
+		RefractiveIndexMismatchCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset, settings.refractiveIndexIntensityCorrectionDecayLength );
 
 		if ( settings.showIntermediateResults ) show( intensityCorrected, "input data", null, inputCalibration, false );
 
