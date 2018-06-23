@@ -2,6 +2,7 @@ package de.embl.cba.drosophila.shavenbaby;
 
 import de.embl.cba.drosophila.*;
 import de.embl.cba.drosophila.geometry.CentroidsParameters;
+import de.embl.cba.drosophila.geometry.CoordinatesAndValues;
 import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ImageJ;
@@ -58,11 +59,11 @@ public class ShavenBabyRegistration
 		 *  Refractive index corrections
 		 */
 
-		RefractiveIndexCorrections.correctCalibration( inputCalibration, settings.refractiveIndexSaclingCorrectionFactor );
+		RefractiveIndexMismatchCorrections.correctCalibration( inputCalibration, settings.refractiveIndexSaclingCorrectionFactor );
 
 		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
 
-		RefractiveIndexCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset, settings.refractiveIndexIntensityCorrectionDecayLength );
+		RefractiveIndexMismatchCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset, settings.refractiveI/;ndexIntensityCorrectionDecayLength );
 
 		if ( settings.showIntermediateResults ) show( intensityCorrected, "input data", null, inputCalibration, false );
 
@@ -107,7 +108,7 @@ public class ShavenBabyRegistration
 		if ( settings.showIntermediateResults ) show( labelImg, "watershed", null, registrationCalibration, false );
 
 		/**
-		 * Get Central Embryo
+		 * Get central embryo
 		 */
 
 		final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( labeling );
@@ -126,16 +127,29 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval yawAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
+		final RandomAccessibleInterval yawAlignedIntensities = Utils.copyAsArrayImg( Transforms.createTransformedView( downscaled, registration ) );
+
+
 		/**
-		 * Compute roll alignment
+		 *  Long axis orientation
 		 */
 
-		final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongX( yawAlignedMask, settings.registrationResolution );
+		final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities );
 
-		if ( settings.showIntermediateResults )  Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
-		if ( settings.showIntermediateResults )  Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
+		registration.preConcatenate( orientationTransform );
 
-		if ( settings.showIntermediateResults ) show( yawAlignedMask, "yaw aligned mask", centroidsParameters.centroids, registrationCalibration, false );
+
+		/**
+		 *  Roll transform
+		 */
+
+		final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
+
+		final CentroidsParameters centroidsParameters = Utils.computeCentroidsAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution );
+
+		if ( settings.showIntermediateResults ) Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
+		if ( settings.showIntermediateResults ) Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
+		if ( settings.showIntermediateResults ) show( yawAndOrientationAlignedMask, "yaw and orientation aligned mask", centroidsParameters.centroids, registrationCalibration, false );
 
 		final AffineTransform3D rollTransform = computeRollTransform( centroidsParameters, settings );
 
@@ -153,10 +167,23 @@ public class ShavenBabyRegistration
 
 		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( intensityCorrected, registration ), "aligned input data ( " + settings.outputResolution + " um )", origin(), registrationCalibration, false );
 
-
-
 		return registration;
 
+	}
+
+	public AffineTransform3D computeOrientationTransform( RandomAccessibleInterval yawAlignedMask, RandomAccessibleInterval yawAlignedIntensities )
+	{
+		final CoordinatesAndValues coordinatesAndValues = Utils.computeAverageIntensitiesAlongAxis( yawAlignedIntensities, yawAlignedMask, X );
+
+		if ( settings.showIntermediateResults )  Plots.plot( coordinatesAndValues.coordinates, coordinatesAndValues.values, "x", "average intensity" );
+
+		double maxLoc = Utils.computeMaxLoc( coordinatesAndValues.coordinates, coordinatesAndValues.values );
+
+		AffineTransform3D affineTransform3D = new AffineTransform3D();
+
+		if ( maxLoc < 0 ) affineTransform3D.rotate( Z, toRadians( 180.0D ) );
+
+		return new AffineTransform3D();
 	}
 
 	public ArrayList< RealPoint > createTransformedCentroidPointList( CentroidsParameters centroidsParameters, AffineTransform3D rollTransform )

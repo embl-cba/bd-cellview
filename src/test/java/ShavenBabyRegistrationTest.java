@@ -19,7 +19,7 @@ public class ShavenBabyRegistrationTest
 		ImageJ ij = new ImageJ();
 		ij.ui().showUI();
 
-		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby.zip" ).getFile();
+		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby01.zip" ).getFile();
 
 		final ImagePlus imp = IJ.openImage( path );
 		double[] calibration = Utils.getCalibration( imp );

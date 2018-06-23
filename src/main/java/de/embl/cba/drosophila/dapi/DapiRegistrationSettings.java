@@ -11,5 +11,6 @@ public class DapiRegistrationSettings
 	public double projectionRangeMinDistanceToCenterInMicrometer = +20.0;
 	public double projectionRangeMaxDistanceToCenterInMicrometer = +80.0;
 	public double sigmaForBlurringAverageProjectionInMicrometer = 20.0;
+	public double refractiveIndexIntensityCorrectionDecayLength = 100;
 
 }

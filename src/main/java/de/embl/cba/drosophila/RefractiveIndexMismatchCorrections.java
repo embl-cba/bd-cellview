@@ -8,7 +8,7 @@ import net.imglib2.view.Views;
 import static de.embl.cba.drosophila.Constants.Z;
 import static java.lang.Math.exp;
 
-public abstract class RefractiveIndexCorrections
+public abstract class RefractiveIndexMismatchCorrections
 {
 
 
@@ -46,7 +46,7 @@ public abstract class RefractiveIndexCorrections
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
-	void correctIntensity( RandomAccessibleInterval< T > rai, double zCalibration, double intensityOffset, double intensityDecayLength )
+	void correctIntensity( RandomAccessibleInterval< T > rai, double zCalibration, double backgroundIntensity, double intensityDecayLength )
 	{
 		for ( long z = rai.min( Z ); z <= rai.max( Z ); ++z )
 		{
@@ -56,13 +56,13 @@ public abstract class RefractiveIndexCorrections
 
 			Views.iterable( slice ).forEach( t ->
 					{
-						if ( ( t.getRealDouble() - intensityOffset ) < 0 )
+						if ( ( t.getRealDouble() - backgroundIntensity ) < 0 )
 						{
 							t.setReal( 0 );
 						}
 						else
 						{
-							t.setReal( t.getRealDouble() - intensityOffset );
+							t.setReal( t.getRealDouble() - backgroundIntensity );
 							t.mul( intensityCorrectionFactor );
 						}
 

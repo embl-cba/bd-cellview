@@ -1,7 +1,7 @@
 package de.embl.cba.drosophila.dapi;
 
 import de.embl.cba.drosophila.Algorithms;
-import de.embl.cba.drosophila.RefractiveIndexCorrections;
+import de.embl.cba.drosophila.RefractiveIndexMismatchCorrections;
 import de.embl.cba.drosophila.Transforms;
 import de.embl.cba.drosophila.Utils;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
@@ -40,7 +40,7 @@ public class DapiRegistration
 
 		if ( settings.showIntermediateResults ) show( input, "dapi input data", null, calibration, false );
 
-		RefractiveIndexCorrections.correctCalibration( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
+		RefractiveIndexMismatchCorrections.correctCalibration( calibration, settings.refractiveIndexCorrectionAxialScalingFactor );
 
 		if ( settings.showIntermediateResults ) show( input, "calibration corrected createTransformedView on raw input data", null, calibration, false );
 
@@ -57,7 +57,7 @@ public class DapiRegistration
 
 		if ( settings.showIntermediateResults ) show( binned, "binned copyAsArrayImg ( " + settings.resolutionDuringRegistrationInMicrometer + " um )", null, calibration, false );
 
-		RefractiveIndexCorrections.correctIntensity( binned, calibration[ Z ], 0.0D );
+		RefractiveIndexMismatchCorrections.correctIntensity( binned, calibration[ Z ], 0.0D, settings.refractiveIndexIntensityCorrectionDecayLength );
 
 		final RandomAccessibleInterval< BitType > binaryImage = Utils.createBinaryImage( binned, settings.threshold );
 

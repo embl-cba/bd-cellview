@@ -1,8 +1,7 @@
 package de.embl.cba.drosophila;
 
-import bdv.util.BdvFunctions;
-import bdv.util.BdvOptions;
 import de.embl.cba.drosophila.geometry.CentroidsParameters;
+import de.embl.cba.drosophila.geometry.CoordinatesAndValues;
 import ij.ImagePlus;
 import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
@@ -36,19 +35,42 @@ import static java.lang.Math.*;
 
 public class Utils
 {
-	public static < T extends RealType< T > & NativeType< T > > void computeAverageIntensitiesAlongAxis(
-			RandomAccessibleInterval< T > rai, int axis, double[] averages, double[] coordinates )
+	public static < T extends RealType< T > & NativeType< T > >
+	CoordinatesAndValues computeAverageIntensitiesAlongAxis(
+			RandomAccessibleInterval< T > rai, int axis )
 	{
-		for ( long coordinate = rai.min( axis ), i = 0; coordinate <= rai.max( axis ); ++coordinate, ++i )
+		final CoordinatesAndValues coordinatesAndValues = new CoordinatesAndValues();
+
+		for ( long coordinate = rai.min( axis ); coordinate <= rai.max( axis ); ++coordinate )
 		{
-			final IntervalView< T > slice = Views.hyperSlice( rai, axis, coordinate );
-			averages[ (int) i ] = computeAverage( slice );
-			coordinates[ (int) i ] = coordinate;
+			final IntervalView< T > intensitySlice = Views.hyperSlice( rai, axis, coordinate );
+			coordinatesAndValues.coordinates.add( (double) coordinate );
+			coordinatesAndValues.values.add( computeAverage( intensitySlice ) );
 		}
+
+		return coordinatesAndValues;
+	}
+
+	public static < T extends RealType< T > & NativeType< T > >
+	CoordinatesAndValues computeAverageIntensitiesAlongAxis(
+			RandomAccessibleInterval< T > rai, RandomAccessibleInterval< BooleanType > mask, int axis )
+	{
+		final CoordinatesAndValues coordinatesAndValues = new CoordinatesAndValues();
+
+		for ( long coordinate = rai.min( axis ); coordinate <= rai.max( axis ); ++coordinate )
+		{
+			final IntervalView< T > intensitySlice = Views.hyperSlice( rai, axis, coordinate );
+			final IntervalView< BooleanType > maskSlice = Views.hyperSlice( mask, axis, coordinate );
+
+			coordinatesAndValues.coordinates.add( (double) coordinate );
+			coordinatesAndValues.values.add( computeAverage( intensitySlice, maskSlice ) );
+		}
+
+		return coordinatesAndValues;
 	}
 
 
-	public static CentroidsParameters computeCentroidsParametersAlongX(
+	public static CentroidsParameters computeCentroidsAlongXAxis(
 			RandomAccessibleInterval< BooleanType > rai,
 			double calibration )
 	{
@@ -108,8 +130,6 @@ public class Utils
 
 	private static double[] computeCentroidPerpendicularToAxis( RandomAccessibleInterval< BooleanType > rai, int axis, long coordinate )
 	{
-
-
 		final IntervalView< BooleanType > slice = Views.hyperSlice( rai, axis, coordinate );
 
 		int numHyperSliceDimensions = rai.numDimensions() - 1;
@@ -120,34 +140,16 @@ public class Utils
 
 		final Cursor< BooleanType > cursor = slice.cursor();
 
-		boolean show = true;
-
 		while( cursor.hasNext() )
 		{
 			if( cursor.next().get() )
 			{
-					if ( coordinate == -20 )
-					{
-						if ( show )
-						{
-							show( slice, "hyperslice -20", origin(), new double[]{1,1,1}, false );
-							show = false;
-						}
-
-						System.out.println( " y : " + cursor.getLongPosition( 0 ) + " ; " +
-								" z : " + cursor.getLongPosition( 1 )
-						);
-					}
-
-
-
 				for ( int d = 0; d < numHyperSliceDimensions; ++d )
 				{
 					centroid[ d ] += cursor.getLongPosition( d );
 					numPoints++;
 				}
 			}
-
 		}
 
 		if ( numPoints > 0 )
@@ -162,8 +164,6 @@ public class Utils
 		{
 			return null;
 		}
-
-
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
@@ -230,21 +230,19 @@ public class Utils
 			RandomAccessibleInterval< T > rai, int longAxisDimension, double derivativeDelta, double scaling,
 			boolean showPlots )
 	{
-		double[ ] averages = new double[ (int) rai.dimension( longAxisDimension ) ];
-		double[ ] coordinates = new double[ (int) rai.dimension( longAxisDimension ) ];
 
-		computeAverageIntensitiesAlongAxis( rai, longAxisDimension, averages, coordinates );
+		final CoordinatesAndValues coordinatesAndValues = computeAverageIntensitiesAlongAxis( rai, longAxisDimension );
 
-		double[] absoluteDerivatives = computeAbsoluteDerivatives( averages, (int) (derivativeDelta / scaling ));
+		ArrayList< Double > absoluteDerivatives = computeAbsoluteDerivatives( coordinatesAndValues.values, (int) (derivativeDelta / scaling ));
 
-		double maxLoc = computeMaxLoc( coordinates, absoluteDerivatives );
+		double maxLoc = computeMaxLoc( coordinatesAndValues.coordinates, absoluteDerivatives );
 
 		System.out.println( "maxLoc = " + maxLoc );
 
 		if ( showPlots )
 		{
-			Plots.plot( coordinates, averages );
-			Plots.plot( coordinates, absoluteDerivatives );
+			Plots.plot( coordinatesAndValues.coordinates, coordinatesAndValues.values, "x", "intensity" );
+			Plots.plot( coordinatesAndValues.coordinates, absoluteDerivatives, "x", "abs( derivative )" );
 		}
 
 		if ( maxLoc > 0 )
@@ -261,29 +259,29 @@ public class Utils
 
 	}
 
-	public static double[] computeAbsoluteDerivatives( double[] values, int di )
+	public static ArrayList< Double > computeAbsoluteDerivatives( ArrayList< Double > values, int di )
 	{
-		double[ ] derivatives = new double[ values.length ];
+		final ArrayList< Double > derivatives = new ArrayList<>();
 
-		for ( int i = di / 2 + 1; i < values.length - di / 2 - 1; ++i )
+		for ( int i = di / 2 + 1; i < values.size() - di / 2 - 1; ++i )
 		{
-			derivatives[ i ] = abs( values[ i + di / 2 ] - values[ i - di / 2 ] );
+			derivatives.add( abs( values.get( i + di / 2 ) - values.get( i - di / 2 ) ) );
 		}
 
 		return derivatives;
 	}
 
-	public static double computeMaxLoc( double[] coordinates, double[] values )
+	public static double computeMaxLoc( ArrayList< Double > coordinates, ArrayList< Double > values )
 	{
 		double max = Double.MIN_VALUE;
-		double maxLoc = coordinates[ 0 ];
+		double maxLoc = coordinates.get( 0 );
 
-		for ( int i = 0; i < values.length; ++i )
+		for ( int i = 0; i < values.size(); ++i )
 		{
-			if ( values[ i ] > max )
+			if ( values.get( i ) > max )
 			{
-				max = values[ i ];
-				maxLoc = coordinates[ i ];
+				max = values.get( i );
+				maxLoc = coordinates.get( i );
 			}
 		}
 
@@ -337,6 +335,36 @@ public class Utils
 
 		return average;
 	}
+
+
+
+
+	public static < T extends RealType< T > & NativeType< T > >
+	double computeAverage( final RandomAccessibleInterval< T > rai, final RandomAccessibleInterval< BooleanType > mask )
+	{
+		final Cursor< BooleanType > cursor = Views.iterable( mask ).cursor();
+		final RandomAccess< T > randomAccess = rai.randomAccess();
+
+		randomAccess.setPosition( cursor );
+
+		double average = 0;
+		long n = 0;
+
+		while ( cursor.hasNext() )
+		{
+			if ( cursor.next().get() )
+			{
+				randomAccess.setPosition( cursor );
+				average += randomAccess.get().getRealDouble();
+				++n;
+			}
+		}
+
+		average /= n;
+
+		return average;
+	}
+
 
 	public static < T extends RealType< T > & NativeType< T > >
 	List< RealPoint > computeMaximumLocation( RandomAccessibleInterval< T > blurred, int sigmaForBlurringAverageProjection )
