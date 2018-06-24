@@ -63,7 +63,7 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
 
-		RefractiveIndexMismatchCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.intensityOffset, settings.refractiveIndexIntensityCorrectionDecayLength );
+		RefractiveIndexMismatchCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.backgroundIntensity, settings.refractiveIndexIntensityCorrectionDecayLength );
 
 		if ( settings.showIntermediateResults ) show( intensityCorrected, "input data", null, inputCalibration, false );
 
@@ -136,7 +136,7 @@ public class ShavenBabyRegistration
 
 		final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities );
 
-		registration.preConcatenate( orientationTransform );
+		registration = registration.preConcatenate( orientationTransform );
 
 
 		/**
@@ -145,7 +145,7 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
-		final CentroidsParameters centroidsParameters = Utils.computeCentroidsAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution );
+		final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution );
 
 		if ( settings.showIntermediateResults ) Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
 		if ( settings.showIntermediateResults ) Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
@@ -153,9 +153,9 @@ public class ShavenBabyRegistration
 
 		final AffineTransform3D rollTransform = computeRollTransform( centroidsParameters, settings );
 
-		ArrayList< RealPoint > transformedCentroids = createTransformedCentroidPointList( centroidsParameters, rollTransform );
+		registration = registration.preConcatenate( rollTransform );
 
-		registration.preConcatenate( rollTransform );
+		ArrayList< RealPoint > transformedCentroids = createTransformedCentroidPointList( centroidsParameters, rollTransform );
 
 		if ( settings.showIntermediateResults ) show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "yaw and roll aligned mask", transformedCentroids, registrationCalibration, false );
 
@@ -175,7 +175,7 @@ public class ShavenBabyRegistration
 	{
 		final CoordinatesAndValues coordinatesAndValues = Utils.computeAverageIntensitiesAlongAxis( yawAlignedIntensities, yawAlignedMask, X );
 
-		if ( settings.showIntermediateResults )  Plots.plot( coordinatesAndValues.coordinates, coordinatesAndValues.values, "x", "average intensity" );
+		if ( settings.showIntermediateResults ) Plots.plot( coordinatesAndValues.coordinates, coordinatesAndValues.values, "x", "average intensity" );
 
 		double maxLoc = Utils.computeMaxLoc( coordinatesAndValues.coordinates, coordinatesAndValues.values );
 
@@ -183,7 +183,7 @@ public class ShavenBabyRegistration
 
 		if ( maxLoc < 0 ) affineTransform3D.rotate( Z, toRadians( 180.0D ) );
 
-		return new AffineTransform3D();
+		return affineTransform3D;
 	}
 
 	public ArrayList< RealPoint > createTransformedCentroidPointList( CentroidsParameters centroidsParameters, AffineTransform3D rollTransform )
@@ -201,11 +201,13 @@ public class ShavenBabyRegistration
 
 	public static AffineTransform3D computeRollTransform( CentroidsParameters centroidsParameters, ShavenBabyRegistrationSettings settings )
 	{
-		final double rollAngle = computeRollAngle( centroidsParameters, settings.minDistanceToAxis );
+		final double rollAngle = computeRollAngle( centroidsParameters, settings.minDistanceToAxisForRollAngleComputation );
 
 		AffineTransform3D rollTransform = new AffineTransform3D();
 
 		rollTransform.rotate( X, - toRadians( rollAngle ) );
+
+		System.out.println( "Roll angle : " + rollAngle );
 
 		return rollTransform;
 	}
@@ -227,8 +229,6 @@ public class ShavenBabyRegistration
 		}
 
 		averageAngle /= numAngles;
-
-		averageAngle = - averageAngle;
 
 		return averageAngle;
 	}

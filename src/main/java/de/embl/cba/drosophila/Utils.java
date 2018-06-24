@@ -70,7 +70,7 @@ public class Utils
 	}
 
 
-	public static CentroidsParameters computeCentroidsAlongXAxis(
+	public static CentroidsParameters computeCentroidsParametersAlongXAxis(
 			RandomAccessibleInterval< BooleanType > rai,
 			double calibration )
 	{
@@ -88,7 +88,12 @@ public class Utils
 			{
 				double centroidNorm = vectorNorm( centroid );
 
-				final double angle = 180 / Math.PI * acos( dotProduct( centroid, unitVectorInNegativeZDirection ) / centroidNorm );
+				/**
+				 *  centroid[ 0 ] is the y-axis coordinate
+				 *  the sign of the y-axis coordinate determines the sign of the angle,
+				 *  i.e. the direction of rotation
+				 */
+				final double angle = Math.signum( centroid[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centroid, unitVectorInNegativeZDirection ) / centroidNorm );
 
 				centroidsParameters.distances.add( centroidNorm * calibration );
 				centroidsParameters.angles.add( angle );
