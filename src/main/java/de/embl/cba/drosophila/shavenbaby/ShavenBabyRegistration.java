@@ -7,25 +7,21 @@ import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ImageJ;
 import net.imglib2.Cursor;
-import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.algorithm.morphology.distance.DistanceTransform;
-import net.imglib2.algorithm.neighborhood.DiamondShape;
+import net.imglib2.algorithm.neighborhood.HyperSphereShape;
 import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.roi.BoundaryType;
 import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.roi.labeling.LabelRegion;
 import net.imglib2.roi.labeling.LabelRegions;
 import net.imglib2.roi.labeling.LabelingType;
-import net.imglib2.type.BooleanType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
-import net.imglib2.type.logic.BoolType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
@@ -38,6 +34,7 @@ import net.imglib2.view.Views;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Set;
 
 import static de.embl.cba.drosophila.Constants.X;
 import static de.embl.cba.drosophila.Constants.XYZ;
@@ -69,7 +66,7 @@ public class ShavenBabyRegistration
 		 *  Refractive index corrections
 		 */
 
-		RefractiveIndexMismatchCorrections.correctCalibration( inputCalibration, settings.refractiveIndexSaclingCorrectionFactor );
+		RefractiveIndexMismatchCorrections.correctCalibration( inputCalibration, settings.refractiveIndexScalingCorrectionFactor );
 
 		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
 
@@ -98,10 +95,10 @@ public class ShavenBabyRegistration
 		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
 
 		/**
-		 * Morphological closing to fill holes
+		 * Morphological closing
 		 */
 
-		Shape closingShape = new DiamondShape( 2 );
+		Shape closingShape = new HyperSphereShape( (int) ( settings.closingRadius / settings.registrationResolution ) );
 		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
 		Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape,1 );
 
@@ -111,6 +108,7 @@ public class ShavenBabyRegistration
 		/**
 		 * Distance transform
 		 *
+		 * TODO: why are the values in the distance transform so high? should not be more than 10 ( 8 * 10 = 80, which is the radius in um of the embryo )
 		 */
 
 		final RandomAccessibleInterval< DoubleType > doubleBinary = Converters.convert(
@@ -118,38 +116,55 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( doubleBinary ) );
 
-		DistanceTransform.transform( doubleBinary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
+		DistanceTransform.transform( doubleBinary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN, 1.0D );
 
 		if ( settings.showIntermediateResults ) show( distance, "distance transform", null, registrationCalibration, false );
 
+
+		/**
+		 * Seeds for watershed
+		 */
+
+		final RandomAccessibleInterval< BitType > seeds = Utils.createSeeds(
+				distance,
+				new HyperSphereShape( ( long ) ( settings.drosophilaRadius / settings.registrationResolution ) ),
+				3 * settings.drosophilaRadius / settings.registrationResolution );
+
+
+		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
+
+		final Set< Integer > labels = seedsLabelImg.getMapping().getLabels();
+
+		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
+
+
+
+		/**
+		 * Watershed
+		 */
+
+		// prepare result label image
+		final Img< IntType > watershedLabelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( mask ) );
+		final ImgLabeling< Integer, IntType > watershedLabeling = new ImgLabeling<>( watershedLabelImg );
+
+		ij.op().image().watershed(
+				watershedLabeling,
+				Utils.invertedView( distance ),
+				seedsLabelImg,
+				true,
+				false );
+
+
+		if ( settings.showIntermediateResults ) show( watershedLabelImg, "watershed", null, registrationCalibration, false );
 
 		if ( false )
 		{
 
 			/**
-			 * Watershed
-			 */
-
-			// prepare result label image
-			final Img< IntType > labelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( mask ) );
-			final ImgLabeling< Integer, IntType > labeling = new ImgLabeling<>( labelImg );
-
-			ij.op().image().watershed(
-					labeling,
-					mask,
-					false,
-					false,
-					settings.minimalWatershedDistance / settings.registrationResolution,
-					mask );
-
-
-			if ( settings.showIntermediateResults ) show( labelImg, "watershed", null, registrationCalibration, false );
-
-			/**
 			 * Get central embryo
 			 */
 
-			final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( labeling );
+			final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( watershedLabeling );
 
 			final Img< BitType > centralObjectMask = createBitTypeMaskFromLabelRegion( centralObjectRegion, Intervals.dimensionsAsLongArray( downscaled ) );
 

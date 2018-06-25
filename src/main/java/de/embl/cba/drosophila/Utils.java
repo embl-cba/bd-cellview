@@ -7,8 +7,12 @@ import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
 import net.imglib2.*;
 import net.imglib2.algorithm.gauss3.Gauss3;
+import net.imglib2.algorithm.labeling.ConnectedComponents;
 import net.imglib2.algorithm.neighborhood.HyperSphereShape;
+import net.imglib2.algorithm.neighborhood.Neighborhood;
 import net.imglib2.algorithm.neighborhood.Shape;
+import net.imglib2.converter.Converters;
+import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -16,12 +20,15 @@ import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.LongArray;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.roi.labeling.ImgLabeling;
+import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.type.BooleanType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
-import net.imglib2.type.logic.BoolType;
+import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -30,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static de.embl.cba.drosophila.Constants.*;
-import static de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistration.origin;
 import static de.embl.cba.drosophila.viewing.BdvImageViewer.show;
 import static java.lang.Math.*;
 
@@ -414,6 +420,97 @@ public class Utils
 		return copy;
 	}
 
+
+	public static < T extends RealType< T > & NativeType< T > >
+	RandomAccessibleInterval< BitType > createSeeds( RandomAccessibleInterval< T > rai, Shape shape, double threshold )
+	{
+
+		RandomAccessibleInterval< BitType > maxima = ArrayImgs.bits( Intervals.dimensionsAsLongArray( rai ) );
+		maxima = Transforms.adjustOrigin( rai, maxima );
+
+		RandomAccessible< Neighborhood< T > > neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendBorder( rai ) );
+		RandomAccessibleInterval< Neighborhood< T > > neighborhoodsInterval = Views.interval( neighborhoods, rai );
+
+		final Cursor< Neighborhood< T > > neighborhoodCursor = Views.iterable( neighborhoodsInterval ).cursor();
+		final RandomAccess< T > intensitiesRandomAccess = rai.randomAccess();
+		final RandomAccess< BitType > maximaRandomAccess = maxima.randomAccess();
+
+		while ( neighborhoodCursor.hasNext() )
+		{
+			final Neighborhood< T > neighborhood = neighborhoodCursor.next();
+
+			intensitiesRandomAccess.setPosition( neighborhood );
+			T centerValue = intensitiesRandomAccess.get();
+
+			if ( centerValue.getRealDouble() > threshold )
+			{
+				maximaRandomAccess.setPosition( neighborhood );
+				maximaRandomAccess.get().set( true );
+			}
+			else if ( isCenterLargestOrEqual( centerValue, neighborhood ) )
+			{
+				if ( centerValue.getRealDouble() > 0 )
+				{
+					// local maximum and larger than zero
+					maximaRandomAccess.setPosition( neighborhood );
+					maximaRandomAccess.get().set( true );
+				}
+			}
+
+		}
+
+		return maxima;
+	}
+
+
+	public static < T extends IntegerType >
+	ImgLabeling< Integer, IntType > createLabelImg( RandomAccessibleInterval< T > rai )
+	{
+		final Img< IntType > labelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( rai ) );
+		final ImgLabeling< Integer, IntType > labeling = new ImgLabeling<>( labelImg );
+
+		ConnectedComponents.labelAllConnectedComponents( Views.extendBorder( rai ), labelImg, ConnectedComponents.StructuringElement.EIGHT_CONNECTED );
+
+		return labeling;
+	}
+
+	private static < T extends RealType< T > & NativeType< T > >
+	boolean isCenterLargestOrEqual( T center, Neighborhood< T > neighborhood )
+	{
+		for( T neighbor : neighborhood )
+		{
+			if( neighbor.compareTo( center ) > 0 )
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static < T extends RealType< T > & NativeType< T > >
+	RandomAccessibleInterval< T > invertedView( RandomAccessibleInterval< T > input )
+	{
+		final double maximum = Algorithms.findMaximumValue( input );
+
+		final RandomAccessibleInterval< T > inverted = Converters.convert( input, ( i, o ) -> {
+			o.setReal( ( int ) ( maximum - i.getRealDouble() ) );
+		},  Views.iterable( input ).firstElement() );
+
+		return inverted;
+	}
+
+
+
+	public static RandomAccessibleInterval< IntType >  asIntImg( ImgLabeling< Integer, IntType > labeling )
+	{
+		final RandomAccessibleInterval< IntType > intImg =
+				Converters.convert( ( RandomAccessibleInterval< LabelingType< Integer > > ) labeling,
+						( i, o ) -> {
+							o.set( i.getIndex().getInteger() );
+						}, new IntType() );
+
+		return intImg;
+	}
 
 
 }

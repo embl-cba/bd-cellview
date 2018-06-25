@@ -71,12 +71,12 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 
 	}
 
-	public static < T extends NumericType< T > > RandomAccessibleInterval< T > adjustOrigin( RandomAccessibleInterval< T > rai, RandomAccessibleInterval< T > copy )
+	public static < S extends NumericType< S >, T extends NumericType< T > > RandomAccessibleInterval< T > adjustOrigin( RandomAccessibleInterval< S > source, RandomAccessibleInterval< T > target )
 	{
-		long[] offset = new long[ rai.numDimensions() ];
-		rai.min( offset );
-		copy = Views.translate( copy, offset );
-		return copy;
+		long[] offset = new long[ source.numDimensions() ];
+		source.min( offset );
+		target = Views.translate( target, offset );
+		return target;
 	}
 
 	public static < T extends NumericType< T > >
