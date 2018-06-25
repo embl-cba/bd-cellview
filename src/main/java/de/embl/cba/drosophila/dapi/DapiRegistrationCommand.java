@@ -105,8 +105,6 @@ public class DapiRegistrationCommand<T extends RealType<T> & NativeType< T > > e
 	// Constants
 	//
 
-	private int imagePlusChannelDimension = 2;
-
 
 	public void run()
 	{
@@ -133,7 +131,7 @@ public class DapiRegistrationCommand<T extends RealType<T> & NativeType< T > > e
 
 		RandomAccessibleInterval< T > allChannels = ImageJFunctions.wrap( imagePlus );
 
-		RandomAccessibleInterval< T > dapiChannel = Views.hyperSlice( allChannels, imagePlusChannelDimension, dapiChannelIndexOneBased - 1 );
+		RandomAccessibleInterval< T > dapiChannel = Views.hyperSlice( allChannels, Utils.imagePlusChannelDimension, dapiChannelIndexOneBased - 1 );
 
 		DapiRegistration dapiRegistration = new DapiRegistration( settings );
 
@@ -141,9 +139,9 @@ public class DapiRegistrationCommand<T extends RealType<T> & NativeType< T > > e
 
 		ArrayList< RandomAccessibleInterval< T > > transformedChannels = new ArrayList<>(  );
 
-		for ( int c = 0; c < allChannels.dimension( imagePlusChannelDimension ); ++c )
+		for ( int c = 0; c < allChannels.dimension( Utils.imagePlusChannelDimension ); ++c )
 		{
-			final RandomAccessibleInterval< T > channel = Views.hyperSlice( allChannels, imagePlusChannelDimension, c );
+			final RandomAccessibleInterval< T > channel = Views.hyperSlice( allChannels, Utils.imagePlusChannelDimension, c );
 			transformedChannels.add( Transforms.createTransformedView( channel, registrationTransform ) );
 		}
 

@@ -19,6 +19,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.BooleanType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
+import net.imglib2.type.logic.BoolType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
@@ -35,6 +36,8 @@ import static java.lang.Math.*;
 
 public class Utils
 {
+	public static int imagePlusChannelDimension = 2;
+
 	public static < T extends RealType< T > & NativeType< T > >
 	CoordinatesAndValues computeAverageIntensitiesAlongAxis(
 			RandomAccessibleInterval< T > rai, int axis )
@@ -394,6 +397,7 @@ public class Utils
 	public static < T extends NumericType< T > & NativeType< T > >
 	RandomAccessibleInterval< T > copyAsArrayImg( RandomAccessibleInterval< T > rai )
 	{
+
 		RandomAccessibleInterval< T > copy = new ArrayImgFactory( rai.randomAccess().get() ).create( rai );
 		copy = Transforms.adjustOrigin( rai, copy );
 
@@ -409,5 +413,7 @@ public class Utils
 
 		return copy;
 	}
+
+
 
 }

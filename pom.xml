@@ -111,6 +111,12 @@
 			<artifactId>imglib2</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>ome</groupId>
+			<artifactId>bio-formats_plugins</artifactId>
+		</dependency>
+
+
 		<!-- Jama (Java Matrix package) is used for computing inertia computeRegistration -->
 		<dependency>
 			<groupId>gov.nist.math</groupId>
