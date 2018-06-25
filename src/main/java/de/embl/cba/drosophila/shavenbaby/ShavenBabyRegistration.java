@@ -133,7 +133,7 @@ public class ShavenBabyRegistration
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
 
-		final Set< Integer > labels = seedsLabelImg.getMapping().getLabels();
+		seedsLabelImg.getMapping().getLabels();
 
 		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
 
@@ -152,7 +152,8 @@ public class ShavenBabyRegistration
 				Utils.invertedView( distance ),
 				seedsLabelImg,
 				true,
-				false );
+				false,
+				closed );
 
 
 		if ( settings.showIntermediateResults ) show( watershedLabelImg, "watershed", null, registrationCalibration, false );

@@ -467,9 +467,33 @@ public class Utils
 	ImgLabeling< Integer, IntType > createLabelImg( RandomAccessibleInterval< T > rai )
 	{
 		final Img< IntType > labelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( rai ) );
+		Transforms.adjustOrigin( rai, labelImg );
 		final ImgLabeling< Integer, IntType > labeling = new ImgLabeling<>( labelImg );
 
-		ConnectedComponents.labelAllConnectedComponents( Views.extendBorder( rai ), labelImg, ConnectedComponents.StructuringElement.EIGHT_CONNECTED );
+		final java.util.Iterator< Integer > labelCreator = new java.util.Iterator< Integer >()
+		{
+			int id = 0;
+
+			@Override
+			public boolean hasNext()
+			{
+				return true;
+			}
+
+			@Override
+			public synchronized Integer next()
+			{
+				return id++;
+			}
+		};
+
+		ConnectedComponents.labelAllConnectedComponents( Views.extendBorder( rai ), labeling, labelCreator, ConnectedComponents.StructuringElement.EIGHT_CONNECTED );
+
+		int max = 0;
+		for( IntType pixel : labelImg )
+			max = Math.max( max, pixel.getInteger() );
+		// output maximum
+		System.out.println( "maximum label: " + max);
 
 		return labeling;
 	}
