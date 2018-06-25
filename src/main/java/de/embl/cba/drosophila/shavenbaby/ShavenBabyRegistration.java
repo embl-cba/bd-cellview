@@ -92,7 +92,7 @@ public class ShavenBabyRegistration
 		final RandomAccessibleInterval< BitType > mask = Converters.convert(
 				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterOffsetSubtraction ? true : false ), new BitType() );
 
-		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
+//		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
 
 		/**
 		 * Morphological closing
@@ -102,17 +102,17 @@ public class ShavenBabyRegistration
 		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
 		Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape,1 );
 
-		if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
+//		if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
 
 
 		/**
 		 * Distance transform
 		 *
-		 * TODO: why are the values in the distance transform so high? should not be more than 10 ( 8 * 10 = 80, which is the radius in um of the embryo )
+		 * Note: EUCLIDIAN distances are returned as squared distances
 		 */
 
-		final RandomAccessibleInterval< DoubleType > doubleBinary = Converters.convert(
-				closed, ( i, o ) -> o.set( i.get()  ? Double.MAX_VALUE : 0 ), new DoubleType() );
+		final RandomAccessibleInterval< DoubleType > doubleBinary = Converters.convert( closed,
+				( i, o ) -> o.set( i.get() ? Double.MAX_VALUE : 0 ), new DoubleType() );
 
 		final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( doubleBinary ) );
 
@@ -120,24 +120,21 @@ public class ShavenBabyRegistration
 
 		if ( settings.showIntermediateResults ) show( distance, "distance transform", null, registrationCalibration, false );
 
-
 		/**
 		 * Seeds for watershed
+		 *
+		 * Combining local maxima and values larger than a distance threshold
 		 */
 
+		double distanceThreshold = Math.pow( 0.5 * settings.drosophilaRadius / settings.registrationResolution, 2 );
 		final RandomAccessibleInterval< BitType > seeds = Utils.createSeeds(
 				distance,
 				new HyperSphereShape( ( long ) ( settings.drosophilaRadius / settings.registrationResolution ) ),
-				3 * settings.drosophilaRadius / settings.registrationResolution );
-
+				distanceThreshold );
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
-
-		seedsLabelImg.getMapping().getLabels();
-
+		
 		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
-
-
 
 		/**
 		 * Watershed
@@ -152,9 +149,9 @@ public class ShavenBabyRegistration
 				Utils.invertedView( distance ),
 				seedsLabelImg,
 				true,
-				false,
-				closed );
+				false );
 
+		Utils.applyMask( watershedLabelImg, closed );
 
 		if ( settings.showIntermediateResults ) show( watershedLabelImg, "watershed", null, registrationCalibration, false );
 

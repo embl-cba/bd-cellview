@@ -34,9 +34,8 @@ public class ShavenBabyRegistrationTest
 
 
 //		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby01.zip" ).getFile();
-		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-svb-downScaled.tif";
-
-//		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02-svb-downscaled.tif";
+//		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-svb-downScaled.tif";
+		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02-svb-downscaled.tif";
 		final ImagePlus imagePlus = IJ.openImage( path );
 
 //		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02.czi";

@@ -209,6 +209,11 @@ public class Utils
 	}
 
 
+	public static  < T extends RealType< T > & NativeType< T > >
+	void applyMask( RandomAccessibleInterval< T > rai, RandomAccessibleInterval< BitType > mask )
+	{
+		LoopBuilder.setImages( rai, mask ).forEachPixel( ( i, m ) ->  i.setReal( ( m.get() ? i.getRealDouble() : 0 ) ) );
+	}
 
 	public static < T extends RealType< T > & NativeType< T > >
 	RandomAccessibleInterval< T > createAverageProjection(
