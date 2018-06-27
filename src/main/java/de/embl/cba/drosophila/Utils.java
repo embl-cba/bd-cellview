@@ -34,6 +34,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static de.embl.cba.drosophila.Constants.*;
@@ -58,6 +59,34 @@ public class Utils
 		}
 
 		return coordinatesAndValues;
+	}
+
+	public static double sum( List<Double> a ){
+		if (a.size() > 0) {
+			double sum = 0;
+			for (Double d : a) {
+				sum += d;
+			}
+			return sum;
+		}
+		return 0;
+	}
+	public static double mean( List<Double> a ){
+		double sum = sum( a );
+		double mean = 0;
+		mean = sum / ( a.size() * 1.0 );
+		return mean;
+	}
+
+	public static double median( List<Double> a ){
+
+		int middle = a.size()/2;
+
+		if (a.size() % 2 == 1) {
+			return a.get(middle);
+		} else {
+			return (a.get(middle-1) + a.get(middle)) / 2.0;
+		}
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
@@ -95,18 +124,18 @@ public class Utils
 
 			if ( centroid != null )
 			{
-				double centroidNorm = vectorNorm( centroid );
+				double centroidVectorLength = vectorLength( centroid );
 
 				/**
 				 *  centroid[ 0 ] is the y-axis coordinate
 				 *  the sign of the y-axis coordinate determines the sign of the angle,
 				 *  i.e. the direction of rotation
 				 */
-				final double angle = Math.signum( centroid[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centroid, unitVectorInNegativeZDirection ) / centroidNorm );
+				final double angle = Math.signum( centroid[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centroid, unitVectorInNegativeZDirection ) / centroidVectorLength );
 
-				centroidsParameters.distances.add( centroidNorm * calibration );
+				centroidsParameters.distances.add( centroidVectorLength * calibration );
 				centroidsParameters.angles.add( angle );
-				centroidsParameters.axisCoordinates.add( (double) coordinate );
+				centroidsParameters.axisCoordinates.add( (double) coordinate * calibration );
 				centroidsParameters.centroids.add( new RealPoint( coordinate * calibration , centroid[ 0 ] * calibration , centroid[ 1 ] * calibration  ) );
 			}
 
@@ -116,7 +145,7 @@ public class Utils
 
 	}
 
-	public static double vectorNorm( double[] vector )
+	public static double vectorLength( double[] vector )
 	{
 		double centroidNorm = 0;
 

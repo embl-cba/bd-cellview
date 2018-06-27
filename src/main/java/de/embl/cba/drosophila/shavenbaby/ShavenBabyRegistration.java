@@ -32,9 +32,7 @@ import net.imglib2.algorithm.morphology.Closing;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Set;
+import java.util.*;
 
 import static de.embl.cba.drosophila.Constants.X;
 import static de.embl.cba.drosophila.Constants.XYZ;
@@ -72,7 +70,7 @@ public class ShavenBabyRegistration
 
 		RefractiveIndexMismatchCorrections.correctIntensity( intensityCorrected, inputCalibration[ Z ], settings.backgroundIntensity, settings.refractiveIndexIntensityCorrectionDecayLength );
 
-		if ( settings.showIntermediateResults ) show( intensityCorrected, "input data", null, inputCalibration, false );
+		if ( settings.showIntermediateResults ) show( intensityCorrected, "intensity and calibration corrected", null, inputCalibration, false );
 
 		/**
 		 *  Down-sampling to registration resolution
@@ -155,76 +153,73 @@ public class ShavenBabyRegistration
 
 		if ( settings.showIntermediateResults ) show( watershedLabelImg, "watershed", null, registrationCalibration, false );
 
-		if ( false )
-		{
 
-			/**
-			 * Get central embryo
-			 */
+		/**
+		 * Get central embryo
+		 */
 
-			final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( watershedLabeling );
+		final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( watershedLabeling );
 
-			final Img< BitType > centralObjectMask = createBitTypeMaskFromLabelRegion( centralObjectRegion, Intervals.dimensionsAsLongArray( downscaled ) );
+		final Img< BitType > centralObjectMask = createBitTypeMaskFromLabelRegion( centralObjectRegion, Intervals.dimensionsAsLongArray( downscaled ) );
 
-			if ( settings.showIntermediateResults )
-				show( centralObjectMask, "central object", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults )
+			show( centralObjectMask, "central object", null, registrationCalibration, false );
 
-			/**
-			 * Compute ellipsoid (probably mainly yaw) alignment
-			 */
+		/**
+		 * Compute ellipsoid (probably mainly yaw) alignment
+		 */
 
-			final EllipsoidParameters ellipsoidParameters = Ellipsoids.computeParametersFromBinaryImage( centralObjectMask );
+		final EllipsoidParameters ellipsoidParameters = Ellipsoids.computeParametersFromBinaryImage( centralObjectMask );
 
-			registration.preConcatenate( Ellipsoids.createAlignmentTransform( ellipsoidParameters ) );
+		registration.preConcatenate( Ellipsoids.createAlignmentTransform( ellipsoidParameters ) );
 
-			final RandomAccessibleInterval yawAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
+		final RandomAccessibleInterval yawAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
-			final RandomAccessibleInterval yawAlignedIntensities = Utils.copyAsArrayImg( Transforms.createTransformedView( downscaled, registration ) );
+		final RandomAccessibleInterval yawAlignedIntensities = Utils.copyAsArrayImg( Transforms.createTransformedView( downscaled, registration ) );
 
 
-			/**
-			 *  Long axis orientation
-			 */
+		/**
+		 *  Long axis orientation
+		 */
 
-			final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities );
+		final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities );
 
-			registration = registration.preConcatenate( orientationTransform );
+		registration = registration.preConcatenate( orientationTransform );
 
 
-			/**
-			 *  Roll transform
-			 */
+		/**
+		 *  Roll transform
+		 */
 
-			final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
+		final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
-			final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution );
+		final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution );
 
-			if ( settings.showIntermediateResults )
-				Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
-			if ( settings.showIntermediateResults )
-				Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
-			if ( settings.showIntermediateResults )
-				show( yawAndOrientationAlignedMask, "yaw and orientation aligned mask", centroidsParameters.centroids, registrationCalibration, false );
+		if ( settings.showIntermediateResults )
+			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
+		if ( settings.showIntermediateResults )
+			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
+		if ( settings.showIntermediateResults )
+			show( yawAndOrientationAlignedMask, "yaw and orientation aligned mask", centroidsParameters.centroids, registrationCalibration, false );
 
-			final AffineTransform3D rollTransform = computeRollTransform( centroidsParameters, settings );
+		final AffineTransform3D rollTransform = computeRollTransform( centroidsParameters, settings );
 
-			registration = registration.preConcatenate( rollTransform );
+		registration = registration.preConcatenate( rollTransform );
 
-			ArrayList< RealPoint > transformedCentroids = createTransformedCentroidPointList( centroidsParameters, rollTransform );
+		ArrayList< RealPoint > transformedCentroids = createTransformedCentroidPointList( centroidsParameters, rollTransform );
 
-			if ( settings.showIntermediateResults )
-				show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "yaw and roll aligned mask", transformedCentroids, registrationCalibration, false );
+		if ( settings.showIntermediateResults )
+			show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "yaw and roll aligned mask", transformedCentroids, registrationCalibration, false );
 
-			/**
-			 * Compute final registration transform
-			 */
+		/**
+		 * Compute final registration transform
+		 */
 
-			registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
+		registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
 
-			if ( settings.showIntermediateResults )
-				show( Transforms.createTransformedView( intensityCorrected, registration ), "aligned input data ( " + settings.outputResolution + " um )", origin(), registrationCalibration, false );
+		if ( settings.showIntermediateResults )
+			show( Transforms.createTransformedView( intensityCorrected, registration ), "aligned input data ( " + settings.outputResolution + " um )", origin(), registrationCalibration, false );
 
-		}
 
 		return registration;
 
@@ -275,21 +270,22 @@ public class ShavenBabyRegistration
 	{
 		final int n = centroidsParameters.axisCoordinates.size();
 
-		double averageAngle = 0;
-		int numAngles = 0;
+		List< Double> offCenterAngles = new ArrayList<>(  );
 
 		for ( int i = 0; i < n; ++i )
 		{
 			if ( centroidsParameters.distances.get( i ) > minDistanceToAxis )
 			{
-				averageAngle += centroidsParameters.angles.get( i );
-				++numAngles;
+				offCenterAngles.add( centroidsParameters.angles.get( i ) );
 			}
 		}
 
-		averageAngle /= numAngles;
+		Collections.sort( offCenterAngles );
 
-		return averageAngle;
+		double meanAngle = Utils.mean( offCenterAngles );
+		double medianAngle = Utils.median( offCenterAngles );
+
+		return medianAngle;
 	}
 
 	public static ArrayList< RealPoint > origin()

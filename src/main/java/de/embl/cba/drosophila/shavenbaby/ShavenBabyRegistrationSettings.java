@@ -11,7 +11,7 @@ public class ShavenBabyRegistrationSettings
 	public double outputResolution = 1.0;
 	public double backgroundIntensity = 3155; // TODO: determine from image (maybe min value after averaging)
 	public double refractiveIndexIntensityCorrectionDecayLength = 170;
-	public double minDistanceToAxisForRollAngleComputation = 6;
+	public double minDistanceToAxisForRollAngleComputation = 5;
 	public double drosophilaRadius = 80;
 
 	public double thresholdAfterOffsetSubtraction = 500;

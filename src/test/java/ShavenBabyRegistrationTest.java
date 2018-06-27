@@ -32,10 +32,28 @@ public class ShavenBabyRegistrationTest
 		settings.registrationResolution = 10;
 		settings.showIntermediateResults = true;
 
+		/**
+		 * Notes:
+		 * - 07 is very beautiful
+		 * - svb signal inside of embryos is quite variable and asymmetric
+		 */
+
+		/**
+		 * Ideas:
+		 * - the length of enbryos should be well defined? Use this for the segmentation to avoid merging with touching objects such as in 03?
+		 *
+		 * 
+		 */
+
+		/**
+		 * Issues
+		 * - 03 & 05: segmentation is wrong, a touching embryo is merged into the central one
+		 *
+		 */
+
 
 //		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby01.zip" ).getFile();
-//		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-svb-downScaled.tif";
-		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02-svb-downscaled.tif";
+		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-08-downscaled-svb.tif";
 		final ImagePlus imagePlus = IJ.openImage( path );
 
 //		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02.czi";
