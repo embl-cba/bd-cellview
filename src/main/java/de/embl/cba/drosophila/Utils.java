@@ -47,14 +47,14 @@ public class Utils
 
 	public static < T extends RealType< T > & NativeType< T > >
 	CoordinatesAndValues computeAverageIntensitiesAlongAxis(
-			RandomAccessibleInterval< T > rai, int axis )
+			RandomAccessibleInterval< T > rai, int axis, double calibration )
 	{
 		final CoordinatesAndValues coordinatesAndValues = new CoordinatesAndValues();
 
 		for ( long coordinate = rai.min( axis ); coordinate <= rai.max( axis ); ++coordinate )
 		{
 			final IntervalView< T > intensitySlice = Views.hyperSlice( rai, axis, coordinate );
-			coordinatesAndValues.coordinates.add( (double) coordinate );
+			coordinatesAndValues.coordinates.add( (double) coordinate * calibration );
 			coordinatesAndValues.values.add( computeAverage( intensitySlice ) );
 		}
 
@@ -91,7 +91,7 @@ public class Utils
 
 	public static < T extends RealType< T > & NativeType< T > >
 	CoordinatesAndValues computeAverageIntensitiesAlongAxis(
-			RandomAccessibleInterval< T > rai, RandomAccessibleInterval< BooleanType > mask, int axis )
+			RandomAccessibleInterval< T > rai, RandomAccessibleInterval< BooleanType > mask, int axis, double calibration )
 	{
 		final CoordinatesAndValues coordinatesAndValues = new CoordinatesAndValues();
 
@@ -100,13 +100,12 @@ public class Utils
 			final IntervalView< T > intensitySlice = Views.hyperSlice( rai, axis, coordinate );
 			final IntervalView< BooleanType > maskSlice = Views.hyperSlice( mask, axis, coordinate );
 
-			coordinatesAndValues.coordinates.add( (double) coordinate );
+			coordinatesAndValues.coordinates.add( (double) coordinate * calibration );
 			coordinatesAndValues.values.add( computeAverage( intensitySlice, maskSlice ) );
 		}
 
 		return coordinatesAndValues;
 	}
-
 
 	public static CentroidsParameters computeCentroidsParametersAlongXAxis(
 			RandomAccessibleInterval< BooleanType > rai,
@@ -121,6 +120,7 @@ public class Utils
 		{
 
 			final double[] centroid = computeCentroidPerpendicularToAxis( rai, X, coordinate );
+			final long numVoxels = computeNumberOfVoxelsPerpendicularToAxis( rai, X, coordinate );
 
 			if ( centroid != null )
 			{
@@ -137,6 +137,7 @@ public class Utils
 				centroidsParameters.angles.add( angle );
 				centroidsParameters.axisCoordinates.add( (double) coordinate * calibration );
 				centroidsParameters.centroids.add( new RealPoint( coordinate * calibration , centroid[ 0 ] * calibration , centroid[ 1 ] * calibration  ) );
+				centroidsParameters.numVoxels.add( (double) numVoxels );
 			}
 
 		}
@@ -209,6 +210,30 @@ public class Utils
 		}
 	}
 
+	private static long computeNumberOfVoxelsPerpendicularToAxis( RandomAccessibleInterval< BooleanType > rai, int axis, long coordinate )
+	{
+		final IntervalView< BooleanType > slice = Views.hyperSlice( rai, axis, coordinate );
+
+		int numHyperSliceDimensions = rai.numDimensions() - 1;
+
+		final double[] centroid = new double[ numHyperSliceDimensions ];
+
+		int numPoints = 0;
+
+		final Cursor< BooleanType > cursor = slice.cursor();
+
+		while ( cursor.hasNext() )
+		{
+			if ( cursor.next().get() )
+			{
+				numPoints++;
+			}
+		}
+
+		return numPoints;
+	}
+
+
 	public static < T extends RealType< T > & NativeType< T > >
 	RandomAccessibleInterval< T > createBlurredRai( RandomAccessibleInterval< T > rai, double sigma, double scaling )
 	{
@@ -275,13 +300,13 @@ public class Utils
 
 	public static < T extends RealType< T > & NativeType< T > >
 	AffineTransform3D createOrientationTransformation(
-			RandomAccessibleInterval< T > rai, int longAxisDimension, double derivativeDelta, double scaling,
+			RandomAccessibleInterval< T > rai, int longAxisDimension, double derivativeDelta, double calibration,
 			boolean showPlots )
 	{
 
-		final CoordinatesAndValues coordinatesAndValues = computeAverageIntensitiesAlongAxis( rai, longAxisDimension );
+		final CoordinatesAndValues coordinatesAndValues = computeAverageIntensitiesAlongAxis( rai, longAxisDimension, calibration );
 
-		ArrayList< Double > absoluteDerivatives = computeAbsoluteDerivatives( coordinatesAndValues.values, (int) (derivativeDelta / scaling ));
+		ArrayList< Double > absoluteDerivatives = computeAbsoluteDerivatives( coordinatesAndValues.values, (int) (derivativeDelta / calibration ));
 
 		double maxLoc = computeMaxLoc( coordinatesAndValues.coordinates, absoluteDerivatives );
 
@@ -462,7 +487,7 @@ public class Utils
 		RandomAccessibleInterval< BitType > maxima = ArrayImgs.bits( Intervals.dimensionsAsLongArray( rai ) );
 		maxima = Transforms.adjustOrigin( rai, maxima );
 
-		RandomAccessible< Neighborhood< T > > neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendBorder( rai ) );
+		RandomAccessible< Neighborhood< T > > neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendPeriodic( rai ) );
 		RandomAccessibleInterval< Neighborhood< T > > neighborhoodsInterval = Views.interval( neighborhoods, rai );
 
 		final Cursor< Neighborhood< T > > neighborhoodCursor = Views.iterable( neighborhoodsInterval ).cursor();

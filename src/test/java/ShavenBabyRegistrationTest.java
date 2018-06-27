@@ -40,20 +40,18 @@ public class ShavenBabyRegistrationTest
 
 		/**
 		 * Ideas:
-		 * - the length of enbryos should be well defined? Use this for the segmentation to avoid merging with touching objects such as in 03?
+		 * - the length of embryos should be well defined? Use this for the segmentation to avoid merging with touching objects such as in 03?
 		 *
-		 * 
 		 */
 
 		/**
 		 * Issues
-		 * - 03 & 05: segmentation is wrong, a touching embryo is merged into the central one
 		 *
 		 */
 
 
 //		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby01.zip" ).getFile();
-		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-08-downscaled-svb.tif";
+		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-05-downscaled-svb.tif";
 		final ImagePlus imagePlus = IJ.openImage( path );
 
 //		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02.czi";

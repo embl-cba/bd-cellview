@@ -100,7 +100,7 @@ public class ShavenBabyRegistration
 		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
 		Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape,1 );
 
-//		if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
 
 
 		/**
@@ -121,18 +121,22 @@ public class ShavenBabyRegistration
 		/**
 		 * Seeds for watershed
 		 *
-		 * Combining local maxima and values larger than a distance threshold
+		 * Combining local maxima or values larger than a distance threshold
 		 */
 
-		double distanceThreshold = Math.pow( 0.5 * settings.drosophilaRadius / settings.registrationResolution, 2 );
+		long localMaximaRadius = 1; //( long ) ( 0.5 * settings.drosophilaRadius / settings.registrationResolution )
+
+		double distanceThreshold = Math.pow( settings.watershedSeedsDistanceThreshold / settings.registrationResolution, 2 );
+
 		final RandomAccessibleInterval< BitType > seeds = Utils.createSeeds(
 				distance,
-				new HyperSphereShape( ( long ) ( settings.drosophilaRadius / settings.registrationResolution ) ),
+				new HyperSphereShape( localMaximaRadius ),
 				distanceThreshold );
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
 		
 		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
+
 
 		/**
 		 * Watershed
@@ -146,12 +150,13 @@ public class ShavenBabyRegistration
 				watershedLabeling,
 				Utils.invertedView( distance ),
 				seedsLabelImg,
-				true,
+				false,
 				false );
 
 		Utils.applyMask( watershedLabelImg, closed );
 
-		if ( settings.showIntermediateResults ) show( watershedLabelImg, "watershed", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults )
+			show( watershedLabelImg, "watershed", null, registrationCalibration, false );
 
 
 		/**
@@ -182,7 +187,7 @@ public class ShavenBabyRegistration
 		 *  Long axis orientation
 		 */
 
-		final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities );
+		final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities, settings.registrationResolution );
 
 		registration = registration.preConcatenate( orientationTransform );
 
@@ -199,6 +204,9 @@ public class ShavenBabyRegistration
 			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
 		if ( settings.showIntermediateResults )
 			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
+		if ( settings.showIntermediateResults )
+			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.numVoxels, "x", "numVoxels" );
+
 		if ( settings.showIntermediateResults )
 			show( yawAndOrientationAlignedMask, "yaw and orientation aligned mask", centroidsParameters.centroids, registrationCalibration, false );
 
@@ -225,9 +233,9 @@ public class ShavenBabyRegistration
 
 	}
 
-	public AffineTransform3D computeOrientationTransform( RandomAccessibleInterval yawAlignedMask, RandomAccessibleInterval yawAlignedIntensities )
+	public AffineTransform3D computeOrientationTransform( RandomAccessibleInterval yawAlignedMask, RandomAccessibleInterval yawAlignedIntensities, double calibration )
 	{
-		final CoordinatesAndValues coordinatesAndValues = Utils.computeAverageIntensitiesAlongAxis( yawAlignedIntensities, yawAlignedMask, X );
+		final CoordinatesAndValues coordinatesAndValues = Utils.computeAverageIntensitiesAlongAxis( yawAlignedIntensities, yawAlignedMask, X, calibration );
 
 		if ( settings.showIntermediateResults ) Plots.plot( coordinatesAndValues.coordinates, coordinatesAndValues.values, "x", "average intensity" );
 

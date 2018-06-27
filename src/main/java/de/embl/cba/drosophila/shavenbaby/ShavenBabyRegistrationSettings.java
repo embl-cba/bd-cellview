@@ -13,6 +13,7 @@ public class ShavenBabyRegistrationSettings
 	public double refractiveIndexIntensityCorrectionDecayLength = 170;
 	public double minDistanceToAxisForRollAngleComputation = 5;
 	public double drosophilaRadius = 80;
+	public double watershedSeedsDistanceThreshold = 50;
 
 	public double thresholdAfterOffsetSubtraction = 500;
 	public double closingRadius = 16;
