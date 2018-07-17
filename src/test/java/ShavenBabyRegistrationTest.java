@@ -51,17 +51,16 @@ public class ShavenBabyRegistrationTest
 
 
 //		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby01.zip" ).getFile();
-		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-05-downscaled-svb.tif";
+		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-downscaled-svb.tif";
 		final ImagePlus imagePlus = IJ.openImage( path );
 
 //		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02.czi";
 //		final ImagePlus imagePlus = openWithBioFormats( path );
-//		RandomAccessibleInterval< T > svb = Utils.copyAsArrayImg( Views.hyperSlice( input, Utils.imagePlusChannelDimension, settings.shavenBabyChannelIndex ) )
+//		RandomAccessibleInterval< T > svb = Utils.copyAsArrayImg( Views.hyperSlice( input, Utils.imagePlusChannelDimension, settings.shavenBabyChannelIndexOneBased ) )
 
 		final RandomAccessibleInterval< T > svb = ImageJFunctions.wrap( imagePlus );
 
-		ShavenBabyRegistration registration = new ShavenBabyRegistration( settings, imagej );
-
+		ShavenBabyRegistration registration = new ShavenBabyRegistration( settings, imagej.op() );
 
 		final AffineTransform3D registrationTransform = registration.computeRegistration( svb, Utils.getCalibration( imagePlus ) );
 

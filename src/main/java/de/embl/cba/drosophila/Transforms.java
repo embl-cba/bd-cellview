@@ -10,7 +10,10 @@ import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory
 import net.imglib2.realtransform.*;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
+
+import java.util.ArrayList;
 
 import static de.embl.cba.drosophila.Constants.XYZ;
 
@@ -199,5 +202,19 @@ public abstract class Transforms< T extends InvertibleRealTransform & Concatenab
 		}
 
 		return scaling;
+	}
+
+	public static <T extends RealType<T> & NativeType< T > >
+	RandomAccessibleInterval< T > transformMultipleChannels( RandomAccessibleInterval< T > allChannels, AffineTransform3D registrationTransform )
+	{
+		ArrayList< RandomAccessibleInterval< T > > transformedChannels = new ArrayList<>(  );
+
+		for ( int c = 0; c < allChannels.dimension( Utils.imagePlusChannelDimension ); ++c )
+		{
+			final RandomAccessibleInterval< T > channel = Views.hyperSlice( allChannels, Utils.imagePlusChannelDimension, c );
+			transformedChannels.add( createTransformedView( channel, registrationTransform ) );
+		}
+
+		return Views.stack( transformedChannels );
 	}
 }

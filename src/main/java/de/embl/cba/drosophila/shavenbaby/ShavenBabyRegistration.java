@@ -6,6 +6,7 @@ import de.embl.cba.drosophila.geometry.CoordinatesAndValues;
 import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ImageJ;
+import net.imagej.ops.OpService;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -46,12 +47,12 @@ public class ShavenBabyRegistration
 {
 
 	final ShavenBabyRegistrationSettings settings;
-	final ImageJ ij;
+	final OpService opService;
 
-	public ShavenBabyRegistration( ShavenBabyRegistrationSettings settings, ImageJ ij )
+	public ShavenBabyRegistration( ShavenBabyRegistrationSettings settings, OpService opService )
 	{
 		this.settings = settings;
-		this.ij = ij;
+		this.opService = opService;
 	}
 
 	public < T extends RealType< T > & NativeType< T > >
@@ -88,7 +89,7 @@ public class ShavenBabyRegistration
 		 */
 
 		final RandomAccessibleInterval< BitType > mask = Converters.convert(
-				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterOffsetSubtraction ? true : false ), new BitType() );
+				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterBackgroundSubtraction ? true : false ), new BitType() );
 
 //		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
 
@@ -104,7 +105,7 @@ public class ShavenBabyRegistration
 
 
 		/**
-		 * Distance transform
+		 * Distance transformMultipleChannels
 		 *
 		 * Note: EUCLIDIAN distances are returned as squared distances
 		 */
@@ -116,7 +117,7 @@ public class ShavenBabyRegistration
 
 		DistanceTransform.transform( doubleBinary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN, 1.0D );
 
-		if ( settings.showIntermediateResults ) show( distance, "distance transform", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( distance, "distance transformMultipleChannels", null, registrationCalibration, false );
 
 		/**
 		 * Seeds for watershed
@@ -135,7 +136,7 @@ public class ShavenBabyRegistration
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
 		
-		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transformMultipleChannels derived seeds", null, registrationCalibration, false );
 
 
 		/**
@@ -146,7 +147,7 @@ public class ShavenBabyRegistration
 		final Img< IntType > watershedLabelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( mask ) );
 		final ImgLabeling< Integer, IntType > watershedLabeling = new ImgLabeling<>( watershedLabelImg );
 
-		ij.op().image().watershed(
+		opService.image().watershed(
 				watershedLabeling,
 				Utils.invertedView( distance ),
 				seedsLabelImg,
@@ -193,7 +194,7 @@ public class ShavenBabyRegistration
 
 
 		/**
-		 *  Roll transform
+		 *  Roll transformMultipleChannels
 		 */
 
 		final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
@@ -220,7 +221,7 @@ public class ShavenBabyRegistration
 			show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "yaw and roll aligned mask", transformedCentroids, registrationCalibration, false );
 
 		/**
-		 * Compute final registration transform
+		 * Compute final registration transformMultipleChannels
 		 */
 
 		registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
@@ -372,7 +373,7 @@ public class ShavenBabyRegistration
 	//
 
 	/**
-	 *  Distance transform
+	 *  Distance transformMultipleChannels
 
 	 Hi Christian
 
@@ -391,14 +392,14 @@ public class ShavenBabyRegistration
 	 Phil
 
 	 final RandomAccessibleInterval< UnsignedByteType > binary = Converters.convert(
-	 downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterOffsetSubtraction ? 255 : 0 ), new UnsignedByteType() );
+	 downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterBackgroundSubtraction ? 255 : 0 ), new UnsignedByteType() );
 
 	 if ( settings.showIntermediateResults ) show( binary, "binary", null, calibration, false );
 
 
 	 final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( binary ) );
 
-	 DistanceTransform.transform( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
+	 DistanceTransform.transformMultipleChannels( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
 
 
 	 final double maxDistance = Algorithms.findMaximumValue( distance );
