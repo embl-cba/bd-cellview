@@ -31,6 +31,14 @@ public class Projection< T extends RealType< T > & NativeType< T > >
         init( input, projectionDimension, fullProjectionInterval( input ) );
     }
 
+
+    public Projection( RandomAccessibleInterval< T > input, int projectionDimension, long min, long max )
+    {
+        projectionInterval = new FinalInterval( new long[]{ min }, new long[]{ max }  );
+
+        init( input, projectionDimension, projectionInterval );
+    }
+
     public Projection( RandomAccessibleInterval< T > input, int projectionDimension, FinalInterval projectionInterval )
     {
         init( input, projectionDimension, projectionInterval );

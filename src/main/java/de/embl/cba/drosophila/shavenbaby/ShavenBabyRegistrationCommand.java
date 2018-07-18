@@ -130,17 +130,21 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 					// Register
 					Utils.log( "Creating transformed output images..." );
 					RandomAccessibleInterval< T > transformed = createTransformedImage( imagePlus, registration );
-					showWithBdv( transformed );
+//					showWithBdv( transformed );
 
-					if ( false )
+					if ( true )
 					{
+
 						final RandomAccessibleInterval< T > transformedWithImagePlusDimensionOrder = Utils.copyAsArrayImg( Views.permute( transformed, 2, 3 ) );
 
 						Utils.log( "Creating projections..." );
-						createProjections( transformedWithImagePlusDimensionOrder );
+						final ArrayList< ImagePlus > projections = createProjections( transformedWithImagePlusDimensionOrder );
+
+						Utils.log( "Saving projections..." );
+						saveImages( inputPath, projections );
 
 						Utils.log( "Wrapping to ImagePlus..." );
-						final ImagePlus transformedImagePlus = ImageJFunctions.wrap( Utils.copyAsArrayImg( transformedWithImagePlusDimensionOrder ), "transformed" );
+						final ImagePlus transformedImagePlus = ImageJFunctions.wrap( transformedWithImagePlusDimensionOrder, "transformed" );
 
 						// Save
 						final String outputPath = inputPath + "-registered.tif";
@@ -156,18 +160,39 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 
 	}
 
-	public void createProjections( RandomAccessibleInterval< T > image )
+	public void saveImages( String inputPath, ArrayList< ImagePlus > imps )
+	{
+		for ( ImagePlus imp : imps )
+		{
+			final String outputPath = inputPath + "-" + imp.getTitle() + ".tif";
+			FileSaver fileSaver = new FileSaver( imp );
+			fileSaver.saveAsTiff( outputPath );
+		}
+	}
+
+	public ArrayList< ImagePlus > createProjections( RandomAccessibleInterval< T > image )
 	{
 		int Z = 2;
+
+		long zMin = (long) ( 60 / settings.outputResolution );
+
+		ArrayList< ImagePlus > projections = new ArrayList<>(  );
+
 		for ( int channelId = 0; channelId < image.dimension( Utils.imagePlusChannelDimension ); ++channelId )
 		{
-			final RandomAccessibleInterval channel = Views.hyperSlice( image, Utils.imagePlusChannelDimension, channelId );
-			FinalInterval minMax = new FinalInterval( new long[]{ 0 }, new long[]{ channel.max( Z ) }  );
-			Projection projection = new Projection( channel, Z, minMax );
+
+			RandomAccessibleInterval channel = Views.hyperSlice( image, Utils.imagePlusChannelDimension, channelId );
+			channel = Views.translate( channel, new long[]{ 0, 0, image.min( Z ) } );
+
+			Projection projection = new Projection( channel, Z, zMin, channel.max( Z ) );
+
 			final RandomAccessibleInterval maximum = projection.maximum();
-			final ImagePlus wrap = ImageJFunctions.wrap( maximum, "projection " + channel );
-			wrap.show();
+			final ImagePlus wrap = ImageJFunctions.wrap( maximum, "projection-C" + channelId );
+
+			projections.add( wrap );
 		}
+
+		return projections;
 	}
 
 	public void showWithBdv( RandomAccessibleInterval< T > transformed )

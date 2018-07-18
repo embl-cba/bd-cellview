@@ -129,6 +129,9 @@ public class Utils
 
 		final double[] unitVectorInNegativeZDirection = new double[]{ 0, -1 };
 
+
+		final double[] centralCentroid = computeCentroidPerpendicularToAxis( rai, X, 0 );
+
 		for ( long coordinate = rai.min( X ); coordinate <= rai.max( X ); ++coordinate )
 		{
 
@@ -137,16 +140,17 @@ public class Utils
 
 			if ( centroid != null )
 			{
-				double centroidVectorLength = vectorLength( centroid );
+				double[] centerDisplacementVector = subtract( centroid, centralCentroid );
+				double centerDisplacementLength = vectorLength( centerDisplacementVector );
 
 				/**
 				 *  centroid[ 0 ] is the y-axis coordinate
 				 *  the sign of the y-axis coordinate determines the sign of the angle,
 				 *  i.e. the direction of rotation
 				 */
-				final double angle = Math.signum( centroid[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centroid, unitVectorInNegativeZDirection ) / centroidVectorLength );
+				final double angle = Math.signum( centerDisplacementVector[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centerDisplacementVector, unitVectorInNegativeZDirection ) / centerDisplacementLength );
 
-				centroidsParameters.distances.add( centroidVectorLength * calibration );
+				centroidsParameters.distances.add( centerDisplacementLength * calibration );
 				centroidsParameters.angles.add( angle );
 				centroidsParameters.axisCoordinates.add( (double) coordinate * calibration );
 				centroidsParameters.centroids.add( new RealPoint( coordinate * calibration , centroid[ 0 ] * calibration , centroid[ 1 ] * calibration  ) );
@@ -184,6 +188,19 @@ public class Utils
 
 		return dotProduct;
 	}
+
+	public static double[] subtract( double[] vector01, double[] vector02  )
+	{
+		double[] subtraction = new double[ vector01.length ];
+
+		for ( int d = 0; d < vector01.length; ++d )
+		{
+			subtraction[d] = vector01[ d ] - vector02[ d ];
+		}
+
+		return subtraction;
+	}
+
 
 	private static double[] computeCentroidPerpendicularToAxis( RandomAccessibleInterval< BooleanType > rai, int axis, long coordinate )
 	{
