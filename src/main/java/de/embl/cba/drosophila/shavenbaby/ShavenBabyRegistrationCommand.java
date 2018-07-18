@@ -5,10 +5,9 @@ import de.embl.cba.drosophila.Transforms;
 import de.embl.cba.drosophila.Utils;
 import de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistration;
 import de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistrationSettings;
-import ij.IJ;
 import ij.ImagePlus;
+import ij.io.FileSaver;
 import net.imagej.DatasetService;
-import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -19,17 +18,16 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 import org.scijava.app.StatusService;
 import org.scijava.command.Command;
-import org.scijava.command.InteractiveCommand;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
-import org.scijava.widget.Button;
 import org.scijava.widget.FileWidget;
 
 import java.io.File;
 import java.util.ArrayList;
+
+import static de.embl.cba.drosophila.ImageIO.openWithBioFormats;
 
 
 @Plugin(type = Command.class, menuPath = "Plugins>Registration>EMBL>Drosophila Svb" )
@@ -54,6 +52,15 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 	public ImagePlus imagePlus;
 
 	ShavenBabyRegistrationSettings settings = new ShavenBabyRegistrationSettings();
+
+	public static final String FROM_DIRECTORY = "From directory";
+	public static final String CURRENT_IMAGE = "Current image";
+
+	@Parameter( choices = { FROM_DIRECTORY, CURRENT_IMAGE })
+	public String inputModality = FROM_DIRECTORY;
+
+	@Parameter
+	public String fileNameEndsWith = "downscaled-svb.tif";
 
 	@Parameter
 	public int shavenBabyChannelIndexOneBased = settings.shavenBabyChannelIndexOneBased;
@@ -81,21 +88,21 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 
 	@Parameter
 	public double watershedSeedsDistanceThreshold = settings.watershedSeedsDistanceThreshold;
-	
+
 	public void run()
 	{
-
 		setSettingsFromUI();
 
 		final ShavenBabyRegistration registration = new ShavenBabyRegistration( settings, opService );
 
-		if ( imagePlus != null )
+		if ( inputModality.equals( CURRENT_IMAGE ) && imagePlus != null )
 		{
 			RandomAccessibleInterval< T > transformed = createTransformedImage( imagePlus, registration );
 			showWithBdv( transformed );
 			ImageJFunctions.show( Views.permute( transformed, 2, 3 ) );
 		}
-		else
+
+		if ( inputModality.equals( FROM_DIRECTORY ) )
 		{
 			final File directory = uiService.chooseFile( null, FileWidget.DIRECTORY_STYLE );
 			String[] files = directory.list();
@@ -103,9 +110,35 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 			// for each name in the path array
 			for( String file : files )
 			{
-				if ( file.endsWith( ".lsm" ) )
+
+				if ( file.endsWith( fileNameEndsWith ) )
 				{
-					System.out.println( file );
+					// Open
+					final String inputPath = directory + "/" + file;
+					Utils.log( inputPath );
+					final ImagePlus imagePlus = openWithBioFormats( inputPath );
+
+					if ( imagePlus == null )
+					{
+						logService.error( "Error opening file: " + inputPath );
+						continue;
+					}
+
+					// Register
+					RandomAccessibleInterval< T > transformed = createTransformedImage( imagePlus, registration );
+
+					Utils.log( "Wrapping to ImagePlus..." );
+					final RandomAccessibleInterval< T > transformedWithImagePlusDimensionOrder = Utils.copyAsArrayImg( Views.permute( transformed, 2, 3 ) );
+					final ImagePlus transformedImagePlus = ImageJFunctions.wrap( transformedWithImagePlusDimensionOrder, "transformed" );
+
+					// Save
+					final String outputPath = inputPath + "-registered.tif";
+					Utils.log( "Saving registered image: " + outputPath );
+					FileSaver fileSaver = new FileSaver( transformedImagePlus );
+					fileSaver.saveAsTiff( outputPath );
+
+					// Show
+//					showWithBdv( transformed );
 				}
 			}
 		}
@@ -124,9 +157,30 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 	public RandomAccessibleInterval< T > createTransformedImage( ImagePlus imagePlus, ShavenBabyRegistration registration )
 	{
 		RandomAccessibleInterval< T > allChannels = ImageJFunctions.wrap( imagePlus );
-		RandomAccessibleInterval< T > svb = Views.hyperSlice( allChannels, Utils.imagePlusChannelDimension,  shavenBabyChannelIndexOneBased - 1 );
+		RandomAccessibleInterval< T > svb = getShaveBabyImage( imagePlus.getNChannels(), allChannels );
+
+		Utils.log( "Computing registration..." );
 		final AffineTransform3D registrationTransform = registration.computeRegistration( svb, Utils.getCalibration( imagePlus ) );
-		return Transforms.transformMultipleChannels( allChannels, registrationTransform );
+
+		Utils.log( "Transforming all channels..." );
+		final RandomAccessibleInterval< T > allChannelsTransformed = Transforms.transformAllChannels( allChannels, registrationTransform, imagePlus.getNChannels() );
+
+		return allChannelsTransformed;
+	}
+
+	public RandomAccessibleInterval< T > getShaveBabyImage( int numChannels, RandomAccessibleInterval< T > allChannels )
+	{
+		RandomAccessibleInterval< T > svb;
+
+		if ( numChannels > 1 )
+		{
+			svb = Views.hyperSlice( allChannels, Utils.imagePlusChannelDimension, shavenBabyChannelIndexOneBased - 1 );
+		}
+		else
+		{
+			svb = allChannels;
+		}
+		return svb;
 	}
 
 	public void setSettingsFromUI()

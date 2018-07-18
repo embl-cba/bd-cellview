@@ -4,7 +4,7 @@ public class ShavenBabyRegistrationSettings
 {
 	// all spatial values are in micrometer
 
-	public int shavenBabyChannelIndexOneBased = 0;
+	public int shavenBabyChannelIndexOneBased = 1;
 	public boolean showIntermediateResults = false;
 	public double refractiveIndexScalingCorrectionFactor = 1.6;
 	public double registrationResolution = 8.0;

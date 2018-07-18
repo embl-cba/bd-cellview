@@ -2,6 +2,7 @@ package de.embl.cba.drosophila;
 
 import de.embl.cba.drosophila.geometry.CentroidsParameters;
 import de.embl.cba.drosophila.geometry.CoordinatesAndValues;
+import ij.IJ;
 import ij.ImagePlus;
 import net.imagej.Dataset;
 import net.imagej.axis.LinearAxis;
@@ -32,6 +33,7 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
+import org.scijava.log.LogService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +46,17 @@ import static java.lang.Math.*;
 public class Utils
 {
 	public static int imagePlusChannelDimension = 2;
+
+	public static void log( String message )
+	{
+		IJ.log( message );
+	}
+
+
+	public static void log( String message, LogService logService )
+	{
+		logService.info( message );
+	}
 
 	public static < T extends RealType< T > & NativeType< T > >
 	CoordinatesAndValues computeAverageIntensitiesAlongAxis(

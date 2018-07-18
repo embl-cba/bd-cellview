@@ -65,6 +65,8 @@ public class ShavenBabyRegistration
 		 *  Refractive index corrections
 		 */
 
+		Utils.log( "Refractive index corrections..." );
+
 		RefractiveIndexMismatchCorrections.correctCalibration( inputCalibration, settings.refractiveIndexScalingCorrectionFactor );
 
 		final RandomAccessibleInterval< T > intensityCorrected = Utils.copyAsArrayImg( input );
@@ -77,6 +79,8 @@ public class ShavenBabyRegistration
 		 *  Down-sampling to registration resolution
 		 */
 
+		Utils.log( "Down-sampling to registration resolution..." );
+
 		final RandomAccessibleInterval< T > downscaled = Algorithms.createDownscaledArrayImg( intensityCorrected, getScalingFactors( inputCalibration, settings.registrationResolution ) );
 
 		double[] registrationCalibration = getRegistrationCalibration();
@@ -88,6 +92,8 @@ public class ShavenBabyRegistration
 		 * Threshold
 		 */
 
+		Utils.log( "Threshold...");
+
 		final RandomAccessibleInterval< BitType > mask = Converters.convert(
 				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterBackgroundSubtraction ? true : false ), new BitType() );
 
@@ -97,6 +103,8 @@ public class ShavenBabyRegistration
 		 * Morphological closing
 		 */
 
+		Utils.log( "Morphological closing...");
+
 		Shape closingShape = new HyperSphereShape( (int) ( settings.closingRadius / settings.registrationResolution ) );
 		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
 		Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape,1 );
@@ -105,10 +113,12 @@ public class ShavenBabyRegistration
 
 
 		/**
-		 * Distance transformMultipleChannels
+		 * Distance transform
 		 *
 		 * Note: EUCLIDIAN distances are returned as squared distances
 		 */
+
+		Utils.log( "Distance transform...");
 
 		final RandomAccessibleInterval< DoubleType > doubleBinary = Converters.convert( closed,
 				( i, o ) -> o.set( i.get() ? Double.MAX_VALUE : 0 ), new DoubleType() );
@@ -117,13 +127,15 @@ public class ShavenBabyRegistration
 
 		DistanceTransform.transform( doubleBinary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN, 1.0D );
 
-		if ( settings.showIntermediateResults ) show( distance, "distance transformMultipleChannels", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( distance, "distance transformAllChannels", null, registrationCalibration, false );
 
 		/**
 		 * Seeds for watershed
 		 *
 		 * Combining local maxima or values larger than a distance threshold
 		 */
+
+		Utils.log( "Seeds for watershed...");
 
 		long localMaximaRadius = 1; //( long ) ( 0.5 * settings.drosophilaRadius / settings.registrationResolution )
 
@@ -136,12 +148,14 @@ public class ShavenBabyRegistration
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
 		
-		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transformMultipleChannels derived seeds", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transformAllChannels derived seeds", null, registrationCalibration, false );
 
 
 		/**
 		 * Watershed
 		 */
+
+		Utils.log( "Watershed...");
 
 		// prepare result label image
 		final Img< IntType > watershedLabelImg = ArrayImgs.ints( Intervals.dimensionsAsLongArray( mask ) );
@@ -164,6 +178,8 @@ public class ShavenBabyRegistration
 		 * Get central embryo
 		 */
 
+		Utils.log( "Get central embryo...");
+
 		final LabelRegion< Integer > centralObjectRegion = getCentralObjectLabelRegion( watershedLabeling );
 
 		final Img< BitType > centralObjectMask = createBitTypeMaskFromLabelRegion( centralObjectRegion, Intervals.dimensionsAsLongArray( downscaled ) );
@@ -174,6 +190,8 @@ public class ShavenBabyRegistration
 		/**
 		 * Compute ellipsoid (probably mainly yaw) alignment
 		 */
+
+		Utils.log( "Fit ellipsoid..." );
 
 		final EllipsoidParameters ellipsoidParameters = Ellipsoids.computeParametersFromBinaryImage( centralObjectMask );
 
@@ -188,14 +206,19 @@ public class ShavenBabyRegistration
 		 *  Long axis orientation
 		 */
 
+		Utils.log( "Computing long axis orientation..." );
+
+
 		final AffineTransform3D orientationTransform = computeOrientationTransform( yawAlignedMask, yawAlignedIntensities, settings.registrationResolution );
 
 		registration = registration.preConcatenate( orientationTransform );
 
 
 		/**
-		 *  Roll transformMultipleChannels
+		 *  Roll transform
 		 */
+
+		Utils.log( "Computing roll transform..." );
 
 		final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
@@ -207,7 +230,6 @@ public class ShavenBabyRegistration
 			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.distances, "x", "distance" );
 		if ( settings.showIntermediateResults )
 			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.numVoxels, "x", "numVoxels" );
-
 		if ( settings.showIntermediateResults )
 			show( yawAndOrientationAlignedMask, "yaw and orientation aligned mask", centroidsParameters.centroids, registrationCalibration, false );
 
@@ -221,7 +243,7 @@ public class ShavenBabyRegistration
 			show( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ), "yaw and roll aligned mask", transformedCentroids, registrationCalibration, false );
 
 		/**
-		 * Compute final registration transformMultipleChannels
+		 * Compute final registration
 		 */
 
 		registration = createFinalTransform( inputCalibration, registration, registrationCalibration );
@@ -270,7 +292,7 @@ public class ShavenBabyRegistration
 
 		rollTransform.rotate( X, - toRadians( rollAngle ) );
 
-		System.out.println( "Roll angle : " + rollAngle );
+		Utils.log( "Roll angle : " + rollAngle );
 
 		return rollTransform;
 	}
@@ -373,7 +395,7 @@ public class ShavenBabyRegistration
 	//
 
 	/**
-	 *  Distance transformMultipleChannels
+	 *  Distance transformAllChannels
 
 	 Hi Christian
 
@@ -399,7 +421,7 @@ public class ShavenBabyRegistration
 
 	 final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( binary ) );
 
-	 DistanceTransform.transformMultipleChannels( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
+	 DistanceTransform.transformAllChannels( binary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN );
 
 
 	 final double maxDistance = Algorithms.findMaximumValue( distance );

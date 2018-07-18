@@ -12,11 +12,10 @@ public class ShavenBabyRegistrationCommandTest
 		final ImageJ ij = new ImageJ();
 		ij.ui().showUI();
 
-		String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-downscaled-svb.tif";
 
 		// Load and show data
-		ImagePlus imp = IJ.openImage( path );
-		//imp.show();
+//		String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-downscaled-svb.tif";
+//		ImagePlus imp = IJ.openImage( path ); imp.show();
 
 		// invoke the plugin
 		ij.command().run( ShavenBabyRegistrationCommand.class, true );

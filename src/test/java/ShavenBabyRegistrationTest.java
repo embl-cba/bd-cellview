@@ -3,23 +3,15 @@ import de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistration;
 import de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistrationSettings;
 import ij.IJ;
 import ij.ImagePlus;
-import io.scif.services.DatasetIOService;
-import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.view.Views;
 import loci.formats.FormatException;
-import loci.plugins.in.ImagePlusReader;
-import loci.plugins.in.ImporterOptions;
-import loci.plugins.in.ImportProcess;
 
 import java.io.IOException;
-
-import static de.embl.cba.drosophila.ImageReaders.openWithBioFormats;
 
 public class ShavenBabyRegistrationTest
 {
