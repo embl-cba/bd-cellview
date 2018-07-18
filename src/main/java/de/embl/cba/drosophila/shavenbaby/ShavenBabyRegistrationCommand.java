@@ -1,6 +1,7 @@
 package de.embl.cba.drosophila.dapi;
 
 import bdv.util.*;
+import de.embl.cba.drosophila.Projection;
 import de.embl.cba.drosophila.Transforms;
 import de.embl.cba.drosophila.Utils;
 import de.embl.cba.drosophila.shavenbaby.ShavenBabyRegistration;
@@ -9,12 +10,14 @@ import ij.ImagePlus;
 import ij.io.FileSaver;
 import net.imagej.DatasetService;
 import net.imagej.ops.OpService;
+import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import org.scijava.app.StatusService;
 import org.scijava.command.Command;
@@ -125,25 +128,46 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 					}
 
 					// Register
+					Utils.log( "Creating transformed output images..." );
 					RandomAccessibleInterval< T > transformed = createTransformedImage( imagePlus, registration );
+					showWithBdv( transformed );
 
-					Utils.log( "Wrapping to ImagePlus..." );
-					final RandomAccessibleInterval< T > transformedWithImagePlusDimensionOrder = Utils.copyAsArrayImg( Views.permute( transformed, 2, 3 ) );
-					final ImagePlus transformedImagePlus = ImageJFunctions.wrap( transformedWithImagePlusDimensionOrder, "transformed" );
+					if ( false )
+					{
+						final RandomAccessibleInterval< T > transformedWithImagePlusDimensionOrder = Utils.copyAsArrayImg( Views.permute( transformed, 2, 3 ) );
 
-					// Save
-					final String outputPath = inputPath + "-registered.tif";
-					Utils.log( "Saving registered image: " + outputPath );
-					FileSaver fileSaver = new FileSaver( transformedImagePlus );
-					fileSaver.saveAsTiff( outputPath );
+						Utils.log( "Creating projections..." );
+						createProjections( transformedWithImagePlusDimensionOrder );
 
-					// Show
-//					showWithBdv( transformed );
+						Utils.log( "Wrapping to ImagePlus..." );
+						final ImagePlus transformedImagePlus = ImageJFunctions.wrap( Utils.copyAsArrayImg( transformedWithImagePlusDimensionOrder ), "transformed" );
+
+						// Save
+						final String outputPath = inputPath + "-registered.tif";
+						Utils.log( "Saving registered image: " + outputPath );
+						FileSaver fileSaver = new FileSaver( transformedImagePlus );
+						fileSaver.saveAsTiff( outputPath );
+					}
+
 				}
 			}
 		}
 
 
+	}
+
+	public void createProjections( RandomAccessibleInterval< T > image )
+	{
+		int Z = 2;
+		for ( int channelId = 0; channelId < image.dimension( Utils.imagePlusChannelDimension ); ++channelId )
+		{
+			final RandomAccessibleInterval channel = Views.hyperSlice( image, Utils.imagePlusChannelDimension, channelId );
+			FinalInterval minMax = new FinalInterval( new long[]{ 0 }, new long[]{ channel.max( Z ) }  );
+			Projection projection = new Projection( channel, Z, minMax );
+			final RandomAccessibleInterval maximum = projection.maximum();
+			final ImagePlus wrap = ImageJFunctions.wrap( maximum, "projection " + channel );
+			wrap.show();
+		}
 	}
 
 	public void showWithBdv( RandomAccessibleInterval< T > transformed )
