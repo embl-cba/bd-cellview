@@ -129,8 +129,7 @@ public class Utils
 
 		final double[] unitVectorInNegativeZDirection = new double[]{ 0, -1 };
 
-
-		final double[] centralCentroid = computeCentroidPerpendicularToAxis( rai, X, 0 );
+		final double[] centralCentroid = computeCentroidPerpendicularToAxis( rai, X, 0 ); // this is not very robust, because the central one could be off
 
 		for ( long coordinate = rai.min( X ); coordinate <= rai.max( X ); ++coordinate )
 		{
@@ -140,7 +139,9 @@ public class Utils
 
 			if ( centroid != null )
 			{
-				double[] centerDisplacementVector = subtract( centroid, centralCentroid );
+//				double[] centerDisplacementVector = subtract( centroid, centralCentroid ); // this is not very robust, because the central one could be off
+
+				double[] centerDisplacementVector = centroid;
 				double centerDisplacementLength = vectorLength( centerDisplacementVector );
 
 				/**

@@ -78,6 +78,12 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 	public double outputResolution = settings.outputResolution;
 
 	@Parameter
+	public double closingRadius = settings.closingRadius;
+
+	@Parameter
+	public double backgroundIntensity = settings.backgroundIntensity;
+
+	@Parameter
 	public double thresholdAfterBackgroundSubtraction = settings.thresholdAfterBackgroundSubtraction;
 
 	@Parameter
@@ -118,7 +124,7 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 				{
 					// Open
 					final String inputPath = directory + "/" + file;
-					Utils.log( inputPath );
+					Utils.log( "Reading: " + inputPath + "..." );
 					final ImagePlus imagePlus = openWithBioFormats( inputPath );
 
 					if ( imagePlus == null )
@@ -127,31 +133,25 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 						continue;
 					}
 
-					// Register
-					Utils.log( "Creating transformed output images..." );
 					RandomAccessibleInterval< T > transformed = createTransformedImage( imagePlus, registration );
 //					showWithBdv( transformed );
 
-					if ( true )
-					{
+					final RandomAccessibleInterval< T > transformedWithImagePlusDimensionOrder = Utils.copyAsArrayImg( Views.permute( transformed, 2, 3 ) );
 
-						final RandomAccessibleInterval< T > transformedWithImagePlusDimensionOrder = Utils.copyAsArrayImg( Views.permute( transformed, 2, 3 ) );
+					Utils.log( "Creating projections..." );
+					final ArrayList< ImagePlus > projections = createProjections( transformedWithImagePlusDimensionOrder );
 
-						Utils.log( "Creating projections..." );
-						final ArrayList< ImagePlus > projections = createProjections( transformedWithImagePlusDimensionOrder );
+					Utils.log( "Saving projections..." );
+					saveImages( inputPath, projections );
 
-						Utils.log( "Saving projections..." );
-						saveImages( inputPath, projections );
+					Utils.log( "Wrapping to ImagePlus..." );
+					final ImagePlus transformedImagePlus = ImageJFunctions.wrap( transformedWithImagePlusDimensionOrder, "transformed" );
 
-						Utils.log( "Wrapping to ImagePlus..." );
-						final ImagePlus transformedImagePlus = ImageJFunctions.wrap( transformedWithImagePlusDimensionOrder, "transformed" );
-
-						// Save
-						final String outputPath = inputPath + "-registered.tif";
-						Utils.log( "Saving registered image: " + outputPath );
-						FileSaver fileSaver = new FileSaver( transformedImagePlus );
-						fileSaver.saveAsTiff( outputPath );
-					}
+					// Save
+					final String outputPath = inputPath + "-registered.tif";
+					Utils.log( "Saving registered image: " + outputPath );
+					FileSaver fileSaver = new FileSaver( transformedImagePlus );
+					fileSaver.saveAsTiff( outputPath );
 
 				}
 			}
@@ -237,6 +237,7 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 		settings.showIntermediateResults = showIntermediateResults;
 		settings.registrationResolution = registrationResolution;
 		settings.outputResolution = outputResolution;
+		settings.backgroundIntensity = backgroundIntensity;
 		settings.thresholdAfterBackgroundSubtraction = thresholdAfterBackgroundSubtraction;
 		settings.refractiveIndexScalingCorrectionFactor = refractiveIndexScalingCorrectionFactor;
 		settings.refractiveIndexIntensityCorrectionDecayLength = refractiveIndexIntensityCorrectionDecayLength;

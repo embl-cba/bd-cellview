@@ -14,7 +14,5 @@ public class ShavenBabyRegistrationSettings
 	public double minDistanceToAxisForRollAngleComputation = 5;
 	public double watershedSeedsDistanceThreshold = 50;
 	public double thresholdAfterBackgroundSubtraction = 500;
-	public double closingRadius = 16;
-
-
+	public double closingRadius = 32;
 }

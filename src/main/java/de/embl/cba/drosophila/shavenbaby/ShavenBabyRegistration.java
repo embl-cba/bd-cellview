@@ -127,7 +127,7 @@ public class ShavenBabyRegistration
 
 		DistanceTransform.transform( doubleBinary, distance, DistanceTransform.DISTANCE_TYPE.EUCLIDIAN, 1.0D );
 
-		if ( settings.showIntermediateResults ) show( distance, "distance transformAllChannels", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( distance, "distance transform", null, registrationCalibration, false );
 
 		/**
 		 * Seeds for watershed
@@ -148,7 +148,7 @@ public class ShavenBabyRegistration
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
 		
-		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transformAllChannels derived seeds", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
 
 
 		/**
@@ -288,11 +288,11 @@ public class ShavenBabyRegistration
 	{
 		final double rollAngle = computeRollAngle( centroidsParameters, settings.minDistanceToAxisForRollAngleComputation );
 
+		Utils.log( "Roll angle " + rollAngle );
+
 		AffineTransform3D rollTransform = new AffineTransform3D();
 
 		rollTransform.rotate( X, - toRadians( rollAngle ) );
-
-		Utils.log( "Roll angle : " + rollAngle );
 
 		return rollTransform;
 	}
