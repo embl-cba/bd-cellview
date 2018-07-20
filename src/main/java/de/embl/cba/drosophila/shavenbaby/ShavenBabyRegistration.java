@@ -5,7 +5,6 @@ import de.embl.cba.drosophila.geometry.CentroidsParameters;
 import de.embl.cba.drosophila.geometry.CoordinatesAndValues;
 import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
-import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
@@ -97,7 +96,7 @@ public class ShavenBabyRegistration
 		final RandomAccessibleInterval< BitType > mask = Converters.convert(
 				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterBackgroundSubtraction ? true : false ), new BitType() );
 
-//		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
+		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
 
 		/**
 		 * Morphological closing
@@ -105,9 +104,13 @@ public class ShavenBabyRegistration
 
 		Utils.log( "Morphological closing...");
 
-		Shape closingShape = new HyperSphereShape( (int) ( settings.closingRadius / settings.registrationResolution ) );
 		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
-		Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape,1 );
+
+		if ( settings.closingRadius > 0 )
+		{
+			Shape closingShape = new HyperSphereShape( ( int ) ( settings.closingRadius / settings.registrationResolution ) );
+			Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape, 1 );
+		}
 
 		if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
 
@@ -135,20 +138,7 @@ public class ShavenBabyRegistration
 		 * Combining local maxima or values larger than a distance threshold
 		 */
 
-		Utils.log( "Seeds for watershed...");
-
-		long localMaximaRadius = 1; //( long ) ( 0.5 * settings.drosophilaRadius / settings.registrationResolution )
-
-		double distanceThreshold = Math.pow( settings.watershedSeedsDistanceThreshold / settings.registrationResolution, 2 );
-
-		final RandomAccessibleInterval< BitType > seeds = Utils.createSeeds(
-				distance,
-				new HyperSphereShape( localMaximaRadius ),
-				distanceThreshold );
-
-		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
-		
-		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "distance transform derived seeds", null, registrationCalibration, false );
+		final ImgLabeling< Integer, IntType > seedsLabelImg = createWatershedSeeds( registrationCalibration, distance, closed );
 
 
 		/**
@@ -254,6 +244,38 @@ public class ShavenBabyRegistration
 
 		return registration;
 
+	}
+
+	public ImgLabeling< Integer, IntType > createWatershedSeeds( double[] registrationCalibration, RandomAccessibleInterval< DoubleType > distance, RandomAccessibleInterval< BitType > mask )
+	{
+		Utils.log( "Seeds for watershed...");
+
+		final RandomAccessibleInterval< BitType > seeds;
+
+		if ( false )
+		{
+			// based on local maxima
+			//
+			long localMaximaRadius = 1; //( long ) ( 0.5 * settings.drosophilaRadius / settings.registrationResolution )
+
+			double distanceThreshold = Math.pow( settings.watershedSeedsDistanceThreshold / settings.registrationResolution, 2 );
+
+			seeds = Utils.createSeedsBasedOnLocalMaximaAndValuesAboveThreshold(
+					distance,
+					new HyperSphereShape( localMaximaRadius ),
+					distanceThreshold );
+		}
+		else if ( true )
+		{
+			// based on central and boundary pixels
+			//
+			seeds = Utils.createSeedsForCentralAndBoundaryPixels( mask );
+		}
+
+		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
+
+		if ( settings.showIntermediateResults ) show( Utils.asIntImg( seedsLabelImg ), "watershed seeds", null, registrationCalibration, false );
+		return seedsLabelImg;
 	}
 
 	public AffineTransform3D computeOrientationTransform( RandomAccessibleInterval yawAlignedMask, RandomAccessibleInterval yawAlignedIntensities, double calibration )

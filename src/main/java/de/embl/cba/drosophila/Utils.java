@@ -512,7 +512,86 @@ public class Utils
 
 
 	public static < T extends RealType< T > & NativeType< T > >
-	RandomAccessibleInterval< BitType > createSeeds( RandomAccessibleInterval< T > rai, Shape shape, double threshold )
+	long[] getCenterLocation( RandomAccessibleInterval< T > rai )
+	{
+		int numDimensions = rai.numDimensions();
+
+		long[] center = new long[ numDimensions ];
+
+		for ( int d = 0; d < numDimensions; ++d )
+		{
+			center[ d ] = ( rai.max( d ) - rai.min( d ) ) / 2 + rai.min( d );
+		}
+
+		return center;
+
+	}
+
+
+	public static < T extends RealType< T > & NativeType< T > >
+	boolean isBoundaryPixel( Cursor< T > cursor, RandomAccessibleInterval< T > rai )
+	{
+		int numDimensions = rai.numDimensions();
+		final long[] position = new long[ numDimensions ];
+		cursor.localize( position );
+
+
+		for ( int d = 0; d < numDimensions; ++d )
+		{
+			if ( position[ d ] == rai.min( d ) ) return true;
+			if ( position[ d ] == rai.max( d ) ) return true;
+		}
+
+		return false;
+	}
+
+	public static < T extends RealType< T > & NativeType< T > >
+	boolean isLateralBoundaryPixel( Cursor< T > cursor, RandomAccessibleInterval< T > rai )
+	{
+		int numDimensions = rai.numDimensions();
+		final long[] position = new long[ numDimensions ];
+		cursor.localize( position );
+
+
+		for ( int d = 0; d < numDimensions - 1; ++d )
+		{
+			if ( position[ d ] == rai.min( d ) ) return true;
+			if ( position[ d ] == rai.max( d ) ) return true;
+		}
+
+		return false;
+
+	}
+
+	public static RandomAccessibleInterval< BitType > createSeedsForCentralAndBoundaryPixels( RandomAccessibleInterval< BitType > rai )
+	{
+
+		RandomAccessibleInterval< BitType > seeds = ArrayImgs.bits( Intervals.dimensionsAsLongArray( rai ) );
+		seeds = Transforms.adjustOrigin( rai, seeds );
+
+		final Cursor< BitType > cursor = Views.iterable( rai ).cursor();
+
+		// set center pixel
+		final RandomAccess< BitType > randomAccess = seeds.randomAccess();
+		randomAccess.setPosition( getCenterLocation( rai ) );
+		randomAccess.get().set( true );
+
+		// set boundary pixels if
+		while ( cursor.hasNext() )
+		{
+			if ( cursor.next().get() && isLateralBoundaryPixel( cursor, rai ) )
+			{
+				randomAccess.setPosition( cursor );
+				randomAccess.get().set( true );
+			}
+		}
+
+		return seeds;
+	}
+
+
+	public static < T extends RealType< T > & NativeType< T > >
+	RandomAccessibleInterval< BitType > createSeedsBasedOnLocalMaximaAndValuesAboveThreshold( RandomAccessibleInterval< T > rai, Shape shape, double threshold )
 	{
 
 		RandomAccessibleInterval< BitType > maxima = ArrayImgs.bits( Intervals.dimensionsAsLongArray( rai ) );
@@ -551,7 +630,6 @@ public class Utils
 
 		return maxima;
 	}
-
 
 	public static < T extends IntegerType >
 	ImgLabeling< Integer, IntType > createLabelImg( RandomAccessibleInterval< T > rai )
