@@ -21,7 +21,6 @@ public class ShavenBabyRegistrationTest
 		imagej.ui().showUI();
 
 		ShavenBabyRegistrationSettings settings = new ShavenBabyRegistrationSettings();
-		settings.registrationResolution = 10;
 		settings.showIntermediateResults = true;
 
 		/**
@@ -43,7 +42,7 @@ public class ShavenBabyRegistrationTest
 
 
 //		final String path = ShavenBabyRegistrationTest.class.getResource( "/ShavenBaby01.zip" ).getFile();
-		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-04-downscaled-svb.tif";
+		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-07-downscaled-svb.tif";
 		final ImagePlus imagePlus = IJ.openImage( path );
 
 //		final String path = "/Users/tischer/Documents/justin-crocker-drosophila-registration--data/E3NWT-02.czi";

@@ -7,11 +7,13 @@ import de.embl.cba.drosophila.geometry.EllipsoidParameters;
 import de.embl.cba.drosophila.geometry.Ellipsoids;
 import net.imagej.ops.OpService;
 import net.imglib2.Cursor;
+import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.algorithm.morphology.distance.DistanceTransform;
 import net.imglib2.algorithm.neighborhood.HyperSphereShape;
 import net.imglib2.converter.Converters;
+import net.imglib2.histogram.Histogram1d;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
@@ -91,29 +93,16 @@ public class ShavenBabyRegistration
 		 * Threshold
 		 */
 
-		Utils.log( "Threshold...");
+		RandomAccessibleInterval< BitType > mask = createMask( downscaled, registrationCalibration );
 
-		final RandomAccessibleInterval< BitType > mask = Converters.convert(
-				downscaled, ( i, o ) -> o.set( i.getRealDouble() > settings.thresholdAfterBackgroundSubtraction ? true : false ), new BitType() );
-
-		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
 
 		/**
 		 * Morphological closing
 		 */
 
-		Utils.log( "Morphological closing...");
+//		RandomAccessibleInterval< BitType > closed = createClosedImage( registrationCalibration, mask );
 
-		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
-
-		if ( settings.closingRadius > 0 )
-		{
-			Shape closingShape = new HyperSphereShape( ( int ) ( settings.closingRadius / settings.registrationResolution ) );
-			Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape, 1 );
-		}
-
-		if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
-
+		RandomAccessibleInterval< BitType > closed = mask;
 
 		/**
 		 * Distance transform
@@ -123,8 +112,7 @@ public class ShavenBabyRegistration
 
 		Utils.log( "Distance transform...");
 
-		final RandomAccessibleInterval< DoubleType > doubleBinary = Converters.convert( closed,
-				( i, o ) -> o.set( i.get() ? Double.MAX_VALUE : 0 ), new DoubleType() );
+		final RandomAccessibleInterval< DoubleType > doubleBinary = Converters.convert( closed, ( i, o ) -> o.set( i.get() ? Double.MAX_VALUE : 0 ), new DoubleType() );
 
 		final RandomAccessibleInterval< DoubleType > distance = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( doubleBinary ) );
 
@@ -133,9 +121,7 @@ public class ShavenBabyRegistration
 		if ( settings.showIntermediateResults ) show( distance, "distance transform", null, registrationCalibration, false );
 
 		/**
-		 * Seeds for watershed
-		 *
-		 * Combining local maxima or values larger than a distance threshold
+		 * Watershed seeds
 		 */
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = createWatershedSeeds( registrationCalibration, distance, closed );
@@ -212,7 +198,7 @@ public class ShavenBabyRegistration
 
 		final RandomAccessibleInterval yawAndOrientationAlignedMask = Utils.copyAsArrayImg( Transforms.createTransformedView( centralObjectMask, registration, new NearestNeighborInterpolatorFactory() ) );
 
-		final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution );
+		final CentroidsParameters centroidsParameters = Utils.computeCentroidsParametersAlongXAxis( yawAndOrientationAlignedMask, settings.registrationResolution, settings.rollAngleMaxDistanceToCenter );
 
 		if ( settings.showIntermediateResults )
 			Plots.plot( centroidsParameters.axisCoordinates, centroidsParameters.angles, "x", "angle" );
@@ -246,31 +232,51 @@ public class ShavenBabyRegistration
 
 	}
 
+	public RandomAccessibleInterval< BitType > createClosedImage( double[] registrationCalibration, RandomAccessibleInterval< BitType > mask )
+	{
+		RandomAccessibleInterval< BitType > closed = Utils.copyAsArrayImg( mask );
+
+		if ( settings.closingRadius > 0 )
+		{
+			Utils.log( "Morphological closing...");
+			Shape closingShape = new HyperSphereShape( ( int ) ( settings.closingRadius / settings.registrationResolution ) );
+			Closing.close( Views.extendBorder( mask ), Views.iterable( closed ), closingShape, 1 );
+			if ( settings.showIntermediateResults ) show( closed, "closed", null, registrationCalibration, false );
+		}
+		return closed;
+	}
+
+	public < T extends RealType< T > & NativeType< T > > RandomAccessibleInterval< BitType > createMask( RandomAccessibleInterval< T > downscaled, double[] registrationCalibration )
+	{
+		Utils.log( "Threshold...");
+
+		final Histogram1d< T > histogram = opService.image().histogram( Views.iterable( downscaled ) );
+
+//		double huang = opService.threshold().huang( histogram ).getRealDouble();
+		double yen = opService.threshold().yen( histogram ).getRealDouble();
+		double threshold = yen;
+
+		RandomAccessibleInterval< BitType > mask = Converters.convert( downscaled, ( i, o ) -> o.set( i.getRealDouble() > threshold ? true : false ), new BitType() );
+
+		mask = opService.morphology().fillHoles( mask );
+
+		if ( settings.showIntermediateResults ) show( mask, "mask", null, registrationCalibration, false );
+
+		return mask;
+	}
+
 	public ImgLabeling< Integer, IntType > createWatershedSeeds( double[] registrationCalibration, RandomAccessibleInterval< DoubleType > distance, RandomAccessibleInterval< BitType > mask )
 	{
 		Utils.log( "Seeds for watershed...");
 
-		final RandomAccessibleInterval< BitType > seeds;
+		double globalDistanceThreshold = Math.pow( settings.watershedSeedsGlobalDistanceThreshold / settings.registrationResolution, 2 );
+		double localMaximaDistanceThreshold = Math.pow( settings.watershedSeedsLocalMaximaDistanceThreshold / settings.registrationResolution, 2 );
 
-		if ( false )
-		{
-			// based on local maxima
-			//
-			long localMaximaRadius = 1; //( long ) ( 0.5 * settings.drosophilaRadius / settings.registrationResolution )
-
-			double distanceThreshold = Math.pow( settings.watershedSeedsDistanceThreshold / settings.registrationResolution, 2 );
-
-			seeds = Utils.createSeedsBasedOnLocalMaximaAndValuesAboveThreshold(
-					distance,
-					new HyperSphereShape( localMaximaRadius ),
-					distanceThreshold );
-		}
-		else if ( true )
-		{
-			// based on central and boundary pixels
-			//
-			seeds = Utils.createSeedsForCentralAndBoundaryPixels( mask );
-		}
+		final RandomAccessibleInterval< BitType >  seeds = Utils.createSeeds(
+				distance,
+				new HyperSphereShape( 1 ),
+				globalDistanceThreshold,
+				localMaximaDistanceThreshold );
 
 		final ImgLabeling< Integer, IntType > seedsLabelImg = Utils.createLabelImg( seeds );
 
@@ -308,7 +314,7 @@ public class ShavenBabyRegistration
 
 	public static AffineTransform3D computeRollTransform( CentroidsParameters centroidsParameters, ShavenBabyRegistrationSettings settings )
 	{
-		final double rollAngle = computeRollAngle( centroidsParameters, settings.minDistanceToAxisForRollAngleComputation );
+		final double rollAngle = computeRollAngle( centroidsParameters, settings.rollAngleMinDistanceToAxis, settings.rollAngleMinDistanceToCenter, settings.rollAngleMaxDistanceToCenter );
 
 		Utils.log( "Roll angle " + rollAngle );
 
@@ -319,7 +325,7 @@ public class ShavenBabyRegistration
 		return rollTransform;
 	}
 
-	public static double computeRollAngle( CentroidsParameters centroidsParameters, double minDistanceToAxis )
+	public static double computeRollAngle( CentroidsParameters centroidsParameters, double minDistanceToAxis, double minDistanceToCenter, double maxDistanceToCenter )
 	{
 		final int n = centroidsParameters.axisCoordinates.size();
 
@@ -327,7 +333,9 @@ public class ShavenBabyRegistration
 
 		for ( int i = 0; i < n; ++i )
 		{
-			if ( centroidsParameters.distances.get( i ) > minDistanceToAxis )
+			if ( ( centroidsParameters.distances.get( i ) > minDistanceToAxis ) &&
+					( Math.abs(  centroidsParameters.axisCoordinates.get( i ) ) > minDistanceToCenter ) &&
+					( Math.abs(  centroidsParameters.axisCoordinates.get( i ) ) < maxDistanceToCenter ))
 			{
 				offCenterAngles.add( centroidsParameters.angles.get( i ) );
 			}
@@ -335,7 +343,6 @@ public class ShavenBabyRegistration
 
 		Collections.sort( offCenterAngles );
 
-		double meanAngle = Utils.mean( offCenterAngles );
 		double medianAngle = Utils.median( offCenterAngles );
 
 		return medianAngle;

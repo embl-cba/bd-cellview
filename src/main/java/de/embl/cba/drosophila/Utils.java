@@ -30,6 +30,7 @@ import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -122,7 +123,8 @@ public class Utils
 
 	public static CentroidsParameters computeCentroidsParametersAlongXAxis(
 			RandomAccessibleInterval< BooleanType > rai,
-			double calibration )
+			double calibration,
+			double maxDistanceToCenter )
 	{
 
 		CentroidsParameters centroidsParameters = new CentroidsParameters();
@@ -134,30 +136,33 @@ public class Utils
 		for ( long coordinate = rai.min( X ); coordinate <= rai.max( X ); ++coordinate )
 		{
 
-			final double[] centroid = computeCentroidPerpendicularToAxis( rai, X, coordinate );
-			final long numVoxels = computeNumberOfVoxelsPerpendicularToAxis( rai, X, coordinate );
-
-			if ( centroid != null )
+			if ( Math.abs( coordinate * calibration ) < maxDistanceToCenter )
 			{
-//				double[] centerDisplacementVector = subtract( centroid, centralCentroid ); // this is not very robust, because the central one could be off
 
-				double[] centerDisplacementVector = centroid;
-				double centerDisplacementLength = vectorLength( centerDisplacementVector );
+				final double[] centroid = computeCentroidPerpendicularToAxis( rai, X, coordinate );
+				final long numVoxels = computeNumberOfVoxelsPerpendicularToAxis( rai, X, coordinate );
 
-				/**
-				 *  centroid[ 0 ] is the y-axis coordinate
-				 *  the sign of the y-axis coordinate determines the sign of the angle,
-				 *  i.e. the direction of rotation
-				 */
-				final double angle = Math.signum( centerDisplacementVector[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centerDisplacementVector, unitVectorInNegativeZDirection ) / centerDisplacementLength );
+				if ( centroid != null )
+				{
+					//				double[] centerDisplacementVector = subtract( centroid, centralCentroid ); // this is not very robust, because the central one could be off
 
-				centroidsParameters.distances.add( centerDisplacementLength * calibration );
-				centroidsParameters.angles.add( angle );
-				centroidsParameters.axisCoordinates.add( (double) coordinate * calibration );
-				centroidsParameters.centroids.add( new RealPoint( coordinate * calibration , centroid[ 0 ] * calibration , centroid[ 1 ] * calibration  ) );
-				centroidsParameters.numVoxels.add( (double) numVoxels );
+					double[] centerDisplacementVector = centroid;
+					double centerDisplacementLength = vectorLength( centerDisplacementVector );
+
+					/**
+					 *  centroid[ 0 ] is the y-axis coordinate
+					 *  the sign of the y-axis coordinate determines the sign of the angle,
+					 *  i.e. the direction of rotation
+					 */
+					final double angle = Math.signum( centerDisplacementVector[ 0 ] ) * 180 / Math.PI * acos( dotProduct( centerDisplacementVector, unitVectorInNegativeZDirection ) / centerDisplacementLength );
+
+					centroidsParameters.distances.add( centerDisplacementLength * calibration );
+					centroidsParameters.angles.add( angle );
+					centroidsParameters.axisCoordinates.add( ( double ) coordinate * calibration );
+					centroidsParameters.centroids.add( new RealPoint( coordinate * calibration, centroid[ 0 ] * calibration, centroid[ 1 ] * calibration ) );
+					centroidsParameters.numVoxels.add( ( double ) numVoxels );
+				}
 			}
-
 		}
 
 		return centroidsParameters;
@@ -546,12 +551,11 @@ public class Utils
 	}
 
 	public static < T extends RealType< T > & NativeType< T > >
-	boolean isLateralBoundaryPixel( Cursor< T > cursor, RandomAccessibleInterval< T > rai )
+	boolean isLateralBoundaryPixel( Neighborhood< T > cursor, RandomAccessibleInterval< T > rai )
 	{
 		int numDimensions = rai.numDimensions();
 		final long[] position = new long[ numDimensions ];
 		cursor.localize( position );
-
 
 		for ( int d = 0; d < numDimensions - 1; ++d )
 		{
@@ -563,65 +567,42 @@ public class Utils
 
 	}
 
-	public static RandomAccessibleInterval< BitType > createSeedsForCentralAndBoundaryPixels( RandomAccessibleInterval< BitType > rai )
-	{
-
-		RandomAccessibleInterval< BitType > seeds = ArrayImgs.bits( Intervals.dimensionsAsLongArray( rai ) );
-		seeds = Transforms.adjustOrigin( rai, seeds );
-
-		final Cursor< BitType > cursor = Views.iterable( rai ).cursor();
-
-		// set center pixel
-		final RandomAccess< BitType > randomAccess = seeds.randomAccess();
-		randomAccess.setPosition( getCenterLocation( rai ) );
-		randomAccess.get().set( true );
-
-		// set boundary pixels if
-		while ( cursor.hasNext() )
-		{
-			if ( cursor.next().get() && isLateralBoundaryPixel( cursor, rai ) )
-			{
-				randomAccess.setPosition( cursor );
-				randomAccess.get().set( true );
-			}
-		}
-
-		return seeds;
-	}
-
 
 	public static < T extends RealType< T > & NativeType< T > >
-	RandomAccessibleInterval< BitType > createSeedsBasedOnLocalMaximaAndValuesAboveThreshold( RandomAccessibleInterval< T > rai, Shape shape, double threshold )
+	RandomAccessibleInterval< BitType > createSeeds( RandomAccessibleInterval< T > distance, Shape shape, double globalThreshold, double localThreshold )
 	{
 
-		RandomAccessibleInterval< BitType > maxima = ArrayImgs.bits( Intervals.dimensionsAsLongArray( rai ) );
-		maxima = Transforms.adjustOrigin( rai, maxima );
+		RandomAccessibleInterval< BitType > maxima = ArrayImgs.bits( Intervals.dimensionsAsLongArray( distance ) );
+		maxima = Transforms.adjustOrigin( distance, maxima );
 
-		RandomAccessible< Neighborhood< T > > neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendPeriodic( rai ) );
-		RandomAccessibleInterval< Neighborhood< T > > neighborhoodsInterval = Views.interval( neighborhoods, rai );
+		RandomAccessible< Neighborhood< T > > neighborhoods = shape.neighborhoodsRandomAccessible( Views.extendPeriodic( distance ) );
+		RandomAccessibleInterval< Neighborhood< T > > neighborhoodsInterval = Views.interval( neighborhoods, distance );
 
 		final Cursor< Neighborhood< T > > neighborhoodCursor = Views.iterable( neighborhoodsInterval ).cursor();
-		final RandomAccess< T > intensitiesRandomAccess = rai.randomAccess();
+		final RandomAccess< T > distanceRandomAccess = distance.randomAccess();
 		final RandomAccess< BitType > maximaRandomAccess = maxima.randomAccess();
 
 		while ( neighborhoodCursor.hasNext() )
 		{
 			final Neighborhood< T > neighborhood = neighborhoodCursor.next();
+			maximaRandomAccess.setPosition( neighborhood );
+			distanceRandomAccess.setPosition( neighborhood );
 
-			intensitiesRandomAccess.setPosition( neighborhood );
-			T centerValue = intensitiesRandomAccess.get();
+			T centerValue = distanceRandomAccess.get();
 
-			if ( centerValue.getRealDouble() > threshold )
+			if ( centerValue.getRealDouble() > globalThreshold )
 			{
-				maximaRandomAccess.setPosition( neighborhood );
+				maximaRandomAccess.get().set( true );
+			}
+			else if ( isLateralBoundaryPixel( neighborhood, distance ) && distanceRandomAccess.get().getRealDouble() >  0 )
+			{
 				maximaRandomAccess.get().set( true );
 			}
 			else if ( isCenterLargestOrEqual( centerValue, neighborhood ) )
 			{
-				if ( centerValue.getRealDouble() > 0 )
+				if ( centerValue.getRealDouble() > localThreshold )
 				{
-					// local maximum and larger than zero
-					maximaRandomAccess.setPosition( neighborhood );
+					// local maximum and larger than local Threshold
 					maximaRandomAccess.get().set( true );
 				}
 			}

@@ -10,14 +10,12 @@ import ij.ImagePlus;
 import ij.io.FileSaver;
 import net.imagej.DatasetService;
 import net.imagej.ops.OpService;
-import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import org.scijava.app.StatusService;
 import org.scijava.command.Command;
@@ -27,6 +25,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 import org.scijava.widget.FileWidget;
 
+import javax.rmi.CORBA.Util;
 import java.io.File;
 import java.util.ArrayList;
 
@@ -68,7 +67,7 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 	@Parameter
 	public int shavenBabyChannelIndexOneBased = settings.shavenBabyChannelIndexOneBased;
 
-	@Parameter
+	@Parameter( persist = false )
 	public boolean showIntermediateResults = settings.showIntermediateResults;
 
 	@Parameter
@@ -76,9 +75,6 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 
 	@Parameter
 	public double outputResolution = settings.outputResolution;
-
-	@Parameter
-	public double closingRadius = settings.closingRadius;
 
 	@Parameter
 	public double backgroundIntensity = settings.backgroundIntensity;
@@ -93,10 +89,8 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 	public double refractiveIndexIntensityCorrectionDecayLength = settings.refractiveIndexIntensityCorrectionDecayLength;
 
 	@Parameter
-	public double minDistanceToAxisForRollAngleComputation = settings.minDistanceToAxisForRollAngleComputation;
+	public double closingRadius = settings.closingRadius;
 
-	@Parameter
-	public double watershedSeedsDistanceThreshold = settings.watershedSeedsDistanceThreshold;
 
 	public void run()
 	{
@@ -144,7 +138,6 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 					Utils.log( "Saving projections..." );
 					saveImages( inputPath, projections );
 
-					Utils.log( "Wrapping to ImagePlus..." );
 					final ImagePlus transformedImagePlus = ImageJFunctions.wrap( transformedWithImagePlusDimensionOrder, "transformed" );
 
 					// Save
@@ -156,6 +149,8 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 				}
 			}
 		}
+
+		Utils.log( "Done!" );
 
 
 	}
@@ -211,7 +206,7 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 		Utils.log( "Computing registration..." );
 		final AffineTransform3D registrationTransform = registration.computeRegistration( svb, Utils.getCalibration( imagePlus ) );
 
-		Utils.log( "Transforming all channels..." );
+		Utils.log( "Transforming all channels to a final resolution of " + settings.outputResolution + "micrometer ..." );
 		final RandomAccessibleInterval< T > allChannelsTransformed = Transforms.transformAllChannels( allChannels, registrationTransform, imagePlus.getNChannels() );
 
 		return allChannelsTransformed;
@@ -236,13 +231,12 @@ public class ShavenBabyRegistrationCommand<T extends RealType<T> & NativeType< T
 	{
 		settings.showIntermediateResults = showIntermediateResults;
 		settings.registrationResolution = registrationResolution;
+		settings.closingRadius = closingRadius;
 		settings.outputResolution = outputResolution;
 		settings.backgroundIntensity = backgroundIntensity;
 		settings.thresholdAfterBackgroundSubtraction = thresholdAfterBackgroundSubtraction;
 		settings.refractiveIndexScalingCorrectionFactor = refractiveIndexScalingCorrectionFactor;
 		settings.refractiveIndexIntensityCorrectionDecayLength = refractiveIndexIntensityCorrectionDecayLength;
-		settings.minDistanceToAxisForRollAngleComputation = minDistanceToAxisForRollAngleComputation;
-		settings.watershedSeedsDistanceThreshold = watershedSeedsDistanceThreshold;
 	}
 
 
