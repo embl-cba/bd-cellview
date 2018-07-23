@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>22.2.0</version>
+		<version>22.3.0</version>
 	</parent>
 
-	<artifactId>imglib2-drosophila-registration</artifactId>
+	<artifactId>fiji-plugin-yaml-metadata</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 
-	<name>ImgLib2 Drosophila Registration</name>
+	<name>Fiji Plugin YAML Metadata</name>
 	<description>TODO</description>
 	<inceptionYear>2018</inceptionYear>
 	<organization>
@@ -107,27 +107,8 @@
 		</dependency>
 
 		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2</artifactId>
-		</dependency>
-
-		<dependency>
 			<groupId>ome</groupId>
 			<artifactId>bio-formats_plugins</artifactId>
-		</dependency>
-
-
-		<!-- Jama (Java Matrix package) is used for computing inertia computeRegistration -->
-		<dependency>
-			<groupId>gov.nist.math</groupId>
-			<artifactId>jama</artifactId>
-		</dependency>
-
-		<!-- phase correlation -->
-		<dependency>
-			<groupId>net.preibisch</groupId>
-			<artifactId>BigStitcher</artifactId>
-			<version>0.1.1</version>
 		</dependency>
 
 	</dependencies>
