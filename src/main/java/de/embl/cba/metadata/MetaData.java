@@ -2,6 +2,7 @@ package de.embl.cba.metadata;
 
 import loci.formats.IFormatReader;
 import loci.formats.meta.IMetadata;
+import net.imagej.ops.Ops;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,6 +12,11 @@ public class MetaData
 	public static final String IMAGE_DIMENSIONS = "Image dimensions";
 	public static final String ENTITY = "Entity";
 	public static final String LABEL = "Label";
+	public static final String TOTAL_DATA_SIZE = "Total data size:";
+	public static final String UNKNOWN = "???";
+	public static final String TIME_POINTS = "Time points";
+	public static final String SPECIES = "Species";
+	public static final String GENES = "Genes";
 
 	final IFormatReader reader;
 	final IMetadata meta;
@@ -25,8 +31,48 @@ public class MetaData
 
 		map = new LinkedHashMap<>( );
 
+		addTotalDataSize();
 		addDimensions();
 		addChannels();
+		addTimePoints();
+		addPositions();
+		map.put( "Imaging method", UNKNOWN );
+		map.put( "Developmental stage", UNKNOWN );
+		map.put( "Cell line", UNKNOWN );
+		
+	}
+
+	public void addSpecies()
+	{
+		final LinkedHashMap< String, Object > species = new LinkedHashMap<>();
+		species.put( "Name", UNKNOWN );
+		species.put( "Taxon", UNKNOWN );
+		map.put( SPECIES, species );
+	}
+
+
+	public void addGenes()
+	{
+		final LinkedHashMap< String, Object > genes = new LinkedHashMap<>();
+		genes.put( "Symbols", UNKNOWN );
+		genes.put( "Identifiers", UNKNOWN );
+		map.put( GENES, genes );
+	}
+
+
+	public Object addPositions()
+	{
+		return map.put( "Positions", UNKNOWN );
+	}
+
+	public void addTimePoints()
+	{
+		map.put( TIME_POINTS, UNKNOWN );
+	}
+
+	public void addTotalDataSize()
+	{
+		map.put( TOTAL_DATA_SIZE, UNKNOWN );
 	}
 
 	public Map< String, Object > getMap()

@@ -1,5 +1,6 @@
 
 import de.embl.cba.metadata.MetaData;
+import ij.IJ;
 import ij.ImageJ;
 import loci.common.services.ServiceFactory;
 import loci.formats.IFormatReader;
@@ -99,9 +100,12 @@ public class BioFormatsMetadataExtractionTest
 		final DumperOptions dumperOptions = new DumperOptions();
 		dumperOptions.setDefaultFlowStyle( DumperOptions.FlowStyle.BLOCK );
 
+		String outputPath = "/Volumes/cba/exchange/OeyvindOedegaard/yaml_project/test.yaml";
 		Yaml yaml = new Yaml( dumperOptions );
-		FileWriter writer = new FileWriter("/Volumes/cba/exchange/OeyvindOedegaard/yaml_project/test.yaml");
+		FileWriter writer = new FileWriter( outputPath );
 		yaml.dump(map, writer);
+
+		IJ.open( outputPath );
 
 
 
