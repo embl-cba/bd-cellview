@@ -1,9 +1,7 @@
 
-import de.embl.cba.metadata.Utils;
+import de.embl.cba.metadata.MetaData;
 import ij.ImageJ;
-import loci.common.DateTools;
 import loci.common.services.ServiceFactory;
-import loci.formats.FormatReader;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 import loci.formats.meta.IMetadata;
@@ -12,6 +10,15 @@ import loci.formats.services.OMEXMLService;
 import ome.units.quantity.Length;
 import ome.units.quantity.Time;
 import ome.units.UNITS;
+
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
+
+
+import java.io.FileWriter;
+import java.util.*;
+
+import static de.embl.cba.metadata.Utils.log;
 
 /**
  * Uses Bio-Formats to extract some basic standardized
@@ -29,14 +36,14 @@ public class BioFormatsMetadataExtractionTest
 		int sizeC = reader.getSizeC();
 		int sizeT = reader.getSizeT();
 		int imageCount = reader.getImageCount();
-		Utils.log("");
-		Utils.log("Pixel dimensions:");
-		Utils.log("\tWidth = " + sizeX);
-		Utils.log("\tHeight = " + sizeY);
-		Utils.log("\tFocal planes = " + sizeZ);
-		Utils.log("\tChannels = " + sizeC);
-		Utils.log("\tTimepoints = " + sizeT);
-		Utils.log("\tTotal planes = " + imageCount);
+		log("");
+		log("Pixel dimensions:");
+		log("\tWidth = " + sizeX);
+		log("\tHeight = " + sizeY);
+		log("\tFocal planes = " + sizeZ);
+		log("\tChannels = " + sizeC);
+		log("\tTimepoints = " + sizeT);
+		log("\tTotal planes = " + imageCount);
 	}
 
 	/** Outputs global timing details. */
@@ -45,16 +52,17 @@ public class BioFormatsMetadataExtractionTest
 		Length physicalSizeY = meta.getPixelsPhysicalSizeY(series);
 		Length physicalSizeZ = meta.getPixelsPhysicalSizeZ(series);
 		Time timeIncrement = meta.getPixelsTimeIncrement(series);
-		Utils.log("");
-		Utils.log("Physical dimensions:");
-		Utils.log("\tX spacing = " +
+		log("");
+		log("Physical dimensions:");
+		log("\tX spacing = " +
 				physicalSizeX.value() + " " + physicalSizeX.unit().getSymbol());
-		Utils.log("\tY spacing = " +
+		log("\tY spacing = " +
 				physicalSizeY.value() + " " + physicalSizeY.unit().getSymbol());
-		Utils.log("\tZ spacing = " +
+		log("\tZ spacing = " +
 				physicalSizeZ.value() + " " + physicalSizeZ.unit().getSymbol());
-		Utils.log("\tTime increment = " + timeIncrement.value(UNITS.SECOND).doubleValue() + " seconds");
+		log("\tTime increment = " + timeIncrement.value(UNITS.SECOND).doubleValue() + " seconds");
 	}
+
 
 	public static void main(String[] args) throws Exception {
 
@@ -73,16 +81,30 @@ public class BioFormatsMetadataExtractionTest
 		reader.setMetadataStore(meta);
 
 		// initialize file
-		Utils.log("Initializing " + id);
+		log("Initializing " + id);
 		reader.setId(id);
 
 		int seriesCount = reader.getSeriesCount();
 		if (series < seriesCount) reader.setSeries(series);
 		series = reader.getSeries();
-		Utils.log("\tImage series = " + series + " of " + seriesCount);
+		log("\tImage series = " + series + " of " + seriesCount);
 
 		printPixelDimensions(reader);
 		printPhysicalDimensions(meta, series);
+
+		final MetaData metaData = new MetaData( reader, meta, series );
+
+		final Map< String, Object > map = metaData.getMap();
+
+		final DumperOptions dumperOptions = new DumperOptions();
+		dumperOptions.setDefaultFlowStyle( DumperOptions.FlowStyle.BLOCK );
+
+		Yaml yaml = new Yaml( dumperOptions );
+		FileWriter writer = new FileWriter("/Volumes/cba/exchange/OeyvindOedegaard/yaml_project/test.yaml");
+		yaml.dump(map, writer);
+
+
+
 	}
 
 }
