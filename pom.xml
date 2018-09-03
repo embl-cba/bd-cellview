@@ -8,10 +8,10 @@
 		<version>22.3.0</version>
 	</parent>
 
-	<artifactId>fiji-plugin-yaml-metadata</artifactId>
+	<artifactId>fiji-plugin-granulometry</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 
-	<name>Fiji Plugin YAML Metadata</name>
+	<name>Fiji Plugin Granulometry</name>
 	<description>TODO</description>
 	<inceptionYear>2018</inceptionYear>
 	<organization>
@@ -68,7 +68,7 @@
 	</ciManagement>
 
 	<properties>
-		<package-name>de.embl.cba.registration</package-name>
+		<package-name>de.embl.cba.granulometry</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>EMBL</license.copyrightOwners>
 		<imagej.app.directory>/Applications/Fiji.app/</imagej.app.directory>
@@ -104,32 +104,6 @@
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>ij</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>formats-api</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>formats-bsd</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>formats-gpl</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>bio-formats_plugins</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>org.yaml</groupId>
-			<artifactId>snakeyaml</artifactId>
-			<version>1.16</version>
 		</dependency>
 
 	</dependencies>
