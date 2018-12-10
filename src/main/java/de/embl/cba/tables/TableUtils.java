@@ -36,36 +36,32 @@ public class TableUtils
 		return new JTable( model );
 	}
 
-	public static void saveTable( JTable table )
+	public static void saveTable( JTable table ) throws IOException
 	{
-
 		final JFileChooser jFileChooser = new JFileChooser( "" );
 
-		try
+		if ( jFileChooser.showSaveDialog( null ) == JFileChooser.APPROVE_OPTION )
 		{
 			BufferedWriter bfw = new BufferedWriter( new FileWriter( jFileChooser.getSelectedFile() ) );
 
 			// header
-			for( int column = 0; column < table.getColumnCount(); column++)
+			for ( int column = 0; column < table.getColumnCount(); column++ )
 			{
-				bfw.write( table.getColumnName(column) + "\t" );
+				bfw.write( table.getColumnName( column ) + "\t" );
 			}
 			bfw.write( "\n" );
 
 			// content
-			for( int row = 0; row < table.getRowCount(); row++ )
+			for ( int row = 0; row < table.getRowCount(); row++ )
 			{
-				for( int column = 0; column < table.getColumnCount(); column++)
+				for ( int column = 0; column < table.getColumnCount(); column++ )
 				{
-					bfw.write( table.getValueAt(row, column) + "\t" );
+					bfw.write( table.getValueAt( row, column ) + "\t" );
 				}
 				bfw.write( "\n" );
 			}
-		}
-		catch ( IOException e )
-		{
-			e.printStackTrace();
-			return;
+
+			bfw.close();
 		}
 
 

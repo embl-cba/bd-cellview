@@ -9,6 +9,7 @@ import net.imagej.table.GenericTable;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 
 import static de.embl.cba.tables.Constants.*;
 
@@ -19,13 +20,14 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
 
     private JFrame frame;
     private JScrollPane scrollPane;
-    
+
     private ImagePlus imagePlus;
     private Bdv bdv;
     private double bdvZoom;
     private int[] coordinateColumnIndices;
     private String[] coordinateColumns;
     private boolean[] hasCoordinate;
+    private JMenuBar menuBar;
 
     public InteractiveTablePanel( JTable table )
     {
@@ -59,22 +61,40 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
 
         this.bdvZoom = 10;
 
-        addMenu();
+        initMenus();
+
+        showTable();
+
     }
 
-    private void addMenu()
+    private void initMenus()
     {
-        final JMenu fileMenu = new JMenu( "File" );
+        menuBar = new JMenuBar();
+        JMenu fileMenu = getSaveMenuItem();
+        menuBar.add( fileMenu );
+    }
+
+    private JMenu getSaveMenuItem()
+    {
+        JMenu fileMenu = new JMenu( "File" );
         final JMenuItem saveMenuItem = new JMenuItem( "Save as..." );
         saveMenuItem.addActionListener( new ActionListener()
         {
             @Override
             public void actionPerformed( ActionEvent e )
             {
-                TableUtils.saveTable( table );
+                try
+                {
+                    TableUtils.saveTable( table );
+                }
+                catch ( IOException e1 )
+                {
+                    e1.printStackTrace();
+                }
             }
         } );
         fileMenu.add( saveMenuItem );
+        return fileMenu;
     }
 
     // TODO: Remove to a listener
@@ -109,10 +129,12 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         return true;
     }
 
-    public void showTable() {
+    private void showTable() {
 
         //Create and set up the window.
         frame = new JFrame("Table");
+
+        frame.setJMenuBar( menuBar );
 
         //Create and set up the content pane.
         this.setOpaque(true); //content panes must be opaque
