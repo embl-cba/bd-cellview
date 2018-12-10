@@ -4,6 +4,9 @@ import net.imagej.table.GenericTable;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class TableUtils
 {
@@ -31,5 +34,40 @@ public class TableUtils
 		}
 
 		return new JTable( model );
+	}
+
+	public static void saveTable( JTable table )
+	{
+
+		final JFileChooser jFileChooser = new JFileChooser( "" );
+
+		try
+		{
+			BufferedWriter bfw = new BufferedWriter( new FileWriter( jFileChooser.getSelectedFile() ) );
+
+			// header
+			for( int column = 0; column < table.getColumnCount(); column++)
+			{
+				bfw.write( table.getColumnName(column) + "\t" );
+			}
+			bfw.write( "\n" );
+
+			// content
+			for( int row = 0; row < table.getRowCount(); row++ )
+			{
+				for( int column = 0; column < table.getColumnCount(); column++)
+				{
+					bfw.write( table.getValueAt(row, column) + "\t" );
+				}
+				bfw.write( "\n" );
+			}
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+			return;
+		}
+
+
 	}
 }

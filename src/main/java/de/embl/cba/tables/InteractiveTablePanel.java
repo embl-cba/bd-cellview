@@ -5,14 +5,10 @@ import de.embl.cba.bdv.utils.BdvUtils;
 import ij.ImagePlus;
 import ij.gui.PointRoi;
 import net.imagej.table.GenericTable;
-import net.imglib2.RealPoint;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
 
 import static de.embl.cba.tables.Constants.*;
 
@@ -20,27 +16,33 @@ import static de.embl.cba.tables.Constants.*;
 public class InteractiveTablePanel extends JPanel implements MouseListener, KeyListener
 {
     final private JTable table;
-    final private GenericTable genericTable;
 
     private JFrame frame;
     private JScrollPane scrollPane;
-
-    private String coordinateColumnX;
-    private String coordinateColumnY;
-    private String coordinateColumnZ;
-    private String coordinateColumnT;
-
+    
     private ImagePlus imagePlus;
     private Bdv bdv;
     private double bdvZoom;
+    private int[] coordinateColumnIndices;
+    private String[] coordinateColumns;
+    private boolean[] hasCoordinate;
+
+    public InteractiveTablePanel( JTable table )
+    {
+        super( new GridLayout(1, 0 ) );
+        this.table = table;
+        init();
+    }
 
     public InteractiveTablePanel( GenericTable genericTable )
     {
         super( new GridLayout(1, 0 ) );
-
-        this.genericTable = genericTable;
-
         table = TableUtils.asJTable( genericTable );
+        init();
+    }
+
+    private void init()
+    {
         table.setPreferredScrollableViewportSize( new Dimension(500, 200) );
         table.setFillsViewportHeight( true );
         table.setAutoCreateRowSorter( true );
@@ -48,42 +50,63 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         table.addMouseListener(this );
         table.addKeyListener(this );
 
-        this.bdvZoom = 10;
-
         scrollPane = new JScrollPane( table );
         add( scrollPane );
+
+        coordinateColumnIndices = new int[ 4 ];
+        coordinateColumns = new String[ 4 ];
+        hasCoordinate = new boolean[ 4 ];
+
+        this.bdvZoom = 10;
+
+        addMenu();
     }
 
+    private void addMenu()
+    {
+        final JMenu fileMenu = new JMenu( "File" );
+        final JMenuItem saveMenuItem = new JMenuItem( "Save as..." );
+        saveMenuItem.addActionListener( new ActionListener()
+        {
+            @Override
+            public void actionPerformed( ActionEvent e )
+            {
+                TableUtils.saveTable( table );
+            }
+        } );
+        fileMenu.add( saveMenuItem );
+    }
+
+    // TODO: Remove to a listener
     public void setBdvZoom( double bdvZoom )
     {
         this.bdvZoom = bdvZoom;
     }
 
+    // TODO: Remove to a listener
     public void setImagePlus( ImagePlus imagePlus )
     {
         this.imagePlus = imagePlus;
     }
 
+    // TODO: Remove to a listener
     public void setBdv( Bdv bdv ){ this.bdv = bdv; }
 
-    public void setCoordinateColumnX( String coordinateColumnX )
+    public void setCoordinateColumn( String coordinateColumn, int xyzt )
     {
-        this.coordinateColumnX = coordinateColumnX;
+        this.coordinateColumns[ xyzt ] = coordinateColumn;
+        this.coordinateColumnIndices[ xyzt ] = table.getColumn( coordinateColumn ).getModelIndex();
+        this.hasCoordinate[ xyzt ] = true;
     }
 
-    public void setCoordinateColumnY( String coordinateColumnY )
+    public boolean hasXYZT()
     {
-        this.coordinateColumnY = coordinateColumnY;
-    }
+        for ( int d = 0; d < 4; ++d )
+        {
+            if ( hasCoordinate[ d ] == false ) return false;
+        }
 
-    public void setCoordinateColumnZ( String coordinateColumnZ )
-    {
-        this.coordinateColumnZ = coordinateColumnZ;
-    }
-
-    public void setCoordinateColumnT( String coordinateColumnT )
-    {
-        this.coordinateColumnT = coordinateColumnT;
+        return true;
     }
 
     public void showTable() {
@@ -104,53 +127,44 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     {
         int row = table.convertRowIndexToModel( table.getSelectedRow() );
 
-        if ( imagePlus != null )
+        if ( hasXYZT() )
         {
-            markSelectedObjectInImagePlus( getXYZT( row ) );
+            final double[] xyzt = getXYZT( row );
+
+            if ( imagePlus != null )
+            {
+                markSelectedObjectInImagePlus( xyzt );
+            }
+
+            if ( bdv != null )
+            {
+                BdvUtils.zoomToPosition( bdv, xyzt, bdvZoom );
+            }
         }
 
-        if ( bdv != null )
-        {
-            BdvUtils.zoomToPosition( bdv, getXYZT( row ), bdvZoom );
-        }
     }
-
 
     private double[] getXYZT( int row )
     {
-        if ( coordinateColumnX != null && coordinateColumnY != null )
+        double[] position = new double[ 4 ];
+
+        for ( int d = 0; d < 4; ++d )
         {
-            float x = Float.parseFloat( genericTable.get( coordinateColumnX, row ).toString() );
-            float y = Float.parseFloat( genericTable.get( coordinateColumnY, row ).toString() );
-            int z = 0;
-            int t = 0;
-
-            if ( coordinateColumnZ != null )
-            {
-                z = Integer.parseInt( genericTable.get( coordinateColumnZ, row ).toString() ) - 1;
-            }
-
-            if ( coordinateColumnT != null )
-            {
-                t = Integer.parseInt( genericTable.get( coordinateColumnT, row ).toString() ) - 1;
-            }
-
-            return new double[]{ x, y, z, t };
+            position[ d ] = Float.parseFloat( table.getValueAt( row, coordinateColumnIndices[ d ] ).toString() );
         }
-        else
-        {
-            return null;
-        }
+
+        return position;
     }
 
+    // TODO: Remove to a listener
     public void markSelectedObjectInImagePlus( double[] xyzt )
     {
         PointRoi pointRoi = new PointRoi( xyzt[ X ], xyzt[ Y ] );
-        pointRoi.setPosition( 0, (int) xyzt[ Z ] + 1, (int) xyzt[ T ] + 1 );
+        pointRoi.setPosition( 0, (int) xyzt[ Z ], (int) xyzt[ T ] );
         pointRoi.setSize( 4 );
         pointRoi.setStrokeColor( Color.MAGENTA );
 
-        imagePlus.setPosition( 1, (int) xyzt[ Z ] + 1, (int) xyzt[ T ] + 1 );
+        imagePlus.setPosition( 1, (int) xyzt[ Z ], (int) xyzt[ T ] );
         imagePlus.setRoi( pointRoi );
     }
 
@@ -183,4 +197,6 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     {
         reactToRowSelection();
     }
+
+
 }
