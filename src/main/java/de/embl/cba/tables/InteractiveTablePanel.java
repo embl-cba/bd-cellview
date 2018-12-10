@@ -52,8 +52,9 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         table.addMouseListener(this );
         table.addKeyListener(this );
 
-        scrollPane = new JScrollPane( table );
-        add( scrollPane );
+        scrollPane = new JScrollPane( table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        this.add( scrollPane );
+        table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
 
         coordinateColumnIndices = new int[ 4 ];
         coordinateColumns = new String[ 4 ];
@@ -135,6 +136,9 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         frame = new JFrame("Table");
 
         frame.setJMenuBar( menuBar );
+
+        //Show the table
+        //frame.add( scrollPane );
 
         //Create and set up the content pane.
         this.setOpaque(true); //content panes must be opaque

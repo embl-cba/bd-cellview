@@ -7,18 +7,26 @@ public class TestInteractiveTable
 	public static void main( String[] args )
 	{
 
+		int n = 300;
+		int m = 10;
 
-		String[] columnNames = {"First Name", "Last Name","Sport","# of Years"};
+		String[] colNames = new String[ n ];
+		Object[][] data = new Object[ m ][ n ];
 
-		Object[][] data = {
-				{"Kathy", "Smith", "Snowboarding", "5"},
-				{"John", "Doe", "Rowing", "2"},
-				{"Sue", "Black", "Knitting", "8"},
-				{"Jane", "White", "Speed reading", "10"},
-				{"Joe", "Brown", "Pool", "20"}
-		};
+		for ( int i = 0; i < n ; i++ )
+		{
+			colNames[ i ] = "AAAAA";
+		}
 
-		JTable table = new JTable(data, columnNames);
+		for ( int i = 0; i < m; i++ )
+		{
+			for ( int j = 0; j < n; j++ )
+			{
+				data[ i ][ j ] = i * j;
+			}
+		}
+
+		JTable table = new JTable( data, colNames );
 
 		new InteractiveTablePanel( table );
 
