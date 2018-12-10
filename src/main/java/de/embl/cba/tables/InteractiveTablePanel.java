@@ -1,8 +1,11 @@
 package de.embl.cba.tables;
 
+import bdv.util.Bdv;
+import de.embl.cba.bdv.utils.BdvUtils;
 import ij.ImagePlus;
 import ij.gui.PointRoi;
 import net.imagej.table.GenericTable;
+import net.imglib2.RealPoint;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,6 +13,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+
+import static de.embl.cba.tables.Constants.*;
 
 
 public class InteractiveTablePanel extends JPanel implements MouseListener, KeyListener
@@ -19,11 +24,15 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
 
     private JFrame frame;
     private JScrollPane scrollPane;
-    private ImagePlus imagePlus;
+
     private String coordinateColumnX;
     private String coordinateColumnY;
     private String coordinateColumnZ;
     private String coordinateColumnT;
+
+    private ImagePlus imagePlus;
+    private Bdv bdv;
+    private double bdvZoom;
 
     public InteractiveTablePanel( GenericTable genericTable )
     {
@@ -39,14 +48,23 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         table.addMouseListener(this );
         table.addKeyListener(this );
 
+        this.bdvZoom = 10;
+
         scrollPane = new JScrollPane( table );
         add( scrollPane );
+    }
+
+    public void setBdvZoom( double bdvZoom )
+    {
+        this.bdvZoom = bdvZoom;
     }
 
     public void setImagePlus( ImagePlus imagePlus )
     {
         this.imagePlus = imagePlus;
     }
+
+    public void setBdv( Bdv bdv ){ this.bdv = bdv; }
 
     public void setCoordinateColumnX( String coordinateColumnX )
     {
@@ -86,38 +104,55 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     {
         int row = table.convertRowIndexToModel( table.getSelectedRow() );
 
-        if ( imagePlus != null && coordinateColumnX != null && coordinateColumnY != null )
+        if ( imagePlus != null )
+        {
+            markSelectedObjectInImagePlus( getXYZT( row ) );
+        }
+
+        if ( bdv != null )
+        {
+            BdvUtils.zoomToPosition( bdv, getXYZT( row ), bdvZoom );
+        }
+    }
+
+
+    private double[] getXYZT( int row )
+    {
+        if ( coordinateColumnX != null && coordinateColumnY != null )
         {
             float x = Float.parseFloat( genericTable.get( coordinateColumnX, row ).toString() );
             float y = Float.parseFloat( genericTable.get( coordinateColumnY, row ).toString() );
-            int slice = 1;
-            int frame = 1;
+            int z = 0;
+            int t = 0;
 
             if ( coordinateColumnZ != null )
             {
-                slice = Integer.parseInt( genericTable.get( coordinateColumnZ, row ).toString() );
+                z = Integer.parseInt( genericTable.get( coordinateColumnZ, row ).toString() ) - 1;
             }
 
             if ( coordinateColumnT != null )
             {
-                frame = Integer.parseInt( genericTable.get( coordinateColumnT, row ).toString() );
+                t = Integer.parseInt( genericTable.get( coordinateColumnT, row ).toString() ) - 1;
             }
 
-            imagePlus.setPosition( 1, slice, frame );
-
-            markSelectedObject( x, y, slice, frame );
+            return new double[]{ x, y, z, t };
+        }
+        else
+        {
+            return null;
         }
     }
 
-    public void markSelectedObject( float x, float y, int slice, int frame )
+    public void markSelectedObjectInImagePlus( double[] xyzt )
     {
-        PointRoi pointRoi = new PointRoi( x, y );
+        PointRoi pointRoi = new PointRoi( xyzt[ X ], xyzt[ Y ] );
+        pointRoi.setPosition( 0, (int) xyzt[ Z ] + 1, (int) xyzt[ T ] + 1 );
         pointRoi.setSize( 4 );
         pointRoi.setStrokeColor( Color.MAGENTA );
-        pointRoi.setPosition( 0, slice, frame );
+
+        imagePlus.setPosition( 1, (int) xyzt[ Z ] + 1, (int) xyzt[ T ] + 1 );
         imagePlus.setRoi( pointRoi );
     }
-
 
     @Override
     public void mouseClicked(MouseEvent e)
@@ -126,34 +161,22 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     }
 
     @Override
-    public void mousePressed(MouseEvent e) {
-
-    }
+    public void mousePressed(MouseEvent e) { }
 
     @Override
-    public void mouseReleased(MouseEvent e) {
-
-    }
+    public void mouseReleased(MouseEvent e) { }
 
     @Override
-    public void mouseEntered(MouseEvent e) {
-
-    }
+    public void mouseEntered(MouseEvent e) { }
 
     @Override
-    public void mouseExited(MouseEvent e) {
-
-    }
+    public void mouseExited(MouseEvent e) { }
 
     @Override
-    public void keyTyped(KeyEvent e) {
-
-    }
+    public void keyTyped(KeyEvent e) { }
 
     @Override
-    public void keyPressed(KeyEvent e) {
-
-    }
+    public void keyPressed(KeyEvent e) { }
 
     @Override
     public void keyReleased(KeyEvent e)

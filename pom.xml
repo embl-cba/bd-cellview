@@ -106,6 +106,12 @@
 			<artifactId>ij</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>bdv-utils</artifactId>
+			<version>0.1.23</version>
+		</dependency>
+
 	</dependencies>
 
 </project>
