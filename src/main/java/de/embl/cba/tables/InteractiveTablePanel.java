@@ -2,14 +2,17 @@ package de.embl.cba.tables;
 
 import bdv.util.Bdv;
 import de.embl.cba.bdv.utils.BdvUtils;
+import de.embl.cba.bdv.utils.labels.VolatileRealToRandomARGBConverter;
 import ij.ImagePlus;
 import ij.gui.PointRoi;
-import net.imagej.table.GenericTable;
+import org.scijava.table.GenericTable;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.util.HashSet;
 
 import static de.embl.cba.tables.Constants.*;
 
@@ -24,10 +27,21 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     private ImagePlus imagePlus;
     private Bdv bdv;
     private double bdvZoom;
-    private int[] coordinateColumnIndices;
-    private String[] coordinateColumns;
-    private boolean[] hasCoordinate;
+    private int[] coordinateColumsXYZT;
     private JMenuBar menuBar;
+
+    private int bdvDurationMillis;
+    private VolatileRealToRandomARGBConverter bdvSourceConverter;
+    private Integer labelColumn;
+
+
+    public InteractiveTablePanel( String[] columns )
+    {
+        DefaultTableModel model = new DefaultTableModel( columns, 0 );
+        table = new JTable( model );
+        init();
+    }
+
 
     public InteractiveTablePanel( JTable table )
     {
@@ -56,16 +70,13 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         this.add( scrollPane );
         table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
 
-        coordinateColumnIndices = new int[ 4 ];
-        coordinateColumns = new String[ 4 ];
-        hasCoordinate = new boolean[ 4 ];
-
+        // TODO: move out of here
         this.bdvZoom = 10;
+        this.bdvDurationMillis = 1000;
 
         initMenus();
 
         showTable();
-
     }
 
     private void initMenus()
@@ -104,6 +115,12 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         this.bdvZoom = bdvZoom;
     }
 
+	// TODO: Remove to a listener
+	public void setBdvDurationMillis( int bdvDurationMillis )
+	{
+		this.bdvDurationMillis = bdvDurationMillis;
+	}
+
     // TODO: Remove to a listener
     public void setImagePlus( ImagePlus imagePlus )
     {
@@ -111,23 +128,39 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     }
 
     // TODO: Remove to a listener
-    public void setBdv( Bdv bdv ){ this.bdv = bdv; }
-
-    public void setCoordinateColumn( String coordinateColumn, int xyzt )
+    public void setBdv( Bdv bdv )
     {
-        this.coordinateColumns[ xyzt ] = coordinateColumn;
-        this.coordinateColumnIndices[ xyzt ] = table.getColumn( coordinateColumn ).getModelIndex();
-        this.hasCoordinate[ xyzt ] = true;
+	    this.bdv = bdv;
     }
 
-    public boolean hasXYZT()
+    public void setBdvSourceConverter( VolatileRealToRandomARGBConverter sourceConverter )
     {
-        for ( int d = 0; d < 4; ++d )
-        {
-            if ( hasCoordinate[ d ] == false ) return false;
-        }
+        this.bdvSourceConverter = sourceConverter;
+    }
 
-        return true;
+
+    public synchronized void addRow( final Object[] row )
+    {
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+        model.addRow(row);
+    }
+
+    // TODO: split up again in xy, z, and t
+    public void setCoordinateColumnIndices( int[] xyzt )
+    {
+        this.coordinateColumsXYZT = xyzt;
+    }
+
+    public void setObjectLabelColumnIndex( int labelColumn )
+    {
+        this.labelColumn = labelColumn;
+    }
+
+    public boolean hasPosition()
+    {
+        if ( coordinateColumsXYZT != null ) return true;
+
+        return false;
     }
 
     private void showTable() {
@@ -153,9 +186,9 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     {
         int row = table.convertRowIndexToModel( table.getSelectedRow() );
 
-        if ( hasXYZT() )
+        if ( hasPosition() )
         {
-            final double[] xyzt = getXYZT( row );
+            final double[] xyzt = getPositionXYZT( row );
 
             if ( imagePlus != null )
             {
@@ -164,19 +197,34 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
 
             if ( bdv != null )
             {
-                BdvUtils.zoomToPosition( bdv, xyzt, bdvZoom );
+                BdvUtils.zoomToPosition( bdv, xyzt, bdvZoom, bdvDurationMillis );
+
+                if ( bdvSourceConverter != null && labelColumn != null )
+                {
+                    final HashSet< Double > selectedLabels = new HashSet<>();
+                    selectedLabels.add( ( Double ) table.getValueAt( row, labelColumn ) );
+                    bdvSourceConverter.setSelectedLabels( new HashSet<>( selectedLabels ) );
+                    bdv.getBdvHandle().getViewerPanel().requestRepaint();
+                }
             }
         }
 
     }
 
-    private double[] getXYZT( int row )
+    private double[] getPositionXYZT( int row )
     {
         double[] position = new double[ 4 ];
 
         for ( int d = 0; d < 4; ++d )
         {
-            position[ d ] = Float.parseFloat( table.getValueAt( row, coordinateColumnIndices[ d ] ).toString() );
+            if ( d == 3  && coordinateColumsXYZT.length < 4 )
+            {
+                position[ d ] = 0; // time column missing
+            }
+            else
+            {
+                position[ d ] = Float.parseFloat( table.getValueAt( row, coordinateColumsXYZT[ d ] ).toString() );
+            }
         }
 
         return position;
@@ -223,6 +271,7 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     {
         reactToRowSelection();
     }
+
 
 
 }

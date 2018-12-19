@@ -1,12 +1,12 @@
 package de.embl.cba.tables;
 
-import net.imagej.table.GenericTable;
+import org.scijava.table.GenericTable;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 public class TableUtils
 {
@@ -63,7 +63,90 @@ public class TableUtils
 
 			bfw.close();
 		}
+	}
+
+	public static JTable loadTable( File file, String delim ) throws IOException
+	{
+		return 	loadTable( file, delim, -1, -1.0 );
+	}
+
+	public static JTable loadTable( final File file, final String delim, final int filterColumnIndex, final Double filterValue ) throws IOException
+	{
+
+		DefaultTableModel model = null;
+
+		try {
+			FileInputStream fin =  new FileInputStream( file );
+			BufferedReader br = new BufferedReader(new InputStreamReader(fin));
+
+			// extract column names
+			StringTokenizer st1 = new StringTokenizer( br.readLine(), delim );
+			ArrayList< String > colNames = new ArrayList<>(  );
+			while( st1.hasMoreTokens() )
+			{
+				colNames.add( st1.nextToken() );
+			}
+
+			// extract data
+			int numCols = colNames.size();
+			String aRow;
+			int iRow = 0;
+
+			final Float[] rowEntries = new Float[ numCols ];
+			StringTokenizer st2;
+			int iCol;
+
+			while ((aRow = br.readLine()) != null)
+			{
+				st2 = new StringTokenizer( aRow, delim );
+
+				iCol = 0;
+
+				while( st2.hasMoreTokens() )
+				{
+					rowEntries[ iCol++ ] = Float.parseFloat(  st2.nextToken() );
+				}
+
+				if ( iRow == 0 )
+				{
+					model = new DefaultTableModel()
+					{
+						@Override
+						public Class getColumnClass( int column )
+						{
+							return Float.class;
+						}
+					};
+					iRow++;
+
+					for ( String colName : colNames )
+					{
+						model.addColumn( colName );
+					}
+				}
+
+				if ( filterColumnIndex != -1 )
+				{
+					if ( rowEntries[ filterColumnIndex ] > filterValue )
+					{
+						model.addRow( rowEntries );
+					}
+				}
+				else
+				{
+					model.addRow( rowEntries );
+				}
+
+			}
+
+			br.close();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
 
 
+		return new JTable( model );
 	}
 }
