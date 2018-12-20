@@ -92,7 +92,7 @@ public class TableUtils
 			String aRow;
 			int iRow = 0;
 
-			final Float[] rowEntries = new Float[ numCols ];
+			final Double[] rowEntries = new Double[ numCols ];
 			StringTokenizer st2;
 			int iCol;
 
@@ -104,7 +104,7 @@ public class TableUtils
 
 				while( st2.hasMoreTokens() )
 				{
-					rowEntries[ iCol++ ] = Float.parseFloat(  st2.nextToken() );
+					rowEntries[ iCol++ ] = Double.parseDouble(  st2.nextToken() );
 				}
 
 				if ( iRow == 0 )
@@ -114,7 +114,13 @@ public class TableUtils
 						@Override
 						public Class getColumnClass( int column )
 						{
-							return Float.class;
+							return Double.class;
+						}
+
+						@Override
+						public boolean isCellEditable(int row, int column)
+						{
+							return false;
 						}
 					};
 					iRow++;

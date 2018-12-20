@@ -9,7 +9,7 @@
 	</parent>
 
 	<artifactId>table-utils</artifactId>
-	<version>0.1.01</version>
+	<version>0.1.02</version>
 
 	<name>Table Utils</name>
 	<description>TODO</description>

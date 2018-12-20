@@ -223,7 +223,7 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
             }
             else
             {
-                position[ d ] = Float.parseFloat( table.getValueAt( row, coordinateColumsXYZT[ d ] ).toString() );
+                position[ d ] = Double.parseDouble( table.getValueAt( row, coordinateColumsXYZT[ d ] ).toString() );
             }
         }
 
