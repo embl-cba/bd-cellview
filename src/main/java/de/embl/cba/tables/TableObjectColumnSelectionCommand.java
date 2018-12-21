@@ -21,35 +21,46 @@ public class TableObjectColumnSelectionCommand extends DynamicCommand
 	@Override
 	public void run()
 	{
-		int a = 1;
+		final InteractiveTablePanel interactiveTablePanel = new InteractiveTablePanel( jTable );
+
+		for ( Coordinate coordinate : Coordinate.values() )
+		{
+			interactiveTablePanel.setCoordinateColumn( coordinate, getCoordinateColumn( coordinate ) );
+		}
+
+		interactiveTablePanel.showTable();
 	}
 
 	public void init() throws IOException
 	{
 		jTable = TableUtils.loadTable( tableFile, "\t" );
 
-
 		final ArrayList< String > columnNames = new ArrayList<>( );
-		columnNames.add( "None" );
+		columnNames.add( InteractiveTablePanel.NONE );
 		columnNames.addAll( TableUtils.getColumnNames( jTable ) );
 
-		for ( ObjectCoordinate coordinate : ObjectCoordinate.values())
+		for ( Coordinate coordinate : Coordinate.values())
 		{
-			addObjectCoordinateParameter( coordinate.toString(), columnNames );
+			addCoordinateParameter( coordinate, columnNames );
 		}
 	}
 
-	public static String getCoordinateParameterName( String coordinate )
+	public static String getCoordinateParameterName( Coordinate coordinate )
 	{
 		return "ColumnIndex" + coordinate;
 	}
 
-	private void addObjectCoordinateParameter( String coordinate, ArrayList< String > columnNames )
+	private void addCoordinateParameter( Coordinate coordinate, ArrayList< String > columnNames )
 	{
 		final MutableModuleItem< String > axisItem = addInput( getCoordinateParameterName( coordinate ), String.class );
 		axisItem.setChoices( columnNames );
 		axisItem.setValue(this, columnNames.get( 0 ) );
 		axisItem.setPersisted( true );
+	}
+
+	private String getCoordinateColumn( Coordinate coordinate )
+	{
+		return (String) getInput( getCoordinateParameterName( coordinate ) );
 	}
 
 }

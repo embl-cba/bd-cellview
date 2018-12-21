@@ -1,10 +1,10 @@
 package de.embl.cba.tables;
 
-public enum ObjectCoordinate
+public enum Coordinate
 {
-	Label,
 	X,
 	Y,
 	Z,
-	T;
+	T,
+	Label;
 }

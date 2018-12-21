@@ -12,6 +12,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import static de.embl.cba.tables.Constants.*;
@@ -19,34 +21,29 @@ import static de.embl.cba.tables.Constants.*;
 
 public class InteractiveTablePanel extends JPanel implements MouseListener, KeyListener
 {
-    final private JTable table;
+    public static final String NONE = "None";
 
+    final private JTable table;
     private JFrame frame;
     private JScrollPane scrollPane;
 
     private ImagePlus imagePlus;
     private Bdv bdv;
     private double bdvZoom;
-    private int[] coordinateColumsXYZT;
     private JMenuBar menuBar;
 
     private int bdvDurationMillis;
     private VolatileRealToRandomARGBConverter bdvSourceConverter;
     private Integer labelColumn;
 
+    private HashMap< Coordinate, String > coordinateColumnMap;
+
 
     public InteractiveTablePanel( String[] columns )
     {
+        super( new GridLayout(1, 0 ) );
         DefaultTableModel model = new DefaultTableModel( columns, 0 );
         table = new JTable( model );
-        init();
-    }
-
-
-    public InteractiveTablePanel( JTable table )
-    {
-        super( new GridLayout(1, 0 ) );
-        this.table = table;
         init();
     }
 
@@ -55,6 +52,18 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         super( new GridLayout(1, 0 ) );
         table = TableUtils.asJTable( genericTable );
         init();
+    }
+
+    public InteractiveTablePanel( JTable table )
+    {
+        super( new GridLayout(1, 0 ) );
+        this.table = table;
+        init();
+    }
+
+    public void setCoordinateColumn( Coordinate coordinate, String columnName )
+    {
+        coordinateColumnMap.put( coordinate, columnName );
     }
 
     private void init()
@@ -74,9 +83,10 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         this.bdvZoom = 10;
         this.bdvDurationMillis = 1000;
 
+        this.coordinateColumnMap = new HashMap<>( );
+
         initMenus();
 
-        showTable();
     }
 
     private void initMenus()
@@ -145,25 +155,7 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
         model.addRow(row);
     }
 
-    // TODO: split up again in xy, z, and t
-    public void setCoordinateColumnIndices( int[] xyzt )
-    {
-        this.coordinateColumsXYZT = xyzt;
-    }
-
-    public void setObjectLabelColumnIndex( int labelColumn )
-    {
-        this.labelColumn = labelColumn;
-    }
-
-    public boolean hasPosition()
-    {
-        if ( coordinateColumsXYZT != null ) return true;
-
-        return false;
-    }
-
-    private void showTable() {
+    public void showTable() {
 
         //Create and set up the window.
         frame = new JFrame("Table");
@@ -186,18 +178,29 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
     {
         int row = table.convertRowIndexToModel( table.getSelectedRow() );
 
-        if ( hasPosition() )
+        if ( hasXYPosition() )
         {
-            final double[] xyzt = getPositionXYZT( row );
-
             if ( imagePlus != null )
             {
-                markSelectedObjectInImagePlus( xyzt );
+                markSelectedObjectInImagePlus(
+                        getCoordinate( Coordinate.X, row ),
+                        getCoordinate( Coordinate.Y, row ),
+                        getCoordinate( Coordinate.Z, row ) + 1,
+                        getCoordinate( Coordinate.T, row ) + 1
+                        );
             }
 
             if ( bdv != null )
             {
-                BdvUtils.zoomToPosition( bdv, xyzt, bdvZoom, bdvDurationMillis );
+                BdvUtils.zoomToPosition(
+                        bdv,
+                        new double[]{
+                            getCoordinate( Coordinate.X, row ),
+                            getCoordinate( Coordinate.Y, row ),
+                            getCoordinate( Coordinate.Z, row ),
+                            getCoordinate( Coordinate.T, row )},
+                        bdvZoom,
+                        bdvDurationMillis );
 
                 if ( bdvSourceConverter != null && labelColumn != null )
                 {
@@ -211,34 +214,35 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
 
     }
 
-    private double[] getPositionXYZT( int row )
+
+    private boolean hasXYPosition()
     {
-        double[] position = new double[ 4 ];
+        return coordinateColumnMap.containsKey( Coordinate.X ) && coordinateColumnMap.containsKey( Coordinate.Y );
+    }
 
-        for ( int d = 0; d < 4; ++d )
+
+    private double getCoordinate( Coordinate coordinate, int row )
+    {
+        if ( coordinateColumnMap.containsKey( coordinate ) )
         {
-            if ( d == 3  && coordinateColumsXYZT.length < 4 )
-            {
-                position[ d ] = 0; // time column missing
-            }
-            else
-            {
-                position[ d ] = Double.parseDouble( table.getValueAt( row, coordinateColumsXYZT[ d ] ).toString() );
-            }
+            final int columnIndex = table.getColumnModel().getColumnIndex( coordinateColumnMap.get( coordinate ) );
+            return ( Double ) table.getValueAt( row, columnIndex );
         }
-
-        return position;
+        else
+        {
+            return 0;
+        }
     }
 
     // TODO: Remove to a listener
-    public void markSelectedObjectInImagePlus( double[] xyzt )
+    public void markSelectedObjectInImagePlus( double x, double y, double z, double t )
     {
-        PointRoi pointRoi = new PointRoi( xyzt[ X ], xyzt[ Y ] );
-        pointRoi.setPosition( 0, (int) xyzt[ Z ], (int) xyzt[ T ] );
+        PointRoi pointRoi = new PointRoi( x, y );
+        pointRoi.setPosition( 0, (int) z, (int) t );
         pointRoi.setSize( 4 );
         pointRoi.setStrokeColor( Color.MAGENTA );
 
-        imagePlus.setPosition( 1, (int) xyzt[ Z ], (int) xyzt[ T ] );
+        imagePlus.setPosition( 1, (int) z, (int) t );
         imagePlus.setRoi( pointRoi );
     }
 

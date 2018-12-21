@@ -40,10 +40,11 @@ public class TestInterativeTableBdv
 
 		final InteractiveTablePanel interactiveTablePanel = new InteractiveTablePanel( jTable );
 
-		interactiveTablePanel.setBdv( bdv );
-		interactiveTablePanel.setObjectLabelColumnIndex( 0 );
-		interactiveTablePanel.setBdvSourceConverter( volatileRealToRandomARGBConverter );
-		interactiveTablePanel.setCoordinateColumnIndices( new int[]{ 3, 4, 5} );
+		// TODO: add below code back based on columnNames
+//		interactiveTablePanel.setBdv( bdv );
+//		interactiveTablePanel.setObjectLabelColumnIndex( 0 );
+//		interactiveTablePanel.setBdvSourceConverter( volatileRealToRandomARGBConverter );
+//		interactiveTablePanel.setCoordinateColumnIndices( new int[]{ 3, 4, 5} );
 
 	}
 }
