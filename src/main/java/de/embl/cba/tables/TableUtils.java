@@ -109,7 +109,6 @@ public class TableUtils
 
 		DefaultTableModel model = null;
 
-
 		StringTokenizer st = new StringTokenizer( rows.get( 0 ), delim );
 
 		ArrayList< String > colNames = new ArrayList<>();
@@ -172,4 +171,14 @@ public class TableUtils
 	}
 
 
+	public static ArrayList< String > getColumnNames( JTable jTable ) throws IOException
+	{
+		final ArrayList< String > columnNames = new ArrayList<>();
+
+		for ( int columnIndex = 0; columnIndex < jTable.getColumnCount(); columnIndex++ )
+		{
+			columnNames.add( jTable.getColumnName( columnIndex ) );
+		}
+		return columnNames;
+	}
 }
