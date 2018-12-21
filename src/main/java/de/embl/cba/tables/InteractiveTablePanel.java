@@ -97,7 +97,7 @@ public class InteractiveTablePanel extends JPanel implements MouseListener, KeyL
             {
                 try
                 {
-                    TableUtils.saveTable( table );
+                    TableUtils.saveTableUI( table );
                 }
                 catch ( IOException e1 )
                 {

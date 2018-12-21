@@ -5,8 +5,7 @@ import org.scijava.table.GenericTable;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
+import java.util.*;
 
 public class TableUtils
 {
@@ -36,123 +35,141 @@ public class TableUtils
 		return new JTable( model );
 	}
 
-	public static void saveTable( JTable table ) throws IOException
+
+	public static void saveTableUI( JTable table ) throws IOException
 	{
 		final JFileChooser jFileChooser = new JFileChooser( "" );
 
 		if ( jFileChooser.showSaveDialog( null ) == JFileChooser.APPROVE_OPTION )
 		{
-			BufferedWriter bfw = new BufferedWriter( new FileWriter( jFileChooser.getSelectedFile() ) );
+			final File selectedFile = jFileChooser.getSelectedFile();
 
-			// header
-			for ( int column = 0; column < table.getColumnCount(); column++ )
-			{
-				bfw.write( table.getColumnName( column ) + "\t" );
-			}
-			bfw.write( "\n" );
-
-			// content
-			for ( int row = 0; row < table.getRowCount(); row++ )
-			{
-				for ( int column = 0; column < table.getColumnCount(); column++ )
-				{
-					bfw.write( table.getValueAt( row, column ) + "\t" );
-				}
-				bfw.write( "\n" );
-			}
-
-			bfw.close();
+			saveTable( table, selectedFile );
 		}
 	}
 
-	public static JTable loadTable( File file, String delim ) throws IOException
+	public static void saveTable( JTable table, File file ) throws IOException
 	{
-		return 	loadTable( file, delim, -1, -1.0 );
+		BufferedWriter bfw = new BufferedWriter( new FileWriter( file ) );
+
+		// header
+		for ( int column = 0; column < table.getColumnCount(); column++ )
+		{
+			bfw.write( table.getColumnName( column ) + "\t" );
+		}
+		bfw.write( "\n" );
+
+		// content
+		for ( int row = 0; row < table.getRowCount(); row++ )
+		{
+			for ( int column = 0; column < table.getColumnCount(); column++ )
+			{
+				bfw.write( table.getValueAt( row, column ) + "\t" );
+			}
+			bfw.write( "\n" );
+		}
+
+		bfw.close();
 	}
 
-	public static JTable loadTable( final File file, final String delim, final int filterColumnIndex, final Double filterValue ) throws IOException
+	public static JTable loadTable( final File file, String delim ) throws IOException
+	{
+		ArrayList< String > rows = readRows( file );
+
+		return createJTableFromRows( rows, delim );
+	}
+
+	private static ArrayList< String > readRows( File file )
+	{
+		ArrayList< String > rows = new ArrayList<>();
+
+		try
+		{
+			FileInputStream fin = new FileInputStream( file );
+			BufferedReader br = new BufferedReader( new InputStreamReader( fin ) );
+
+			String aRow;
+
+			while ( ( aRow = br.readLine() ) != null )
+			{
+				rows.add( aRow );
+			}
+
+			br.close();
+		} catch ( Exception e )
+		{
+			e.printStackTrace();
+		}
+		return rows;
+	}
+
+
+	public static JTable createJTableFromRows( ArrayList< String > rows, String delim )
 	{
 
 		DefaultTableModel model = null;
 
-		try {
-			FileInputStream fin =  new FileInputStream( file );
-			BufferedReader br = new BufferedReader(new InputStreamReader(fin));
 
-			// extract column names
-			StringTokenizer st1 = new StringTokenizer( br.readLine(), delim );
-			ArrayList< String > colNames = new ArrayList<>(  );
-			while( st1.hasMoreTokens() )
-			{
-				colNames.add( st1.nextToken() );
-			}
+		StringTokenizer st = new StringTokenizer( rows.get( 0 ), delim );
 
-			// extract data
-			int numCols = colNames.size();
-			String aRow;
-			int iRow = 0;
+		ArrayList< String > colNames = new ArrayList<>();
 
-			final Double[] rowEntries = new Double[ numCols ];
-			StringTokenizer st2;
-			int iCol;
-
-			while ((aRow = br.readLine()) != null)
-			{
-				st2 = new StringTokenizer( aRow, delim );
-
-				iCol = 0;
-
-				while( st2.hasMoreTokens() )
-				{
-					rowEntries[ iCol++ ] = Double.parseDouble(  st2.nextToken() );
-				}
-
-				if ( iRow == 0 )
-				{
-					model = new DefaultTableModel()
-					{
-						@Override
-						public Class getColumnClass( int column )
-						{
-							return Double.class;
-						}
-
-						@Override
-						public boolean isCellEditable(int row, int column)
-						{
-							return false;
-						}
-					};
-					iRow++;
-
-					for ( String colName : colNames )
-					{
-						model.addColumn( colName );
-					}
-				}
-
-				if ( filterColumnIndex != -1 )
-				{
-					if ( rowEntries[ filterColumnIndex ] > filterValue )
-					{
-						model.addRow( rowEntries );
-					}
-				}
-				else
-				{
-					model.addRow( rowEntries );
-				}
-
-			}
-
-			br.close();
-		}
-		catch (Exception e)
+		while ( st.hasMoreTokens() )
 		{
-			e.printStackTrace();
+			colNames.add( st.nextToken() );
 		}
 
+		/**
+		 * Init model
+		 */
+
+		model = new DefaultTableModel()
+		{
+			@Override
+			public Class getColumnClass( int column )
+			{
+				return Double.class;
+			}
+
+			@Override
+			public boolean isCellEditable( int row, int column )
+			{
+				return false;
+			}
+		};
+
+		/**
+		 * Set columns
+		 */
+		for ( String colName : colNames )
+		{
+			model.addColumn( colName );
+		}
+
+
+		// extract data
+		int numCols = colNames.size();
+		final Double[] rowEntries = new Double[ numCols ];
+		int iCol;
+		String s;
+
+		for ( int iRow = 1; iRow < rows.size(); ++iRow )
+		{
+			st = new StringTokenizer( rows.get( iRow ), delim );
+
+			iCol = 0;
+
+			while ( st.hasMoreTokens() )
+			{
+				rowEntries[ iCol++ ] = Double.parseDouble( st.nextToken() );
+			}
+
+			model.addRow( rowEntries );
+
+		}
 
 		return new JTable( model );
 	}
+
+
 }

@@ -36,7 +36,7 @@ public class TestInterativeTableBdv
 		final List< BdvStackSource< ? > > show = BdvFunctions.show( emData, BdvOptions.options().addTo( bdv ) );
 		show.get( 0 ).setDisplayRange( 0, 255 );
 
-		final JTable jTable = TableUtils.loadTable( new File( "/Users/tischer/Desktop/filtered.csv" ), "\t", 2, 1000.0 );
+		final JTable jTable = TableUtils.loadTable( new File( "/Users/tischer/Desktop/filtered.csv" ), "\t" );
 
 		final InteractiveTablePanel interactiveTablePanel = new InteractiveTablePanel( jTable );
 
