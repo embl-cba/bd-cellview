@@ -1,4 +1,4 @@
-import de.embl.cba.tables.TableObjectColumnSelectionCommand;
+import de.embl.cba.tables.ObjectTableCoordinateColumnsSelectionCommand;
 import net.imagej.ImageJ;
 
 import java.io.File;
@@ -19,7 +19,7 @@ public class TestColumnSelectionCommand
 		//ij.command().run( TableObjectColumnSelectionCommand.class, true );
 
 		ij.command().run(
-				TableObjectColumnSelectionCommand.class,
+				ObjectTableCoordinateColumnsSelectionCommand.class,
 				true,
 				parameters );
 	}

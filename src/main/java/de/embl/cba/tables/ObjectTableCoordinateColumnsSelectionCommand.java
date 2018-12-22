@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 @Plugin(type = Command.class, initializer = "init")
-public class TableObjectColumnSelectionCommand extends DynamicCommand
+public class ObjectTableCoordinateColumnsSelectionCommand extends DynamicCommand
 {
 	@Parameter ()
 	File tableFile;
@@ -21,14 +21,14 @@ public class TableObjectColumnSelectionCommand extends DynamicCommand
 	@Override
 	public void run()
 	{
-		final InteractiveTablePanel interactiveTablePanel = new InteractiveTablePanel( jTable );
+		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
 
 		for ( Coordinate coordinate : Coordinate.values() )
 		{
-			interactiveTablePanel.setCoordinateColumn( coordinate, getCoordinateColumn( coordinate ) );
+			objectTablePanel.setObjectCoordinateColumn( coordinate, getCoordinateColumn( coordinate ) );
 		}
 
-		interactiveTablePanel.showTable();
+		objectTablePanel.showTable();
 	}
 
 	public void init() throws IOException
@@ -36,7 +36,7 @@ public class TableObjectColumnSelectionCommand extends DynamicCommand
 		jTable = TableUtils.loadTable( tableFile, "\t" );
 
 		final ArrayList< String > columnNames = new ArrayList<>( );
-		columnNames.add( InteractiveTablePanel.NONE );
+		columnNames.add( ObjectTablePanel.NONE );
 		columnNames.addAll( TableUtils.getColumnNames( jTable ) );
 
 		for ( Coordinate coordinate : Coordinate.values())

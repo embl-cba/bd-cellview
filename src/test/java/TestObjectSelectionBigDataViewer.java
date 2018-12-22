@@ -1,8 +1,10 @@
 import bdv.util.*;
+import de.embl.cba.bdv.utils.BdvUtils;
 import de.embl.cba.bdv.utils.labels.ARGBConvertedRealSource;
 import de.embl.cba.bdv.utils.labels.VolatileRealToRandomARGBConverter;
 import de.embl.cba.bdv.utils.transformhandlers.BehaviourTransformEventHandler3DLeftMouseDrag;
-import de.embl.cba.tables.InteractiveTablePanel;
+import de.embl.cba.tables.Coordinate;
+import de.embl.cba.tables.ObjectTablePanel;
 import de.embl.cba.tables.TableUtils;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
@@ -12,9 +14,10 @@ import net.imglib2.type.volatiles.VolatileARGBType;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 
-public class TestInterativeTableBdv
+public class TestObjectSelectionBigDataViewer
 {
 	public static void main( String[] args ) throws SpimDataException, IOException
 	{
@@ -38,7 +41,30 @@ public class TestInterativeTableBdv
 
 		final JTable jTable = TableUtils.loadTable( new File( "/Users/tischer/Desktop/filtered.csv" ), "\t" );
 
-		final InteractiveTablePanel interactiveTablePanel = new InteractiveTablePanel( jTable );
+		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
+
+		// TODO: set coordinate columns
+		objectTablePanel.showTable();
+
+		// TODO: add a row selection listener
+//		BdvUtils.zoomToPosition(
+//				bdv,
+//				new double[]{
+//						getObjectCoordinate( Coordinate.X, row ),
+//						getObjectCoordinate( Coordinate.Y, row ),
+//						getObjectCoordinate( Coordinate.Z, row ),
+//						getObjectCoordinate( Coordinate.T, row )},
+//				bdvZoom,
+//				bdvDurationMillis );
+//
+//		if ( bdvSourceConverter != null && labelColumn != null )
+//		{
+//			final HashSet< Double > selectedLabels = new HashSet<>();
+//			selectedLabels.add( ( Double ) table.getValueAt( row, labelColumn ) );
+//			bdvSourceConverter.setSelectedLabels( new HashSet<>( selectedLabels ) );
+//			bdv.getBdvHandle().getViewerPanel().requestRepaint();
+//		}
+
 
 		// TODO: add below code back based on columnNames
 //		interactiveTablePanel.setBdv( bdv );

@@ -1,4 +1,4 @@
-import de.embl.cba.tables.InteractiveTablePanel;
+import de.embl.cba.tables.ObjectTablePanel;
 
 import javax.swing.*;
 
@@ -28,9 +28,9 @@ public class TestInteractiveTableBasics
 
 		JTable table = new JTable( data, colNames );
 
-		final InteractiveTablePanel interactiveTablePanel = new InteractiveTablePanel( table );
+		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( table );
 
-		final InteractiveTablePanel interactiveTablePanel2 = new InteractiveTablePanel( colNames );
+		final ObjectTablePanel objectTablePanel2 = new ObjectTablePanel( colNames );
 
 		final Object[] newRow = new Object[ rows ];
 		for ( int i = 0; i < rows; i++ )
@@ -38,7 +38,7 @@ public class TestInteractiveTableBasics
 			newRow[ i ] = "aaa";
 		}
 
-		interactiveTablePanel2.addRow( newRow );
+		objectTablePanel2.addRow( newRow );
 
 		final Double[] newDoubleRow = new Double[ rows ];
 		for ( int i = 0; i < rows; i++ )
@@ -46,7 +46,9 @@ public class TestInteractiveTableBasics
 			newDoubleRow[ i ] = 1.0;
 		}
 
-		interactiveTablePanel2.addRow( newDoubleRow );
+		objectTablePanel2.addRow( newDoubleRow );
+
+		objectTablePanel2.showTable();
 
 	}
 }

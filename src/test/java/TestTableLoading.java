@@ -1,4 +1,4 @@
-import de.embl.cba.tables.InteractiveTablePanel;
+import de.embl.cba.tables.ObjectTablePanel;
 import de.embl.cba.tables.TableUtils;
 
 import javax.swing.*;
@@ -13,6 +13,6 @@ public class TestTableLoading
 
 		final JTable jTable = TableUtils.loadTable( file, "\t" );
 
-		new InteractiveTablePanel( jTable );
+		new ObjectTablePanel( jTable );
 	}
 }
