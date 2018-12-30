@@ -17,50 +17,69 @@ public class ObjectTableCoordinateColumnsSelectionCommand extends DynamicCommand
 	@Parameter ()
 	File tableFile;
 	private JTable jTable;
+	private ArrayList< String > columnNames;
 
 	@Override
 	public void run()
 	{
 		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
 
-		for ( Coordinate coordinate : Coordinate.values() )
+		for ( ObjectCoordinate objectCoordinate : ObjectCoordinate.values() )
 		{
-			objectTablePanel.setObjectCoordinateColumn( coordinate, getCoordinateColumn( coordinate ) );
+			objectTablePanel.setObjectCoordinateColumn(
+					objectCoordinate,
+					getCoordinateColumnIndex( objectCoordinate ) );
 		}
 
-		objectTablePanel.showTable();
+		objectTablePanel.showPanel();
 	}
 
 	public void init() throws IOException
 	{
 		jTable = TableUtils.loadTable( tableFile, "\t" );
 
-		final ArrayList< String > columnNames = new ArrayList<>( );
-		columnNames.add( ObjectTablePanel.NONE );
-		columnNames.addAll( TableUtils.getColumnNames( jTable ) );
+		initColumnNames();
 
-		for ( Coordinate coordinate : Coordinate.values())
+		addUserInterfaceParameters();
+	}
+
+	private void addUserInterfaceParameters()
+	{
+		for ( ObjectCoordinate objectCoordinate : ObjectCoordinate.values())
 		{
-			addCoordinateParameter( coordinate, columnNames );
+			addCoordinateParameter( objectCoordinate, columnNames );
 		}
 	}
 
-	public static String getCoordinateParameterName( Coordinate coordinate )
+	private void initColumnNames() throws IOException
 	{
-		return "ColumnIndex" + coordinate;
+		columnNames = new ArrayList<>( );
+		columnNames.add( "None" );
+		columnNames.addAll( TableUtils.getColumnNames( jTable ) );
 	}
 
-	private void addCoordinateParameter( Coordinate coordinate, ArrayList< String > columnNames )
+	public static String getCoordinateParameterName( ObjectCoordinate objectCoordinate )
 	{
-		final MutableModuleItem< String > axisItem = addInput( getCoordinateParameterName( coordinate ), String.class );
+		return "ColumnIndex" + objectCoordinate;
+	}
+
+	private void addCoordinateParameter( ObjectCoordinate objectCoordinate, ArrayList< String > columnNames )
+	{
+		final MutableModuleItem< String > axisItem = addInput( getCoordinateParameterName( objectCoordinate ), String.class );
 		axisItem.setChoices( columnNames );
 		axisItem.setValue(this, columnNames.get( 0 ) );
 		axisItem.setPersisted( true );
 	}
 
-	private String getCoordinateColumn( Coordinate coordinate )
+	private Integer getCoordinateColumnIndex( ObjectCoordinate objectCoordinate )
 	{
-		return (String) getInput( getCoordinateParameterName( coordinate ) );
+		final String selectedColumnName = ( String ) getInput( getCoordinateParameterName( objectCoordinate ) );
+
+		// -1 is subtracted here, because in initColumnNames()
+		// "None" was added in front of the actual column names;
+		final int coordinateColumnIndex = columnNames.indexOf( selectedColumnName ) - 1;
+
+		return coordinateColumnIndex;
 	}
 
 }

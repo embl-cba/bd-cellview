@@ -76,7 +76,7 @@ public class TableUtils
 	{
 		ArrayList< String > rows = readRows( file );
 
-		return createJTableFromRows( rows, delim );
+		return createJTableFromStringList( rows, delim );
 	}
 
 	private static ArrayList< String > readRows( File file )
@@ -104,12 +104,10 @@ public class TableUtils
 	}
 
 
-	public static JTable createJTableFromRows( ArrayList< String > rows, String delim )
+	public static JTable createJTableFromStringList( ArrayList< String > strings, String delim )
 	{
 
-		DefaultTableModel model = null;
-
-		StringTokenizer st = new StringTokenizer( rows.get( 0 ), delim );
+		StringTokenizer st = new StringTokenizer( strings.get( 0 ), delim );
 
 		ArrayList< String > colNames = new ArrayList<>();
 
@@ -119,53 +117,46 @@ public class TableUtils
 		}
 
 		/**
-		 * Init model
+		 * Init model and columns
 		 */
 
-		model = new DefaultTableModel()
-		{
-			@Override
-			public Class getColumnClass( int column )
-			{
-				return Double.class;
-			}
+		ObjectTableModel model = new ObjectTableModel();
 
-			@Override
-			public boolean isCellEditable( int row, int column )
-			{
-				return false;
-			}
-		};
-
-		/**
-		 * Set columns
-		 */
 		for ( String colName : colNames )
 		{
 			model.addColumn( colName );
 		}
 
-
-		// extract data
 		int numCols = colNames.size();
-		final Double[] rowEntries = new Double[ numCols ];
-		int iCol;
-		String s;
 
-		for ( int iRow = 1; iRow < rows.size(); ++iRow )
+		/**
+		 * Add rows entries
+		 */
+
+		for ( int iString = 1; iString < strings.size(); ++iString )
 		{
-			st = new StringTokenizer( rows.get( iRow ), delim );
+			model.addRow( new Object[ numCols ] );
 
-			iCol = 0;
+			st = new StringTokenizer( strings.get( iString ), delim );
 
-			while ( st.hasMoreTokens() )
+			for ( int iCol = 0; iCol < numCols; iCol++ )
 			{
-				rowEntries[ iCol++ ] = Double.parseDouble( st.nextToken() );
+				String stringValue = st.nextToken();
+
+				try
+				{
+					final Double numericValue = Double.parseDouble( stringValue );
+					model.setValueAt( numericValue, iString - 1, iCol );
+				}
+				catch ( Exception e )
+				{
+					model.setValueAt( stringValue, iString - 1, iCol );
+				}
 			}
 
-			model.addRow( rowEntries );
-
 		}
+
+		model.setColumnClassesFromFirstRow();
 
 		return new JTable( model );
 	}
@@ -181,4 +172,57 @@ public class TableUtils
 		}
 		return columnNames;
 	}
+
+	public static TreeMap< Number, Number > columnsAsTreeMap( JTable jTable,
+											int columnIndexFrom,
+											int columnIndexTo )
+	{
+		final TreeMap< Number, Number > treeMap = new TreeMap();
+
+		for ( int row = 0; row < jTable.getRowCount(); row++ )
+		{
+			treeMap.put( ( Number ) jTable.getValueAt( row, columnIndexFrom ), ( Number ) jTable.getValueAt( row, columnIndexTo ) );
+		}
+
+		return treeMap;
+	}
+
+	public static double columnMin( JTable jTable, int col )
+	{
+		double min = Double.MAX_VALUE;
+
+		final int rowCount = jTable.getRowCount();
+
+		for ( int row = 0; row < rowCount; row++ )
+		{
+			final Double valueAt = ( Double ) jTable.getValueAt( row, col );
+
+			if ( valueAt < min )
+			{
+				min = valueAt;
+			}
+		}
+
+		return min;
+	}
+
+	public static double columnMax( JTable jTable, int col )
+	{
+		double max =  - Double.MAX_VALUE;
+
+		final int rowCount = jTable.getRowCount();
+
+		for ( int row = 0; row < rowCount; row++ )
+		{
+			final Double valueAt = ( Double ) jTable.getValueAt( row, col );
+
+			if ( valueAt > max )
+			{
+				max = valueAt;
+			}
+		}
+
+		return max;
+	}
+
 }

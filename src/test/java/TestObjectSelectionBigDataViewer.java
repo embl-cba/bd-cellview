@@ -1,9 +1,5 @@
 import bdv.util.*;
-import de.embl.cba.bdv.utils.BdvUtils;
-import de.embl.cba.bdv.utils.labels.ARGBConvertedRealSource;
-import de.embl.cba.bdv.utils.labels.VolatileRealToRandomARGBConverter;
 import de.embl.cba.bdv.utils.transformhandlers.BehaviourTransformEventHandler3DLeftMouseDrag;
-import de.embl.cba.tables.Coordinate;
 import de.embl.cba.tables.ObjectTablePanel;
 import de.embl.cba.tables.TableUtils;
 import mpicbg.spim.data.SpimData;
@@ -14,39 +10,37 @@ import net.imglib2.type.volatiles.VolatileARGBType;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 
 public class TestObjectSelectionBigDataViewer
 {
 	public static void main( String[] args ) throws SpimDataException, IOException
 	{
-		SpimData labelData = new XmlIoSpimData().load( new File( "/Volumes/arendt/EM_6dpf_segmentation/EM-Prospr/em-segmented-cells-labels.xml" ).toString() );
-
-		final VolatileRealToRandomARGBConverter volatileRealToRandomARGBConverter
-				= new VolatileRealToRandomARGBConverter();
-		final ARGBConvertedRealSource ARGBConvertedRealSource = new ARGBConvertedRealSource( labelData, 0, volatileRealToRandomARGBConverter );
-
-		final BdvStackSource< VolatileARGBType > bdvStackSource =
-				BdvFunctions.show( ARGBConvertedRealSource,
-						BdvOptions.options().transformEventHandlerFactory(
-								new BehaviourTransformEventHandler3DLeftMouseDrag.BehaviourTransformEventHandler3DFactory() ) );
-
-		final Bdv bdv = bdvStackSource.getBdvHandle();
-
-		SpimData emData = new XmlIoSpimData().load( new File( "/Volumes/arendt/EM_6dpf_segmentation/EM-Prospr/em-raw-full-res.xml" ).toString() );
-
-		final List< BdvStackSource< ? > > show = BdvFunctions.show( emData, BdvOptions.options().addTo( bdv ) );
-		show.get( 0 ).setDisplayRange( 0, 255 );
-
-		final JTable jTable = TableUtils.loadTable( new File( "/Users/tischer/Desktop/filtered.csv" ), "\t" );
-
-		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
-
-		// TODO: set coordinate columns
-		objectTablePanel.showTable();
-
-		// TODO: add a row selection listener
+//		SpimData labelData = new XmlIoSpimData().load( new File( "/Volumes/arendt/EM_6dpf_segmentation/EM-Prospr/em-segmented-cells-labels.xml" ).toString() );
+//
+//		final VolatileRealToRandomARGBConverter volatileRealToRandomARGBConverter = new VolatileRealToRandomARGBConverter();
+//		final ARGBConvertedRealSource ARGBConvertedRealSource = new ARGBConvertedRealSource( labelData, 0, volatileRealToRandomARGBConverter );
+//
+//		final BdvStackSource< VolatileARGBType > bdvStackSource =
+//				BdvFunctions.show( ARGBConvertedRealSource,
+//						BdvOptions.options().transformEventHandlerFactory(
+//								new BehaviourTransformEventHandler3DLeftMouseDrag.BehaviourTransformEventHandler3DFactory() ) );
+//
+//		final Bdv bdv = bdvStackSource.getBdvHandle();
+//
+//		SpimData emData = new XmlIoSpimData().load( new File( "/Volumes/arendt/EM_6dpf_segmentation/EM-Prospr/em-raw-full-res.xml" ).toString() );
+//
+//		final List< BdvStackSource< ? > > show = BdvFunctions.show( emData, BdvOptions.options().addTo( bdv ) );
+//		show.get( 0 ).setDisplayRange( 0, 255 );
+//
+//		final JTable jTable = TableUtils.loadTable( new File( "/Users/tischer/Desktop/filtered.csv" ), "\t" );
+//
+//		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
+//
+//		// TODO: set coordinate columns
+//		objectTablePanel.showPanel();
+//
+//		// TODO: add a row selection listener
 //		BdvUtils.zoomToPosition(
 //				bdv,
 //				new double[]{

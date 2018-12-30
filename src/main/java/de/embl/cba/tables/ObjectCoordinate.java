@@ -1,6 +1,6 @@
 package de.embl.cba.tables;
 
-public enum Coordinate
+public enum ObjectCoordinate
 {
 	X,
 	Y,

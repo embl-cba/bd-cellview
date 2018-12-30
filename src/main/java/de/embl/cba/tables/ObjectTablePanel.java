@@ -1,64 +1,53 @@
 package de.embl.cba.tables;
 
 import bdv.util.Bdv;
-import de.embl.cba.bdv.utils.labels.VolatileRealToRandomARGBConverter;
-import ij.ImagePlus;
-import ij.gui.PointRoi;
-import org.scijava.table.GenericTable;
+import de.embl.cba.bdv.utils.BdvUtils;
+import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
+import de.embl.cba.bdv.utils.lut.ARGBLut;
+import de.embl.cba.bdv.utils.lut.LinearMappingARGBLut;
+import de.embl.cba.bdv.utils.lut.Luts;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.TreeMap;
 
 
 public class ObjectTablePanel extends JPanel
 {
-    public static final String NONE = "None";
-
+    public static final Integer NONE = -1;
     final private JTable table;
     private JFrame frame;
     private JScrollPane scrollPane;
-
-    private ImagePlus imagePlus;
-    private Bdv bdv;
-    private double bdvZoom;
     private JMenuBar menuBar;
+    private HashMap< ObjectCoordinate, Integer > objectCoordinateColumnIndexMap;
 
-    private int bdvDurationMillis;
-    private VolatileRealToRandomARGBConverter bdvSourceConverter;
-    private Integer labelColumn;
+    private Bdv bdv;
+	private SelectableRealVolatileARGBConverter selectableConverter;
+	private ARGBLut selectableConverterARGBLut;
 
-    private HashMap< Coordinate, String > coordinateColumnMap;
-
-    public ObjectTablePanel( JTable table )
+	public ObjectTablePanel( JTable table )
     {
         super( new GridLayout(1, 0 ) );
         this.table = table;
         init();
     }
 
-    public ObjectTablePanel( String[] columns )
-    {
-        super( new GridLayout(1, 0 ) );
-        DefaultTableModel model = new DefaultTableModel( columns, 0 );
-        table = new JTable( model );
-        init();
-    }
+	public ObjectTablePanel( JTable table, Bdv bdv, SelectableRealVolatileARGBConverter selectableConverter )
+	{
+		super( new GridLayout(1, 0 ) );
+		this.table = table;
+		this.bdv = bdv;
+		this.selectableConverter = selectableConverter;
+		init();
+	}
 
-    public ObjectTablePanel( GenericTable genericTable )
+    public void setObjectCoordinateColumn( ObjectCoordinate objectCoordinate, Integer columnIndex )
     {
-        super( new GridLayout(1, 0 ) );
-        table = TableUtils.asJTable( genericTable );
-        init();
-    }
-
-    public void setObjectCoordinateColumn( Coordinate coordinate, String columnName )
-    {
-        coordinateColumnMap.put( coordinate, columnName );
+        objectCoordinateColumnIndexMap.put( objectCoordinate, columnIndex );
     }
 
     private void init()
@@ -72,34 +61,113 @@ public class ObjectTablePanel extends JPanel
         this.add( scrollPane );
         table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
 
-        // TODO: move out of here
-        this.bdvZoom = 10;
-        this.bdvDurationMillis = 1000;
-
         initCoordinateColumns();
 
         initMenus();
-
     }
 
     private void initCoordinateColumns()
     {
-        this.coordinateColumnMap = new HashMap<>( );
+        this.objectCoordinateColumnIndexMap = new HashMap<>( );
 
-        for ( Coordinate coordinate : Coordinate.values() )
+        for ( ObjectCoordinate objectCoordinate : ObjectCoordinate.values() )
         {
-            coordinateColumnMap.put( coordinate, NONE );
+            objectCoordinateColumnIndexMap.put( objectCoordinate, NONE );
         }
     }
 
     private void initMenus()
     {
         menuBar = new JMenuBar();
+
         JMenu fileMenu = getFileMenuItem();
         menuBar.add( fileMenu );
-    }
 
-    private JMenu getFileMenuItem()
+        if ( ( bdv != null ) & ( selectableConverter != null ) )
+		{
+			final JMenu coloringMenuItem = getColoringMenuItem();
+			menuBar.add( coloringMenuItem );
+		}
+	}
+
+	private JMenu getColoringMenuItem()
+	{
+		JMenu coloringMenu = new JMenu( "Coloring" );
+
+		coloringMenu.add( getRestoreOriginalColorMenuItem() );
+
+		for ( int col = 0; col < table.getColumnCount(); col++ )
+		{
+			coloringMenu.add( getColorByColumnMenuItem( col ) );
+		}
+
+		return coloringMenu;
+	}
+
+	private JMenuItem getColorByColumnMenuItem( final int col )
+	{
+		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + table.getColumnName( col ) );
+
+		colorByColumnMenuItem.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				if ( selectableConverter != null
+						&& hasObjectCoordinate( ObjectCoordinate.Label ) )
+				{
+
+					// TODO: for huge tables this should be implemented more efficiently
+
+					TreeMap< Number, Number > labelValueMap =
+							TableUtils.columnsAsTreeMap(
+								table,
+								objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
+								col );
+
+					double min = Double.MAX_VALUE;
+					double max = - Double.MAX_VALUE;
+					for ( Number value : labelValueMap.values() )
+					{
+						if ( value.doubleValue() < min ) min = value.doubleValue();
+						if ( value.doubleValue() > max ) max = value.doubleValue();
+					}
+
+					final LinearMappingARGBLut mappingARGBLut = new LinearMappingARGBLut(
+							labelValueMap,
+							Luts.BLUE_WHITE_RED_LUT,
+							min,
+							max
+					);
+
+					selectableConverter.setARGBLut( mappingARGBLut );
+
+					BdvUtils.repaint( bdv );
+
+				}
+			}
+		} );
+
+		return colorByColumnMenuItem;
+	}
+
+	private JMenuItem getRestoreOriginalColorMenuItem()
+	{
+		final JMenuItem restoreOriginalColorMenuItem = new JMenuItem( "Restore original coloring");
+
+		restoreOriginalColorMenuItem.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				selectableConverter.setARGBLut( selectableConverterARGBLut );
+			}
+		} );
+		return restoreOriginalColorMenuItem;
+	}
+
+
+	private JMenu getFileMenuItem()
     {
         JMenu fileMenu = new JMenu( "File" );
         final JMenuItem saveMenuItem = new JMenuItem( "Save as..." );
@@ -122,13 +190,7 @@ public class ObjectTablePanel extends JPanel
         return fileMenu;
     }
 
-    public synchronized void addRow( final Object[] row )
-    {
-        DefaultTableModel model = (DefaultTableModel) table.getModel();
-        model.addRow(row);
-    }
-
-    public void showTable() {
+    public void showPanel() {
 
         //Create and set up the window.
         frame = new JFrame("Table");
@@ -147,34 +209,34 @@ public class ObjectTablePanel extends JPanel
         frame.setVisible(true);
     }
 
-    // TODO: Remove to a listener
-    public void markSelectedObjectInImagePlus( double x, double y, double z, double t )
-    {
-        PointRoi pointRoi = new PointRoi( x, y );
-        pointRoi.setPosition( 0, (int) z, (int) t );
-        pointRoi.setSize( 4 );
-        pointRoi.setStrokeColor( Color.MAGENTA );
-
-        imagePlus.setPosition( 1, (int) z, (int) t );
-        imagePlus.setRoi( pointRoi );
-    }
+//    // TODO: Remove to a listener
+//    public void markSelectedObjectInImagePlus( double x, double y, double z, double t )
+//    {
+//        PointRoi pointRoi = new PointRoi( x, y );
+//        pointRoi.setPosition( 0, (int) z, (int) t );
+//        pointRoi.setSize( 4 );
+//        pointRoi.setStrokeColor( Color.MAGENTA );
+//
+//        imagePlus.setPosition( 1, (int) z, (int) t );
+//        imagePlus.setRoi( pointRoi );
+//    }
 
     public int getSelectedRowIndex()
     {
         return table.convertRowIndexToModel( table.getSelectedRow() );
     }
 
-    public boolean hasObjectCoordinate( Coordinate coordinate )
+    public boolean hasObjectCoordinate( ObjectCoordinate objectCoordinate )
     {
-        if( coordinateColumnMap.get( coordinate ) == NONE ) return false;
+        if( objectCoordinateColumnIndexMap.get( objectCoordinate ) == NONE ) return false;
         return true;
     }
 
-    public double getObjectCoordinate( Coordinate coordinate, int row )
+    public double getObjectCoordinate( ObjectCoordinate objectCoordinate, int row )
     {
-        if ( coordinateColumnMap.get( coordinate ) != NONE )
+        if ( objectCoordinateColumnIndexMap.get( objectCoordinate ) != NONE )
         {
-            final int columnIndex = table.getColumnModel().getColumnIndex( coordinateColumnMap.get( coordinate ) );
+            final int columnIndex = table.getColumnModel().getColumnIndex( objectCoordinateColumnIndexMap.get( objectCoordinate ) );
             return ( Double ) table.getValueAt( row, columnIndex );
         }
         else
@@ -183,16 +245,9 @@ public class ObjectTablePanel extends JPanel
         }
     }
 
-    /**
-     * Informs about row selection.
-     *
-     * Tip: Use ((ListSelectionEvent)event).getValueIstAdjusting() to avoid multiple notifications.
-     *
-     * @param listener
-     */
-    public void addListSelectionListener( ListSelectionListener listener )
+    public DefaultTableModel getTableModel()
     {
-        table.getSelectionModel().addListSelectionListener( listener );
+        return ( DefaultTableModel ) table.getModel();
     }
 
 }

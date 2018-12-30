@@ -9,7 +9,7 @@
 	</parent>
 
 	<artifactId>table-utils</artifactId>
-	<version>0.1.03</version>
+	<version>0.1.04</version>
 
 	<name>Table Utils</name>
 	<description>TODO</description>
@@ -109,7 +109,7 @@
 		<dependency>
 			<groupId>org.scijava</groupId>
 			<artifactId>bdv-utils</artifactId>
-			<version>0.1.24</version>
+			<version>0.1.26</version>
 		</dependency>
 
 	</dependencies>

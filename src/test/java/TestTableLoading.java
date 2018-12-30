@@ -9,10 +9,11 @@ public class TestTableLoading
 {
 	public static void main( String[] args ) throws IOException
 	{
-		final File file = new File( TestTableLoading.class.getResource( "tab-delim-numeric-table.csv" ).getFile() );
+		final File file = new File( TestTableLoading.class.getResource( "tab-delim-numeric-and-string-table.csv" ).getFile() );
 
 		final JTable jTable = TableUtils.loadTable( file, "\t" );
 
-		new ObjectTablePanel( jTable );
+		new ObjectTablePanel( jTable ).showPanel();
+
 	}
 }
