@@ -1,4 +1,4 @@
-import de.embl.cba.tables.ObjectTablePanel;
+import de.embl.cba.tables.objects.ObjectTablePanel;
 import de.embl.cba.tables.TableUtils;
 
 import javax.swing.*;

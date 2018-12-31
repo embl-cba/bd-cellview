@@ -1,4 +1,4 @@
-package de.embl.cba.tables;
+package de.embl.cba.tables.objects;
 
 import bdv.util.Bdv;
 import de.embl.cba.bdv.utils.BdvUtils;
@@ -6,6 +6,7 @@ import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
 import de.embl.cba.bdv.utils.lut.ARGBLut;
 import de.embl.cba.bdv.utils.lut.LinearMappingARGBLut;
 import de.embl.cba.bdv.utils.lut.Luts;
+import de.embl.cba.tables.TableUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -18,8 +19,10 @@ import java.util.TreeMap;
 
 public class ObjectTablePanel extends JPanel
 {
-    public static final Integer NONE = -1;
-    final private JTable table;
+	public static final String NO_COLUMN_SELECTED = "No column selected";
+	public static final Integer NO_COLUMN_SELECTED_INDEX = -1;
+
+	final private JTable table;
     private JFrame frame;
     private JScrollPane scrollPane;
     private JMenuBar menuBar;
@@ -45,12 +48,7 @@ public class ObjectTablePanel extends JPanel
 		init();
 	}
 
-    public void setObjectCoordinateColumn( ObjectCoordinate objectCoordinate, Integer columnIndex )
-    {
-        objectCoordinateColumnIndexMap.put( objectCoordinate, columnIndex );
-    }
-
-    private void init()
+	private void init()
     {
         table.setPreferredScrollableViewportSize( new Dimension(500, 200) );
         table.setFillsViewportHeight( true );
@@ -66,13 +64,23 @@ public class ObjectTablePanel extends JPanel
         initMenus();
     }
 
+	public synchronized void setCoordinateColumnIndex( ObjectCoordinate objectCoordinate, Integer columnIndex )
+	{
+		objectCoordinateColumnIndexMap.put( objectCoordinate, columnIndex );
+	}
+
+	public int getCoordinateColumnIndex( ObjectCoordinate objectCoordinate )
+	{
+		return objectCoordinateColumnIndexMap.get( objectCoordinate );
+	}
+
     private void initCoordinateColumns()
     {
         this.objectCoordinateColumnIndexMap = new HashMap<>( );
 
         for ( ObjectCoordinate objectCoordinate : ObjectCoordinate.values() )
         {
-            objectCoordinateColumnIndexMap.put( objectCoordinate, NONE );
+            objectCoordinateColumnIndexMap.put( objectCoordinate, NO_COLUMN_SELECTED_INDEX );
         }
     }
 
@@ -80,14 +88,12 @@ public class ObjectTablePanel extends JPanel
     {
         menuBar = new JMenuBar();
 
-        JMenu fileMenu = getFileMenuItem();
-        menuBar.add( fileMenu );
+        menuBar.add( getFileMenuItem() );
 
-        if ( ( bdv != null ) & ( selectableConverter != null ) )
-		{
-			final JMenu coloringMenuItem = getColoringMenuItem();
-			menuBar.add( coloringMenuItem );
-		}
+		menuBar.add( getObjectCoordinateMenuItem() );
+
+		menuBar.add( getColoringMenuItem() );
+
 	}
 
 	private JMenu getColoringMenuItem()
@@ -190,6 +196,27 @@ public class ObjectTablePanel extends JPanel
         return fileMenu;
     }
 
+	private JMenu getObjectCoordinateMenuItem()
+	{
+		JMenu menu = new JMenu( "Object" );
+
+		final ObjectTablePanel objectTablePanel = this;
+
+		final JMenuItem coordinatesMenuItem = new JMenuItem( "Select coordinates..." );
+		coordinatesMenuItem.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				new ObjectCoordinateColumnsSelectionUI( objectTablePanel );
+			}
+		} );
+
+
+		menu.add( coordinatesMenuItem );
+		return menu;
+	}
+
     public void showPanel() {
 
         //Create and set up the window.
@@ -228,13 +255,13 @@ public class ObjectTablePanel extends JPanel
 
     public boolean hasObjectCoordinate( ObjectCoordinate objectCoordinate )
     {
-        if( objectCoordinateColumnIndexMap.get( objectCoordinate ) == NONE ) return false;
+        if( objectCoordinateColumnIndexMap.get( objectCoordinate ) == NO_COLUMN_SELECTED_INDEX ) return false;
         return true;
     }
 
     public double getObjectCoordinate( ObjectCoordinate objectCoordinate, int row )
     {
-        if ( objectCoordinateColumnIndexMap.get( objectCoordinate ) != NONE )
+        if ( objectCoordinateColumnIndexMap.get( objectCoordinate ) != NO_COLUMN_SELECTED_INDEX )
         {
             final int columnIndex = table.getColumnModel().getColumnIndex( objectCoordinateColumnIndexMap.get( objectCoordinate ) );
             return ( Double ) table.getValueAt( row, columnIndex );
@@ -249,5 +276,11 @@ public class ObjectTablePanel extends JPanel
     {
         return ( DefaultTableModel ) table.getModel();
     }
+
+	public JTable getTable()
+	{
+		return table;
+	}
+
 
 }

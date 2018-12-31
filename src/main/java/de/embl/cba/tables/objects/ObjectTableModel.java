@@ -1,4 +1,4 @@
-package de.embl.cba.tables;
+package de.embl.cba.tables.objects;
 
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;

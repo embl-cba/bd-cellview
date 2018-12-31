@@ -1,7 +1,6 @@
-import de.embl.cba.tables.ObjectTablePanel;
+import de.embl.cba.tables.objects.ObjectTablePanel;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 
 public class TestInteractiveTableBasics
 {

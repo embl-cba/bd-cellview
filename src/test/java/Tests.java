@@ -1,8 +1,8 @@
 import bdv.util.Bdv;
 import bdv.util.RandomAccessibleIntervalSource;
 import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
-import de.embl.cba.tables.ObjectCoordinate;
-import de.embl.cba.tables.ObjectTablePanel;
+import de.embl.cba.tables.objects.ObjectCoordinate;
+import de.embl.cba.tables.objects.ObjectTablePanel;
 import de.embl.cba.tables.TableUtils;
 import ij.IJ;
 import ij.ImagePlus;
@@ -46,6 +46,6 @@ public abstract class Tests
 
 		objectTablePanel.showPanel();
 
-		objectTablePanel.setObjectCoordinateColumn( ObjectCoordinate.Label, 0 );
+		objectTablePanel.setCoordinateColumnIndex( ObjectCoordinate.Label, 0 );
 	}
 }

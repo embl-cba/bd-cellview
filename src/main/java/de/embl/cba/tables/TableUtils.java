@@ -1,5 +1,6 @@
 package de.embl.cba.tables;
 
+import de.embl.cba.tables.objects.ObjectTableModel;
 import org.scijava.table.GenericTable;
 
 import javax.swing.*;
@@ -162,7 +163,7 @@ public class TableUtils
 	}
 
 
-	public static ArrayList< String > getColumnNames( JTable jTable ) throws IOException
+	public static ArrayList< String > getColumnNames( JTable jTable )
 	{
 		final ArrayList< String > columnNames = new ArrayList<>();
 

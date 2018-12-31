@@ -1,5 +1,8 @@
 package de.embl.cba.tables;
 
+import de.embl.cba.tables.objects.ObjectCoordinate;
+import de.embl.cba.tables.objects.ObjectTablePanel;
+import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.module.MutableModuleItem;
@@ -12,21 +15,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 @Plugin(type = Command.class, initializer = "init")
+@Deprecated // TODO: do not manage to fetch output...
 public class ObjectTableCoordinateColumnsSelectionCommand extends DynamicCommand
 {
 	@Parameter ()
-	File tableFile;
+	public File tableFile;
+
+	@Parameter ( type = ItemIO.OUTPUT )
+	public ObjectTablePanel objectTablePanel;
+
 	private JTable jTable;
 	private ArrayList< String > columnNames;
 
 	@Override
 	public void run()
 	{
-		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
+		objectTablePanel = new ObjectTablePanel( jTable );
 
 		for ( ObjectCoordinate objectCoordinate : ObjectCoordinate.values() )
 		{
-			objectTablePanel.setObjectCoordinateColumn(
+			objectTablePanel.setCoordinateColumnIndex(
 					objectCoordinate,
 					getCoordinateColumnIndex( objectCoordinate ) );
 		}
