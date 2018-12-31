@@ -6,6 +6,7 @@ import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
 import de.embl.cba.bdv.utils.lut.ARGBLut;
 import de.embl.cba.bdv.utils.lut.LinearMappingARGBLut;
 import de.embl.cba.bdv.utils.lut.Luts;
+import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
 
 import javax.swing.*;
@@ -30,7 +31,7 @@ public class ObjectTablePanel extends JPanel
 
     private Bdv bdv;
 	private SelectableRealVolatileARGBConverter selectableConverter;
-	private ARGBLut selectableConverterARGBLut;
+	private ARGBLut originalARGBLut; // to revert to if needed
 
 	public ObjectTablePanel( JTable table )
     {
@@ -45,6 +46,7 @@ public class ObjectTablePanel extends JPanel
 		this.table = table;
 		this.bdv = bdv;
 		this.selectableConverter = selectableConverter;
+		this.originalARGBLut = selectableConverter.getARGBLut();
 		init();
 	}
 
@@ -119,39 +121,47 @@ public class ObjectTablePanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				if ( selectableConverter != null
-						&& hasObjectCoordinate( ObjectCoordinate.Label ) )
+				if ( selectableConverter == null )
 				{
-
-					// TODO: for huge tables this should be implemented more efficiently
-
-					TreeMap< Number, Number > labelValueMap =
-							TableUtils.columnsAsTreeMap(
-								table,
-								objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
-								col );
-
-					double min = Double.MAX_VALUE;
-					double max = - Double.MAX_VALUE;
-					for ( Number value : labelValueMap.values() )
-					{
-						if ( value.doubleValue() < min ) min = value.doubleValue();
-						if ( value.doubleValue() > max ) max = value.doubleValue();
-					}
-
-					final LinearMappingARGBLut mappingARGBLut = new LinearMappingARGBLut(
-							labelValueMap,
-							Luts.BLUE_WHITE_RED_LUT,
-							min,
-							max
-					);
-
-					selectableConverter.setARGBLut( mappingARGBLut );
-
-					BdvUtils.repaint( bdv );
-
+					Logger.warn( "No associated label image found." );
+					return;
 				}
+
+				if ( ! isCoordinateColumnSet( ObjectCoordinate.Label ) )
+				{
+					Logger.warn( "Please select an object label index column:\n" +
+							"[ Objects > Select coordinates... ]" );
+					return;
+				}
+
+				// TODO: for huge tables this should be implemented more efficiently
+
+				TreeMap< Number, Number > labelValueMap =
+						TableUtils.columnsAsTreeMap(
+							table,
+							objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
+							col );
+
+				double min = Double.MAX_VALUE;
+				double max = - Double.MAX_VALUE;
+				for ( Number value : labelValueMap.values() )
+				{
+					if ( value.doubleValue() < min ) min = value.doubleValue();
+					if ( value.doubleValue() > max ) max = value.doubleValue();
+				}
+
+				final LinearMappingARGBLut mappingARGBLut = new LinearMappingARGBLut(
+						labelValueMap,
+						Luts.BLUE_WHITE_RED_LUT,
+						min,
+						max
+				);
+
+				selectableConverter.setARGBLut( mappingARGBLut );
+
+				BdvUtils.repaint( bdv );
 			}
+
 		} );
 
 		return colorByColumnMenuItem;
@@ -166,7 +176,7 @@ public class ObjectTablePanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				selectableConverter.setARGBLut( selectableConverterARGBLut );
+				selectableConverter.setARGBLut( originalARGBLut );
 			}
 		} );
 		return restoreOriginalColorMenuItem;
@@ -198,7 +208,7 @@ public class ObjectTablePanel extends JPanel
 
 	private JMenu getObjectCoordinateMenuItem()
 	{
-		JMenu menu = new JMenu( "Object" );
+		JMenu menu = new JMenu( "Objects" );
 
 		final ObjectTablePanel objectTablePanel = this;
 
@@ -253,7 +263,7 @@ public class ObjectTablePanel extends JPanel
         return table.convertRowIndexToModel( table.getSelectedRow() );
     }
 
-    public boolean hasObjectCoordinate( ObjectCoordinate objectCoordinate )
+    public boolean isCoordinateColumnSet( ObjectCoordinate objectCoordinate )
     {
         if( objectCoordinateColumnIndexMap.get( objectCoordinate ) == NO_COLUMN_SELECTED_INDEX ) return false;
         return true;

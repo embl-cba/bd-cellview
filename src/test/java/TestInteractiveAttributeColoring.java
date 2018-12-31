@@ -4,6 +4,7 @@ import bdv.util.BdvOptions;
 import bdv.util.RandomAccessibleIntervalSource;
 import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
 import de.embl.cba.bdv.utils.argbconversion.VolatileARGBConvertedRealSource;
+import net.imagej.ImageJ;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -17,7 +18,10 @@ public class TestInteractiveAttributeColoring
 		 * Show image
 		 */
 
-		final RandomAccessibleIntervalSource raiSource = Tests.loadTestImage01();
+		final ImageJ imageJ = new ImageJ();
+		imageJ.ui().showUI();
+
+		final RandomAccessibleIntervalSource raiSource = Tests.load2D16BitLabelMask();
 
 		final SelectableRealVolatileARGBConverter argbConverter = new SelectableRealVolatileARGBConverter();
 
@@ -30,7 +34,7 @@ public class TestInteractiveAttributeColoring
 		 * - interactive attribute coloring is available from the table panel menu
 		 */
 
-		final JTable jTable = Tests.loadTestTable01();
+		final JTable jTable = Tests.loadObjectTableFor2D16BitLabelMask();
 
 		Tests.createInteractiveTablePanel( jTable, bdv, argbConverter );
 	}

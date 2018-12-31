@@ -5,23 +5,34 @@ import bdv.util.RandomAccessibleIntervalSource;
 import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
 import de.embl.cba.bdv.utils.argbconversion.VolatileARGBConvertedRealSource;
 import de.embl.cba.bdv.utils.behaviour.BehaviourSelectionEventHandler;
+import de.embl.cba.tables.objects.ObjectTableModel;
+import de.embl.cba.tables.objects.grouping.Grouping;
+import net.imagej.ImageJ;
 import org.scijava.ui.behaviour.ClickBehaviour;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.scijava.ui.behaviour.util.Behaviours;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public class TestInteractiveObjectGrouping
+public class ExampleInteractiveObjectGrouping
 {
 	public static void main( String[] args ) throws IOException
 	{
+
+		new ImageJ().ui().showUI();
 
 		/**
 		 * Show image
 		 */
 
-		final RandomAccessibleIntervalSource raiSource = Tests.loadTestImage01();
+		final RandomAccessibleIntervalSource raiSource = Tests.load2D16BitLabelMask();
 
 		final SelectableRealVolatileARGBConverter argbConverter = new SelectableRealVolatileARGBConverter();
 
@@ -30,13 +41,28 @@ public class TestInteractiveObjectGrouping
 		Bdv bdv = BdvFunctions.show( argbSource, BdvOptions.options().is2D() ).getBdvHandle();
 
 		/**
-		 * Show interactive table
+		 * Load table and add a group column
 		 */
 
-		final JTable jTable = Tests.loadTestTable01();
+		final JTable jTable = Tests.loadObjectTableFor2D16BitLabelMask();
 
+		// add group column
+		final ObjectTableModel model = (ObjectTableModel) jTable.getModel();
+		final String[] groups = new String[ model.getRowCount() ];
+		Arrays.fill( groups, "None" );
+		model.addColumn( "Group", groups );
+
+		// update column classes
+		model.setColumnClassesFromFirstRow();
+
+		// show panel
 		Tests.createInteractiveTablePanel( jTable, bdv, argbConverter );
 
+		/**
+		 * Init a grouping handler
+		 */
+
+		final Grouping grouping = new Grouping( jTable, 0, model.getColumnCount() - 1 );
 
 		/**
 		 * Configure interactive object grouping
@@ -49,8 +75,11 @@ public class TestInteractiveObjectGrouping
 
 		behaviours.behaviour( ( ClickBehaviour ) ( x, y ) ->
 		{
+			final Set< Double > selectedValues = behaviourSelectionEventHandler.getSelectedValues();
+			grouping.assignObjectsToGroup( selectedValues,"aGroup" );
+
 			System.out.println( "Selected values:" );
-			System.out.println( behaviourSelectionEventHandler.getSelectedValues() );
+			System.out.println( selectedValues );
 
 		}, "fetch-curently-selected-objects-" + argbSource.getName(),
 				Tests.OBJECT_GROUPING_TRIGGER  );

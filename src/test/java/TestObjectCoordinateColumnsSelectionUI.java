@@ -1,15 +1,9 @@
-import de.embl.cba.tables.ObjectTableCoordinateColumnsSelectionCommand;
-import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectCoordinateColumnsSelectionUI;
 import de.embl.cba.tables.objects.ObjectTablePanel;
 import net.imagej.ImageJ;
-import org.scijava.command.CommandModule;
 
 import javax.swing.*;
-import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.concurrent.Future;
 
 public class TestObjectCoordinateColumnsSelectionUI
 {
@@ -18,7 +12,7 @@ public class TestObjectCoordinateColumnsSelectionUI
 		final ImageJ ij = new ImageJ();
 		ij.ui().showUI();
 
-		final JTable table = Tests.loadTestTable01();
+		final JTable table = Tests.loadObjectTableFor2D16BitLabelMask();
 
 		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( table );
 

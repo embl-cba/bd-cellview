@@ -21,14 +21,14 @@ public abstract class Tests
 
 	public static final String OBJECT_GROUPING_TRIGGER = "ctrl G";
 
-	public static JTable loadTestTable01() throws IOException
+	public static JTable loadObjectTableFor2D16BitLabelMask() throws IOException
 	{
 		final File tableFile = new File( TestInteractiveAttributeColoring.class.getResource( "2d-16bit-labelMask-Morphometry.csv" ).getFile() );
 
 		return TableUtils.loadTable( tableFile, "," );
 	}
 
-	public static RandomAccessibleIntervalSource loadTestImage01()
+	public static RandomAccessibleIntervalSource load2D16BitLabelMask()
 	{
 		final ImagePlus imagePlus = IJ.openImage( TestInteractiveAttributeColoring.class.getResource( "2d-16bit-labelMask.tif" ).getFile() );
 
@@ -46,6 +46,6 @@ public abstract class Tests
 
 		objectTablePanel.showPanel();
 
-		objectTablePanel.setCoordinateColumnIndex( ObjectCoordinate.Label, 0 );
+		// objectTablePanel.setCoordinateColumnIndex( ObjectCoordinate.Label, 0 );
 	}
 }
