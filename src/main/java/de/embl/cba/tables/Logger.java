@@ -8,4 +8,9 @@ public class Logger
 	{
 		IJ.showMessage( s );
 	}
+
+	public static void error( String s )
+	{
+		IJ.showMessage( s );
+	}
 }

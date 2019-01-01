@@ -46,6 +46,6 @@ public abstract class Tests
 
 		objectTablePanel.showPanel();
 
-		objectTablePanel.setCoordinateColumnIndex( ObjectCoordinate.Label, 0 );
+		objectTablePanel.setCoordinateColumn( ObjectCoordinate.Label, jTable.getColumnName( 0 ) );
 	}
 }

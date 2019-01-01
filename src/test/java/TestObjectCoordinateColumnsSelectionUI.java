@@ -1,4 +1,4 @@
-import de.embl.cba.tables.objects.ObjectCoordinateColumnsSelectionUI;
+import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
 import de.embl.cba.tables.objects.ObjectTablePanel;
 import net.imagej.ImageJ;
 

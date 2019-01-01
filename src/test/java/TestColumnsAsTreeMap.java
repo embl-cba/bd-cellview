@@ -9,7 +9,10 @@ public class TestColumnsAsTreeMap
 	{
 		JTable jTable = createTable();
 
-		final TreeMap< Number, Number > map = TableUtils.columnsAsTreeMap( jTable, 0, 1 );
+		final TreeMap< Number, Number > map = TableUtils.columnsAsTreeMap(
+				jTable,
+				jTable.getColumnName( 0 ),
+				jTable.getColumnName( 1 ) );
 
 	}
 

@@ -5,7 +5,9 @@ import bdv.util.RandomAccessibleIntervalSource;
 import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
 import de.embl.cba.bdv.utils.argbconversion.VolatileARGBConvertedRealSource;
 import de.embl.cba.bdv.utils.behaviour.BehaviourSelectionEventHandler;
+import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTableModel;
+import de.embl.cba.tables.objects.ObjectTablePanel;
 import de.embl.cba.tables.objects.grouping.Grouping;
 import de.embl.cba.tables.objects.grouping.GroupingUI;
 import ij.IJ;
@@ -42,7 +44,7 @@ public class ExampleInteractiveObjectGrouping
 		new ImageJ().ui().showUI();
 
 		/**
-		 * Show image
+		 * Load and show image
 		 */
 
 		final RandomAccessibleIntervalSource raiSource = Tests.load2D16BitLabelMask();
@@ -69,8 +71,10 @@ public class ExampleInteractiveObjectGrouping
 		// update column classes (needed for proper sorting)
 		model.setColumnClassesFromFirstRow();
 
-		// show panel
-		Tests.createInteractiveTablePanel( jTable, bdv, argbConverter );
+		// show panel and set object label column index
+		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable, bdv, argbConverter );
+		objectTablePanel.showPanel();
+		objectTablePanel.setCoordinateColumn( ObjectCoordinate.Label, jTable.getColumnName( 0 ) );
 
 
 		/**
@@ -83,7 +87,6 @@ public class ExampleInteractiveObjectGrouping
 		/**
 		 * Configure interactive object grouping
 		 */
-
 
 		// Add a behaviour to Bdv, enabling selection of labels by Ctrl + Left-Click
 		//

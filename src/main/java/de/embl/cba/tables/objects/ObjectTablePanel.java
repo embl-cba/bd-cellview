@@ -9,6 +9,7 @@ import de.embl.cba.bdv.utils.lut.Luts;
 import de.embl.cba.bdv.utils.lut.StringMappingRandomARGBLut;
 import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
+import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -22,13 +23,12 @@ import java.util.TreeMap;
 public class ObjectTablePanel extends JPanel
 {
 	public static final String NO_COLUMN_SELECTED = "No column selected";
-	public static final Integer NO_COLUMN_SELECTED_INDEX = -1;
 
 	final private JTable table;
     private JFrame frame;
     private JScrollPane scrollPane;
     private JMenuBar menuBar;
-    private HashMap< ObjectCoordinate, Integer > objectCoordinateColumnIndexMap;
+    private HashMap< ObjectCoordinate, String > objectCoordinateColumnMap;
 
     private Bdv bdv;
 	private SelectableRealVolatileARGBConverter converter;
@@ -67,23 +67,23 @@ public class ObjectTablePanel extends JPanel
         initMenus();
     }
 
-	public synchronized void setCoordinateColumnIndex( ObjectCoordinate objectCoordinate, Integer columnIndex )
+	public synchronized void setCoordinateColumn( ObjectCoordinate objectCoordinate, String column )
 	{
-		objectCoordinateColumnIndexMap.put( objectCoordinate, columnIndex );
+		objectCoordinateColumnMap.put( objectCoordinate, column );
 	}
 
-	public int getCoordinateColumnIndex( ObjectCoordinate objectCoordinate )
+	public String getCoordinateColumn( ObjectCoordinate objectCoordinate )
 	{
-		return objectCoordinateColumnIndexMap.get( objectCoordinate );
+		return objectCoordinateColumnMap.get( objectCoordinate );
 	}
 
     private void initCoordinateColumns()
     {
-        this.objectCoordinateColumnIndexMap = new HashMap<>( );
+        this.objectCoordinateColumnMap = new HashMap<>( );
 
         for ( ObjectCoordinate objectCoordinate : ObjectCoordinate.values() )
         {
-            objectCoordinateColumnIndexMap.put( objectCoordinate, NO_COLUMN_SELECTED_INDEX );
+            objectCoordinateColumnMap.put( objectCoordinate, NO_COLUMN_SELECTED );
         }
     }
 
@@ -107,15 +107,15 @@ public class ObjectTablePanel extends JPanel
 
 		for ( int col = 0; col < table.getColumnCount(); col++ )
 		{
-			coloringMenu.add( getColorByColumnMenuItem( col ) );
+			coloringMenu.add( getColorByColumnMenuItem( table.getColumnName( col ) ) );
 		}
 
 		return coloringMenu;
 	}
 
-	private JMenuItem getColorByColumnMenuItem( final int colorByColumn )
+	private JMenuItem getColorByColumnMenuItem( final String colorByColumn )
 	{
-		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + table.getColumnName( colorByColumn ) );
+		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + colorByColumn );
 
 		colorByColumnMenuItem.addActionListener( new ActionListener()
 		{
@@ -135,7 +135,7 @@ public class ObjectTablePanel extends JPanel
 					return;
 				}
 
-				final Object valueAt = table.getValueAt( 0, colorByColumn );
+				final Object valueAt = table.getValueAt( 0, table.getColumnModel().getColumnIndex( colorByColumn ) );
 
 				if ( valueAt instanceof Number )
 				{
@@ -164,14 +164,14 @@ public class ObjectTablePanel extends JPanel
 	}
 
 	// TODO: for huge tables below code should be implemented more efficiently
-	public LinearMappingARGBLut getLinearMappingARGBLut( int colorByColumn )
+	public LinearMappingARGBLut getLinearMappingARGBLut( String colorByColumn )
 	{
 		// determine mapping of object label to selected color-column
 		//
 		TreeMap< Double, Number > labelValueMap =
 				TableUtils.columnsAsTreeMap(
 						table,
-						objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
+						objectCoordinateColumnMap.get( ObjectCoordinate.Label ),
 						colorByColumn );
 
 		// determine min and max of color-column for setting up the LUT
@@ -195,14 +195,14 @@ public class ObjectTablePanel extends JPanel
 	}
 
 
-	public StringMappingRandomARGBLut getStringMappingRandomARGBLut( int colorByColumn )
+	public StringMappingRandomARGBLut getStringMappingRandomARGBLut( String colorByColumn )
 	{
 		// determine mapping of object label to selected color-column
 		//
 		TreeMap< Double, String > labelStringMap =
 				TableUtils.columnsAsTreeMap(
 						table,
-						objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
+						objectCoordinateColumnMap.get( ObjectCoordinate.Label ),
 						colorByColumn );
 
 		// set up LUT
@@ -292,18 +292,6 @@ public class ObjectTablePanel extends JPanel
         frame.setVisible(true);
     }
 
-//    // TODO: Remove to a listener
-//    public void markSelectedObjectInImagePlus( double x, double y, double z, double t )
-//    {
-//        PointRoi pointRoi = new PointRoi( x, y );
-//        pointRoi.setPosition( 0, (int) z, (int) t );
-//        pointRoi.setSize( 4 );
-//        pointRoi.setStrokeColor( Color.MAGENTA );
-//
-//        imagePlus.setPosition( 1, (int) z, (int) t );
-//        imagePlus.setRoi( pointRoi );
-//    }
-
     public int getSelectedRowIndex()
     {
         return table.convertRowIndexToModel( table.getSelectedRow() );
@@ -311,15 +299,15 @@ public class ObjectTablePanel extends JPanel
 
     public boolean isCoordinateColumnSet( ObjectCoordinate objectCoordinate )
     {
-        if( objectCoordinateColumnIndexMap.get( objectCoordinate ) == NO_COLUMN_SELECTED_INDEX ) return false;
+        if( objectCoordinateColumnMap.get( objectCoordinate ) == NO_COLUMN_SELECTED ) return false;
         return true;
     }
 
     public double getObjectCoordinate( ObjectCoordinate objectCoordinate, int row )
     {
-        if ( objectCoordinateColumnIndexMap.get( objectCoordinate ) != NO_COLUMN_SELECTED_INDEX )
+        if ( objectCoordinateColumnMap.get( objectCoordinate ) != NO_COLUMN_SELECTED )
         {
-            final int columnIndex = table.getColumnModel().getColumnIndex( objectCoordinateColumnIndexMap.get( objectCoordinate ) );
+            final int columnIndex = table.getColumnModel().getColumnIndex( objectCoordinateColumnMap.get( objectCoordinate ) );
             return ( Double ) table.getValueAt( row, columnIndex );
         }
         else

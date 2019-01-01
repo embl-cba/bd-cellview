@@ -1,6 +1,8 @@
-package de.embl.cba.tables.objects;
+package de.embl.cba.tables.objects.ui;
 
 import de.embl.cba.tables.TableUtils;
+import de.embl.cba.tables.objects.ObjectCoordinate;
+import de.embl.cba.tables.objects.ObjectTablePanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -76,23 +78,14 @@ public class ObjectCoordinateColumnsSelectionUI extends JPanel
 
 		// +/- 1 is due to the option to select no column
 
-		jComboBox.setSelectedIndex( objectTablePanel.getCoordinateColumnIndex( coordinate ) + 1 );
+		jComboBox.setSelectedItem( objectTablePanel.getCoordinateColumn( coordinate ) + 1 );
 
 		jComboBox.addActionListener( new ActionListener()
 		{
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				if ( ( String ) jComboBox.getSelectedItem() == ObjectTablePanel.NO_COLUMN_SELECTED )
-				{
-					objectTablePanel.setCoordinateColumnIndex( coordinate, -1 );
-				}
-				else
-				{
-					final int columnIndex = objectTablePanel.getTable().getColumnModel().getColumnIndex( ( String ) jComboBox.getSelectedItem() );
-					objectTablePanel.setCoordinateColumnIndex( coordinate, columnIndex );
-				}
-
+				objectTablePanel.setCoordinateColumn( coordinate, ( String ) jComboBox.getSelectedItem() );
 			}
 		} );
 

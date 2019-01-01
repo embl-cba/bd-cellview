@@ -108,6 +108,18 @@ public class TableUtils
 	public static JTable createJTableFromStringList( ArrayList< String > strings, String delim )
 	{
 
+		if ( delim == null )
+		{
+			if ( strings.get( 0 ).contains( "\t" ) )
+			{
+				delim = "\t";
+			}
+			else if ( strings.get( 0 ).contains( "," )  )
+			{
+				delim = ",";
+			}
+		}
+
 		StringTokenizer st = new StringTokenizer( strings.get( 0 ), delim );
 
 		ArrayList< String > colNames = new ArrayList<>();
@@ -175,15 +187,19 @@ public class TableUtils
 	}
 
 	public static < A, B > TreeMap< A, B > columnsAsTreeMap(
-			JTable jTable,
-			int columnIndexFrom,
-			int columnIndexTo )
+			JTable table,
+			String fromColumn,
+			String toColumn )
 	{
+
+		final int fromColumnIndex = table.getColumnModel().getColumnIndex( fromColumn );
+		final int toColumnIndex = table.getColumnModel().getColumnIndex( toColumn );
+
 		final TreeMap< A, B > treeMap = new TreeMap();
 
-		for ( int row = 0; row < jTable.getRowCount(); row++ )
+		for ( int row = 0; row < table.getRowCount(); row++ )
 		{
-			treeMap.put( ( A ) jTable.getValueAt( row, columnIndexFrom ), ( B ) jTable.getValueAt( row, columnIndexTo ) );
+			treeMap.put( ( A ) table.getValueAt( row, fromColumnIndex ), ( B ) table.getValueAt( row, toColumnIndex ) );
 		}
 
 		return treeMap;
