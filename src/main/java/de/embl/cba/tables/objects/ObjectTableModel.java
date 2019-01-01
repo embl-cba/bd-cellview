@@ -29,8 +29,6 @@ public class ObjectTableModel extends DefaultTableModel
 
 			columnClasses.add( value.getClass() );
 		}
-
-
 	}
 
 }

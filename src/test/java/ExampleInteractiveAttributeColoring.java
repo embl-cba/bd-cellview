@@ -9,7 +9,7 @@ import net.imagej.ImageJ;
 import javax.swing.*;
 import java.io.IOException;
 
-public class TestInteractiveAttributeColoring
+public class ExampleInteractiveAttributeColoring
 {
 
 	public static void main( String[] args ) throws IOException

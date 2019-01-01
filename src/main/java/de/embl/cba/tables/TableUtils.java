@@ -174,15 +174,16 @@ public class TableUtils
 		return columnNames;
 	}
 
-	public static TreeMap< Number, Number > columnsAsTreeMap( JTable jTable,
-											int columnIndexFrom,
-											int columnIndexTo )
+	public static < A, B > TreeMap< A, B > columnsAsTreeMap(
+			JTable jTable,
+			int columnIndexFrom,
+			int columnIndexTo )
 	{
-		final TreeMap< Number, Number > treeMap = new TreeMap();
+		final TreeMap< A, B > treeMap = new TreeMap();
 
 		for ( int row = 0; row < jTable.getRowCount(); row++ )
 		{
-			treeMap.put( ( Number ) jTable.getValueAt( row, columnIndexFrom ), ( Number ) jTable.getValueAt( row, columnIndexTo ) );
+			treeMap.put( ( A ) jTable.getValueAt( row, columnIndexFrom ), ( B ) jTable.getValueAt( row, columnIndexTo ) );
 		}
 
 		return treeMap;

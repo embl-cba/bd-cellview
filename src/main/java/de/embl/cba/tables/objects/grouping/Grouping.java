@@ -1,10 +1,10 @@
 package de.embl.cba.tables.objects.grouping;
 
+import de.embl.cba.tables.objects.ObjectTableModel;
+
 import javax.swing.*;
 import javax.swing.table.TableModel;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.TreeMap;
+import java.util.*;
 
 public class Grouping
 {
@@ -12,7 +12,8 @@ public class Grouping
 	final Integer objectLabelColumnIndex;
 	final Integer groupingColumnIndex;
 	final private TableModel model;
-	private final TreeMap< Number, Integer > labelRowMap;
+	private final TreeMap< Object, Integer > labelRowMap;
+	private HashSet< Object > groups;
 
 	public Grouping( JTable table, Integer objectLabelColumnIndex, Integer groupingColumnIndex )
 	{
@@ -32,22 +33,52 @@ public class Grouping
 
 		for ( int row = 0; row < rowCount; row++ )
 		{
-			final Number label = (Number) model.getValueAt( row, objectLabelColumnIndex );
+			final Object label = model.getValueAt( row, objectLabelColumnIndex );
 			labelRowMap.put( label, row );
 		}
 	}
 
-	public void assignObjectsToGroup( final Collection< ? extends Number > objectLabels, final Object group )
+	public void assignObjectsToGroup( final Collection objectLabels, final Object group )
 	{
-		for ( Number objectLabel : objectLabels )
+		for ( Object objectLabel : objectLabels )
 		{
 			assignObjectToGroup( objectLabel, group );
 		}
 	}
 
-	private void assignObjectToGroup( Number objectLabel, Object group )
+	private void assignObjectToGroup( Object objectLabel, Object group )
 	{
+		if ( ! exists( group ) ) groups.add( group );
+
 		model.setValueAt( group, labelRowMap.get( objectLabel ), groupingColumnIndex );
+	}
+
+	public Set< Object > getGroups()
+	{
+		if ( groups == null ) initGroups();
+
+		return groups;
+	}
+
+	public boolean exists( Object group )
+	{
+		if ( groups == null ) initGroups();
+
+		return groups.contains( group );
+	}
+
+
+	public void initGroups()
+	{
+		final int rowCount = table.getRowCount();
+
+		groups = new HashSet();
+
+		for ( int row = 0; row < rowCount; row++ )
+		{
+			final Object group = model.getValueAt( row, groupingColumnIndex );
+			groups.add( group );
+		}
 	}
 
 }

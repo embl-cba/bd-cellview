@@ -23,14 +23,14 @@ public abstract class Tests
 
 	public static JTable loadObjectTableFor2D16BitLabelMask() throws IOException
 	{
-		final File tableFile = new File( TestInteractiveAttributeColoring.class.getResource( "2d-16bit-labelMask-Morphometry.csv" ).getFile() );
+		final File tableFile = new File( ExampleInteractiveAttributeColoring.class.getResource( "2d-16bit-labelMask-Morphometry.csv" ).getFile() );
 
 		return TableUtils.loadTable( tableFile, "," );
 	}
 
 	public static RandomAccessibleIntervalSource load2D16BitLabelMask()
 	{
-		final ImagePlus imagePlus = IJ.openImage( TestInteractiveAttributeColoring.class.getResource( "2d-16bit-labelMask.tif" ).getFile() );
+		final ImagePlus imagePlus = IJ.openImage( ExampleInteractiveAttributeColoring.class.getResource( "2d-16bit-labelMask.tif" ).getFile() );
 
 		RandomAccessibleInterval< RealType > wrap = ImageJFunctions.wrapReal( imagePlus );
 
@@ -46,6 +46,6 @@ public abstract class Tests
 
 		objectTablePanel.showPanel();
 
-		// objectTablePanel.setCoordinateColumnIndex( ObjectCoordinate.Label, 0 );
+		objectTablePanel.setCoordinateColumnIndex( ObjectCoordinate.Label, 0 );
 	}
 }

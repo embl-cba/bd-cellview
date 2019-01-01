@@ -10,6 +10,7 @@ public class TestColumnsAsTreeMap
 		JTable jTable = createTable();
 
 		final TreeMap< Number, Number > map = TableUtils.columnsAsTreeMap( jTable, 0, 1 );
+
 	}
 
 	private static JTable createTable()
@@ -24,6 +25,7 @@ public class TestColumnsAsTreeMap
 		}
 
 		Object[][] data = new Object[ rows ][ cols ];
+
 		for ( int i = 0; i < rows; i++ )
 		{
 			for ( int j = 0; j < cols; j++ )

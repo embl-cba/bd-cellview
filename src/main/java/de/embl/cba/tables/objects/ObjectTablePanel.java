@@ -6,6 +6,7 @@ import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
 import de.embl.cba.bdv.utils.lut.ARGBLut;
 import de.embl.cba.bdv.utils.lut.LinearMappingARGBLut;
 import de.embl.cba.bdv.utils.lut.Luts;
+import de.embl.cba.bdv.utils.lut.StringMappingRandomARGBLut;
 import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
 
@@ -30,7 +31,7 @@ public class ObjectTablePanel extends JPanel
     private HashMap< ObjectCoordinate, Integer > objectCoordinateColumnIndexMap;
 
     private Bdv bdv;
-	private SelectableRealVolatileARGBConverter selectableConverter;
+	private SelectableRealVolatileARGBConverter converter;
 	private ARGBLut originalARGBLut; // to revert to if needed
 
 	public ObjectTablePanel( JTable table )
@@ -40,13 +41,13 @@ public class ObjectTablePanel extends JPanel
         init();
     }
 
-	public ObjectTablePanel( JTable table, Bdv bdv, SelectableRealVolatileARGBConverter selectableConverter )
+	public ObjectTablePanel( JTable table, Bdv bdv, SelectableRealVolatileARGBConverter converter )
 	{
 		super( new GridLayout(1, 0 ) );
 		this.table = table;
 		this.bdv = bdv;
-		this.selectableConverter = selectableConverter;
-		this.originalARGBLut = selectableConverter.getARGBLut();
+		this.converter = converter;
+		this.originalARGBLut = converter.getARGBLut();
 		init();
 	}
 
@@ -112,16 +113,16 @@ public class ObjectTablePanel extends JPanel
 		return coloringMenu;
 	}
 
-	private JMenuItem getColorByColumnMenuItem( final int col )
+	private JMenuItem getColorByColumnMenuItem( final int colorByColumn )
 	{
-		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + table.getColumnName( col ) );
+		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + table.getColumnName( colorByColumn ) );
 
 		colorByColumnMenuItem.addActionListener( new ActionListener()
 		{
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				if ( selectableConverter == null )
+				if ( converter == null )
 				{
 					Logger.warn( "No associated label image found." );
 					return;
@@ -129,35 +130,30 @@ public class ObjectTablePanel extends JPanel
 
 				if ( ! isCoordinateColumnSet( ObjectCoordinate.Label ) )
 				{
-					Logger.warn( "Please select an object label index column:\n" +
+					Logger.warn( "Please specify the object label column:\n" +
 							"[ Objects > Select coordinates... ]" );
 					return;
 				}
 
-				// TODO: for huge tables this should be implemented more efficiently
+				final Object valueAt = table.getValueAt( 0, colorByColumn );
 
-				TreeMap< Number, Number > labelValueMap =
-						TableUtils.columnsAsTreeMap(
-							table,
-							objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
-							col );
-
-				double min = Double.MAX_VALUE;
-				double max = - Double.MAX_VALUE;
-				for ( Number value : labelValueMap.values() )
+				if ( valueAt instanceof Number )
 				{
-					if ( value.doubleValue() < min ) min = value.doubleValue();
-					if ( value.doubleValue() > max ) max = value.doubleValue();
+					final LinearMappingARGBLut linearMappingARGBLut = getLinearMappingARGBLut( colorByColumn );
+
+					converter.setARGBLut( linearMappingARGBLut );
 				}
+				else if ( valueAt instanceof String )
+				{
+					final StringMappingRandomARGBLut stringMappingRandomARGBLut = getStringMappingRandomARGBLut( colorByColumn );
 
-				final LinearMappingARGBLut mappingARGBLut = new LinearMappingARGBLut(
-						labelValueMap,
-						Luts.BLUE_WHITE_RED_LUT,
-						min,
-						max
-				);
-
-				selectableConverter.setARGBLut( mappingARGBLut );
+					converter.setARGBLut( stringMappingRandomARGBLut );
+				}
+				else
+				{
+					Logger.warn( "Column types must be Number or String");
+					return;
+				}
 
 				BdvUtils.repaint( bdv );
 			}
@@ -165,6 +161,56 @@ public class ObjectTablePanel extends JPanel
 		} );
 
 		return colorByColumnMenuItem;
+	}
+
+	// TODO: for huge tables below code should be implemented more efficiently
+	public LinearMappingARGBLut getLinearMappingARGBLut( int colorByColumn )
+	{
+		// determine mapping of object label to selected color-column
+		//
+		TreeMap< Double, Number > labelValueMap =
+				TableUtils.columnsAsTreeMap(
+						table,
+						objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
+						colorByColumn );
+
+		// determine min and max of color-column for setting up the LUT
+		//
+		double min = Double.MAX_VALUE;
+		double max = -Double.MAX_VALUE;
+		for ( Number value : labelValueMap.values() )
+		{
+			if ( value.doubleValue() < min ) min = value.doubleValue();
+			if ( value.doubleValue() > max ) max = value.doubleValue();
+		}
+
+		// set up LUT
+		//
+		return new LinearMappingARGBLut(
+				labelValueMap,
+				Luts.BLUE_WHITE_RED,
+				min,
+				max
+		);
+	}
+
+
+	public StringMappingRandomARGBLut getStringMappingRandomARGBLut( int colorByColumn )
+	{
+		// determine mapping of object label to selected color-column
+		//
+		TreeMap< Double, String > labelStringMap =
+				TableUtils.columnsAsTreeMap(
+						table,
+						objectCoordinateColumnIndexMap.get( ObjectCoordinate.Label ),
+						colorByColumn );
+
+		// set up LUT
+		//
+		return new StringMappingRandomARGBLut(
+				labelStringMap,
+				Luts.BLUE_WHITE_RED
+		);
 	}
 
 	private JMenuItem getRestoreOriginalColorMenuItem()
@@ -176,7 +222,7 @@ public class ObjectTablePanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				selectableConverter.setARGBLut( originalARGBLut );
+				converter.setARGBLut( originalARGBLut );
 			}
 		} );
 		return restoreOriginalColorMenuItem;
