@@ -76,9 +76,8 @@ public class ObjectCoordinateColumnsSelectionUI extends JPanel
 			jComboBox.addItem( choice );
 		}
 
-		// +/- 1 is due to the option to select no column
-
-		jComboBox.setSelectedItem( objectTablePanel.getCoordinateColumn( coordinate ) + 1 );
+		// +1 is due to the option to select no column
+		jComboBox.setSelectedItem( objectTablePanel.getCoordinateColumn( coordinate ) );
 
 		jComboBox.addActionListener( new ActionListener()
 		{
@@ -96,7 +95,7 @@ public class ObjectCoordinateColumnsSelectionUI extends JPanel
 	private void showUI()
 	{
 		//Create and set up the window.
-		frame = new JFrame("Manual editing");
+		frame = new JFrame("Object coordinates");
 
 		//Create and set up the content pane.
 		this.setOpaque(true); //content panes must be opaque

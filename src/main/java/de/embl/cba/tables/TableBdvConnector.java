@@ -5,14 +5,11 @@ import de.embl.cba.bdv.utils.behaviour.BdvSelectionEventHandler;
 import de.embl.cba.bdv.utils.behaviour.SelectionEventListener;
 import de.embl.cba.bdv.utils.converters.argb.CategoricalMappingRandomARGBConverter;
 import de.embl.cba.bdv.utils.converters.argb.LinearMappingARGBConverter;
-import de.embl.cba.bdv.utils.lut.LinearMappingARGBLut;
 import de.embl.cba.bdv.utils.lut.Luts;
-import de.embl.cba.bdv.utils.lut.StringMappingRandomARGBLut;
 import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTablePanel;
 import net.imglib2.converter.Converter;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.volatiles.VolatileARGBType;
 
 import javax.swing.*;
@@ -20,18 +17,17 @@ import javax.swing.event.MouseInputAdapter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
-import java.util.TreeMap;
 import java.util.function.Function;
 
-public class ObjectTablePanelBdvConnector
+public class TableBdvConnector
 {
 	final private ObjectTablePanel objectTablePanel;
 	final private BdvSelectionEventHandler bdvSelectionEventHandler;
 	private final JTable table;
 	private final Converter< RealType, VolatileARGBType > originalConverter;
 
-	public ObjectTablePanelBdvConnector( ObjectTablePanel objectTablePanel,
-										 BdvSelectionEventHandler bdvSelectionEventHandler )
+	public TableBdvConnector( ObjectTablePanel objectTablePanel,
+							  BdvSelectionEventHandler bdvSelectionEventHandler )
 	{
 		this.bdvSelectionEventHandler = bdvSelectionEventHandler;
 		this.objectTablePanel = objectTablePanel;
@@ -68,27 +64,35 @@ public class ObjectTablePanelBdvConnector
 			{
 				if( me.isControlDown() )
 				{
-					final int row = table.convertRowIndexToModel( table.getSelectedRow() );
+					final int selectedRow = table.convertRowIndexToModel( table.getSelectedRow() );
 
-					bdvSelectionEventHandler.addSelection( getObjectLabel( row ) );
+//					bdvSelectionEventHandler.addSelection( getObjectLabel( selectedRow ) );
 
-					objectTablePanel.getObjectCoordinate( ObjectCoordinate.X, row );
-
-					// TODO: move to xy
+					moveBdvToObjectPosition( selectedRow );
 				}
 			}
 		});
 
 	}
 
-	public double getObjectLabel( int selectedRow )
+	public void moveBdvToObjectPosition( int row )
 	{
-		final Number objectLabelNumber = (Number) table.getModel().getValueAt(
-				selectedRow,
-				table.getColumnModel().getColumnIndex(
-						objectTablePanel.getCoordinateColumn( ObjectCoordinate.Label ) ) );
+		final Double x = objectTablePanel.getObjectCoordinate( ObjectCoordinate.X, row );
+		final Double y = objectTablePanel.getObjectCoordinate( ObjectCoordinate.Y, row );
 
-		return objectLabelNumber.doubleValue();
+		if ( x != null && y != null )
+		{
+			Double z = objectTablePanel.getObjectCoordinate( ObjectCoordinate.Z, row );
+			if ( z == null ) z = 0.0;
+
+			Double t = objectTablePanel.getObjectCoordinate( ObjectCoordinate.T, row );
+			if ( t == null ) t = 0.0;
+
+			BdvUtils.zoomToPosition( bdvSelectionEventHandler.getBdv(),
+					new double[]{ x, y, z, t},
+					null,
+					500);
+		}
 	}
 
 	private JMenu createColoringMenuItem()
@@ -99,13 +103,13 @@ public class ObjectTablePanelBdvConnector
 
 		for ( int col = 0; col < table.getColumnCount(); col++ )
 		{
-			coloringMenu.add( getColorByColumnMenuItem( table.getColumnName( col ) ) );
+			coloringMenu.add( createColorByColumnMenuItem( table.getColumnName( col ) ) );
 		}
 
 		return coloringMenu;
 	}
 
-	private JMenuItem getColorByColumnMenuItem( final String colorByColumn )
+	private JMenuItem createColorByColumnMenuItem( final String colorByColumn )
 	{
 		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + colorByColumn );
 
@@ -194,7 +198,7 @@ public class ObjectTablePanelBdvConnector
 
 		return new CategoricalMappingRandomARGBConverter(
 				labelColumnMapper,
-				Luts.BLUE_WHITE_RED
+				Luts.GLASBEY
 		);
 	}
 

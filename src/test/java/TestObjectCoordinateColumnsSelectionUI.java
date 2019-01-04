@@ -12,7 +12,7 @@ public class TestObjectCoordinateColumnsSelectionUI
 		final ImageJ ij = new ImageJ();
 		ij.ui().showUI();
 
-		final JTable table = Tests.loadObjectTableFor2D16BitLabelMask();
+		final JTable table = Examples.loadObjectTableFor2D16BitLabelMask();
 
 		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( table );
 

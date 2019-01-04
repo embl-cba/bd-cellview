@@ -41,7 +41,7 @@ public class ExampleInteractiveObjectGrouping
 		 * Load and show image
 		 */
 
-		final RandomAccessibleIntervalSource raiSource = Tests.load2D16BitLabelMask();
+		final RandomAccessibleIntervalSource raiSource = Examples.load2D16BitLabelMask();
 
 		final SelectableVolatileARGBConverter argbConverter = new SelectableVolatileARGBConverter();
 
@@ -53,7 +53,7 @@ public class ExampleInteractiveObjectGrouping
 		 * Load table and add a group column
 		 */
 
-		final JTable jTable = Tests.loadObjectTableFor2D16BitLabelMask();
+		final JTable jTable = Examples.loadObjectTableFor2D16BitLabelMask();
 		final ColumnClassAwareTableModel model = (ColumnClassAwareTableModel ) jTable.getModel();
 
 		// add group column
@@ -94,7 +94,7 @@ public class ExampleInteractiveObjectGrouping
 		{
 			groupingUI.assignObjectsToGroup( bdvSelectionEventHandler.getSelectedValues() );
 		}
-		, "fetch-curently-selected-objects-" + argbSource.getName(), Tests.OBJECT_GROUPING_TRIGGER  );
+		, "fetch-curently-selected-objects-" + argbSource.getName(), Examples.OBJECT_GROUPING_TRIGGER  );
 
 	}
 }

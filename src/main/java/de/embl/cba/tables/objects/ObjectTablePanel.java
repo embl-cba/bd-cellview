@@ -244,7 +244,7 @@ public class ObjectTablePanel extends JPanel
 	public void determineMinMaxValues( String selectedColumn )
 	{
 		final int columnIndex =
-				table.getColumnModel().getColumnIndex( getCoordinateColumn( ObjectCoordinate.Label ) );
+				table.getColumnModel().getColumnIndex( selectedColumn );
 
 		double min = Double.MAX_VALUE;
 		double max = -Double.MAX_VALUE;

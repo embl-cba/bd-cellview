@@ -1,13 +1,18 @@
 import de.embl.cba.tables.commands.ObjectMeasurementsReviewCommand;
+import de.embl.cba.tables.objects.ObjectCoordinate;
+import de.embl.cba.tables.objects.ObjectTablePanel;
 import net.imagej.ImageJ;
+import org.scijava.command.CommandModule;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 
 public class ExampleObjectMeasurementsReviewCommand
 {
-	public static void main( String[] args )
+	public static void main( String[] args ) throws ExecutionException, InterruptedException
 	{
 		final ImageJ ij = new ImageJ();
 		ij.ui().showUI();

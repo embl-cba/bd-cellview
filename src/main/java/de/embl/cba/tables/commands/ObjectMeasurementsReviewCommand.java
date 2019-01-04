@@ -8,10 +8,11 @@ import de.embl.cba.bdv.utils.behaviour.BdvSelectionEventHandler;
 import de.embl.cba.bdv.utils.converters.argb.SelectableVolatileARGBConverter;
 import de.embl.cba.bdv.utils.converters.argb.VolatileARGBConvertedRealSource;
 import de.embl.cba.tables.Logger;
-import de.embl.cba.tables.ObjectTablePanelBdvConnector;
+import de.embl.cba.tables.TableBdvConnector;
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTablePanel;
+import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
 import ij.IJ;
 import ij.ImagePlus;
 import net.imglib2.RandomAccessibleInterval;
@@ -43,11 +44,11 @@ public class ObjectMeasurementsReviewCommand implements Command
 	@Parameter ( label = "Intensities (optional)", required = false )
 	public File inputIntensitiesFile;
 
+	public  ObjectTablePanel objectTablePanel;
 	private SelectableVolatileARGBConverter labelsConverter;
 	private VolatileARGBConvertedRealSource labelsSource;
 	private JTable table;
 	private Bdv bdv;
-	private ObjectTablePanel objectTablePanel;
 	private BdvSelectionEventHandler bdvSelectionEventHandler;
 
 	@Override
@@ -66,8 +67,9 @@ public class ObjectMeasurementsReviewCommand implements Command
 				labelsSource,
 				labelsConverter );
 
-		new ObjectTablePanelBdvConnector( objectTablePanel, bdvSelectionEventHandler );
+		new TableBdvConnector( objectTablePanel, bdvSelectionEventHandler );
 
+		new ObjectCoordinateColumnsSelectionUI( objectTablePanel );
 	}
 
 	public void showTablePanel()
