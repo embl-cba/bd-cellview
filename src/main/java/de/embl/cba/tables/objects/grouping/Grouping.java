@@ -1,7 +1,5 @@
 package de.embl.cba.tables.objects.grouping;
 
-import de.embl.cba.tables.objects.ObjectTableModel;
-
 import javax.swing.*;
 import javax.swing.table.TableModel;
 import java.util.*;

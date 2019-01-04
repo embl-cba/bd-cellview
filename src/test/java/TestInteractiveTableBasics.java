@@ -1,6 +1,7 @@
 import de.embl.cba.tables.objects.ObjectTablePanel;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class TestInteractiveTableBasics
 {
@@ -28,25 +29,25 @@ public class TestInteractiveTableBasics
 
 		JTable table = new JTable( data, colNames );
 
-		final ObjectTablePanel panel = new ObjectTablePanel( table );
-
-		final Object[] newStringRow = new Object[ rows ];
-		for ( int i = 0; i < rows; i++ )
-		{
-			newStringRow[ i ] = "aaa";
-		}
-
-		panel.getTableModel().addRow( newStringRow );
-
-		final Double[] newDoubleRow = new Double[ rows ];
-		for ( int i = 0; i < rows; i++ )
-		{
-			newDoubleRow[ i ] = 1.0;
-		}
-
-		panel.getTableModel().addRow( newDoubleRow );
-
-		panel.showPanel();
+//		final ObjectTablePanel panel = new ObjectTablePanel( table );
+//
+//		final Object[] newStringRow = new Object[ rows ];
+//		for ( int i = 0; i < rows; i++ )
+//		{
+//			newStringRow[ i ] = "aaa";
+//		}
+//
+//		((DefaultTableModel)panel.getTableModel()).addRow( newStringRow );
+//
+//		final Double[] newDoubleRow = new Double[ rows ];
+//		for ( int i = 0; i < rows; i++ )
+//		{
+//			newDoubleRow[ i ] = 1.0;
+//		}
+//
+//		((DefaultTableModel)panel.getTableModel()).addRow( newDoubleRow );
+//
+//		panel.showPanel();
 
 	}
 }

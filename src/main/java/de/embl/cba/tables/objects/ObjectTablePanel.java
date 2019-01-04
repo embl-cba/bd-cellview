@@ -1,21 +1,18 @@
 package de.embl.cba.tables.objects;
 
-import bdv.util.Bdv;
-import de.embl.cba.bdv.utils.BdvUtils;
-import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
-import de.embl.cba.bdv.utils.lut.ARGBLut;
-import de.embl.cba.bdv.utils.lut.LinearMappingARGBLut;
-import de.embl.cba.bdv.utils.lut.Luts;
-import de.embl.cba.bdv.utils.lut.StringMappingRandomARGBLut;
-import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
+import de.embl.cba.tables.models.ColumnClassAwareTableModel;
 import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.TreeMap;
 
@@ -23,32 +20,21 @@ import java.util.TreeMap;
 public class ObjectTablePanel extends JPanel
 {
 	public static final String NO_COLUMN_SELECTED = "No column selected";
-
 	final private JTable table;
-    private JFrame frame;
+	private final TableModel model;
+	private JFrame frame;
     private JScrollPane scrollPane;
     private JMenuBar menuBar;
     private HashMap< ObjectCoordinate, String > objectCoordinateColumnMap;
-
-    private Bdv bdv;
-	private SelectableRealVolatileARGBConverter converter;
-	private ARGBLut originalARGBLut; // to revert to if needed
+	private TreeMap< Double, Integer > labelRowMap;
+	private HashMap< String, double[] > columnsMinMaxMap;
 
 	public ObjectTablePanel( JTable table )
     {
         super( new GridLayout(1, 0 ) );
         this.table = table;
         init();
-    }
-
-	public ObjectTablePanel( JTable table, Bdv bdv, SelectableRealVolatileARGBConverter converter )
-	{
-		super( new GridLayout(1, 0 ) );
-		this.table = table;
-		this.bdv = bdv;
-		this.converter = converter;
-		this.originalARGBLut = converter.getARGBLut();
-		init();
+		model = table.getModel();
 	}
 
 	private void init()
@@ -62,9 +48,11 @@ public class ObjectTablePanel extends JPanel
         this.add( scrollPane );
         table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
 
+		columnsMinMaxMap = new HashMap<>();
+
         initCoordinateColumns();
 
-        initMenus();
+        initMenuBar();
     }
 
 	public synchronized void setCoordinateColumn( ObjectCoordinate objectCoordinate, String column )
@@ -87,145 +75,19 @@ public class ObjectTablePanel extends JPanel
         }
     }
 
-    private void initMenus()
+    private void initMenuBar()
     {
         menuBar = new JMenuBar();
 
         menuBar.add( getFileMenuItem() );
 
 		menuBar.add( getObjectCoordinateMenuItem() );
-
-		menuBar.add( getColoringMenuItem() );
-
 	}
 
-	private JMenu getColoringMenuItem()
+	public void addMenu( JMenuItem menuItem )
 	{
-		JMenu coloringMenu = new JMenu( "Coloring" );
-
-		coloringMenu.add( getRestoreOriginalColorMenuItem() );
-
-		for ( int col = 0; col < table.getColumnCount(); col++ )
-		{
-			coloringMenu.add( getColorByColumnMenuItem( table.getColumnName( col ) ) );
-		}
-
-		return coloringMenu;
-	}
-
-	private JMenuItem getColorByColumnMenuItem( final String colorByColumn )
-	{
-		final JMenuItem colorByColumnMenuItem = new JMenuItem( "Color by " + colorByColumn );
-
-		colorByColumnMenuItem.addActionListener( new ActionListener()
-		{
-			@Override
-			public void actionPerformed( ActionEvent e )
-			{
-				if ( converter == null )
-				{
-					Logger.warn( "No associated label image found." );
-					return;
-				}
-
-				if ( ! isCoordinateColumnSet( ObjectCoordinate.Label ) )
-				{
-					Logger.warn( "Please specify the object label column:\n" +
-							"[ Objects > Select coordinates... ]" );
-					return;
-				}
-
-				final Object valueAt = table.getValueAt( 0, table.getColumnModel().getColumnIndex( colorByColumn ) );
-
-				if ( valueAt instanceof Number )
-				{
-					final LinearMappingARGBLut linearMappingARGBLut = getLinearMappingARGBLut( colorByColumn );
-
-					converter.setARGBLut( linearMappingARGBLut );
-				}
-				else if ( valueAt instanceof String )
-				{
-					final StringMappingRandomARGBLut stringMappingRandomARGBLut = getStringMappingRandomARGBLut( colorByColumn );
-
-					converter.setARGBLut( stringMappingRandomARGBLut );
-				}
-				else
-				{
-					Logger.warn( "Column types must be Number or String");
-					return;
-				}
-
-				BdvUtils.repaint( bdv );
-			}
-
-		} );
-
-		return colorByColumnMenuItem;
-	}
-
-	// TODO: for huge tables below code should be implemented more efficiently
-	public LinearMappingARGBLut getLinearMappingARGBLut( String colorByColumn )
-	{
-		// determine mapping of object label to selected color-column
-		//
-		TreeMap< Double, Number > labelValueMap =
-				TableUtils.columnsAsTreeMap(
-						table,
-						objectCoordinateColumnMap.get( ObjectCoordinate.Label ),
-						colorByColumn );
-
-		// determine min and max of color-column for setting up the LUT
-		//
-		double min = Double.MAX_VALUE;
-		double max = -Double.MAX_VALUE;
-		for ( Number value : labelValueMap.values() )
-		{
-			if ( value.doubleValue() < min ) min = value.doubleValue();
-			if ( value.doubleValue() > max ) max = value.doubleValue();
-		}
-
-		// set up LUT
-		//
-		return new LinearMappingARGBLut(
-				labelValueMap,
-				Luts.BLUE_WHITE_RED,
-				min,
-				max
-		);
-	}
-
-
-	public StringMappingRandomARGBLut getStringMappingRandomARGBLut( String colorByColumn )
-	{
-		// determine mapping of object label to selected color-column
-		//
-		TreeMap< Double, String > labelStringMap =
-				TableUtils.columnsAsTreeMap(
-						table,
-						objectCoordinateColumnMap.get( ObjectCoordinate.Label ),
-						colorByColumn );
-
-		// set up LUT
-		//
-		return new StringMappingRandomARGBLut(
-				labelStringMap,
-				Luts.BLUE_WHITE_RED
-		);
-	}
-
-	private JMenuItem getRestoreOriginalColorMenuItem()
-	{
-		final JMenuItem restoreOriginalColorMenuItem = new JMenuItem( "Restore original coloring");
-
-		restoreOriginalColorMenuItem.addActionListener( new ActionListener()
-		{
-			@Override
-			public void actionPerformed( ActionEvent e )
-			{
-				converter.setARGBLut( originalARGBLut );
-			}
-		} );
-		return restoreOriginalColorMenuItem;
+		menuBar.add( menuItem );
+		SwingUtilities.updateComponentTreeUI( frame );
 	}
 
 
@@ -303,7 +165,7 @@ public class ObjectTablePanel extends JPanel
         return true;
     }
 
-    public double getObjectCoordinate( ObjectCoordinate objectCoordinate, int row )
+    public Double getObjectCoordinate( ObjectCoordinate objectCoordinate, int row )
     {
         if ( objectCoordinateColumnMap.get( objectCoordinate ) != NO_COLUMN_SELECTED )
         {
@@ -312,19 +174,90 @@ public class ObjectTablePanel extends JPanel
         }
         else
         {
-            return 0;
+            return null;
         }
     }
 
-    public DefaultTableModel getTableModel()
-    {
-        return ( DefaultTableModel ) table.getModel();
-    }
+	public void addColumn( String column, Object defaultValue )
+	{
+
+		if ( model instanceof DefaultTableModel )
+		{
+			final Object[] rows = new String[ model.getRowCount() ];
+			Arrays.fill( rows, defaultValue );
+			((DefaultTableModel) model ).addColumn( column, rows );
+		}
+
+		if ( model instanceof ColumnClassAwareTableModel )
+		{
+			((ColumnClassAwareTableModel ) model ).refreshColumnClasses();
+		}
+	}
+
+	public ArrayList< String > getColumnNames()
+	{
+		return TableUtils.getColumnNames( table );
+	}
 
 	public JTable getTable()
 	{
 		return table;
 	}
 
+
+	private void createLabelRowMap()
+	{
+		labelRowMap = new TreeMap();
+
+		final int labelColumnIndex =
+				table.getColumnModel().getColumnIndex( getCoordinateColumn( ObjectCoordinate.Label ) );
+
+		final int rowCount = table.getRowCount();
+		for ( int row = 0; row < rowCount; row++ )
+		{
+			labelRowMap.put(
+					( Double ) table.getValueAt( row, labelColumnIndex ),
+					( Integer ) row );
+		}
+	}
+
+	public int getRow( double objectLabel )
+	{
+		if ( labelRowMap == null )
+		{
+			createLabelRowMap();
+		}
+
+		return labelRowMap.get( objectLabel );
+	}
+
+	public double[] getMinMaxValues( String selectedColumn )
+	{
+		if ( ! columnsMinMaxMap.containsKey( selectedColumn ) )
+		{
+			determineMinMaxValues( selectedColumn );
+		}
+
+		return columnsMinMaxMap.get( selectedColumn );
+	}
+
+	public void determineMinMaxValues( String selectedColumn )
+	{
+		final int columnIndex =
+				table.getColumnModel().getColumnIndex( getCoordinateColumn( ObjectCoordinate.Label ) );
+
+		double min = Double.MAX_VALUE;
+		double max = -Double.MAX_VALUE;
+
+		final int rowCount = table.getRowCount();
+		for ( int row = 0; row < rowCount; row++ )
+		{
+			final double value = ( Double ) table.getValueAt( row, columnIndex );
+			if ( value < min ) min = value;
+			if ( value > max ) max = value;
+		}
+
+		columnsMinMaxMap.put( selectedColumn, new double[]{ min, max } );
+	}
 
 }

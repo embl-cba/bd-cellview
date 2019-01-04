@@ -1,9 +1,9 @@
-package de.embl.cba.tables.objects;
+package de.embl.cba.tables.models;
 
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 
-public class ObjectTableModel extends DefaultTableModel
+public class ColumnClassAwareTableModel extends DefaultTableModel
 {
 	ArrayList< Class > columnClasses;
 
@@ -19,7 +19,10 @@ public class ObjectTableModel extends DefaultTableModel
 		return false;
 	}
 
-	public void setColumnClassesFromFirstRow()
+	/**
+	 * Determines column classes from entries in 1st row.
+	 */
+	public void refreshColumnClasses()
 	{
 		columnClasses = new ArrayList<>(  );
 

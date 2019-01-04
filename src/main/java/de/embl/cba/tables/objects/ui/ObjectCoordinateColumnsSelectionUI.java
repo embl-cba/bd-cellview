@@ -59,7 +59,7 @@ public class ObjectCoordinateColumnsSelectionUI extends JPanel
 	{
 		choices = new ArrayList<>( );
 		choices.add( ObjectTablePanel.NO_COLUMN_SELECTED );
-		choices.addAll( TableUtils.getColumnNames( objectTablePanel.getTable() ) );
+		choices.addAll( objectTablePanel.getColumnNames() );
 	}
 
 	private void addColumnSelectionUI( final JPanel panel, final ObjectCoordinate coordinate )

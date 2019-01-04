@@ -1,10 +1,14 @@
 package de.embl.cba.tables.commands;
 
-import bdv.util.*;
-import de.embl.cba.bdv.utils.argbconversion.SelectableRealVolatileARGBConverter;
-import de.embl.cba.bdv.utils.argbconversion.VolatileARGBConvertedRealSource;
-import de.embl.cba.bdv.utils.behaviour.BehaviourSelectionEventHandler;
+import bdv.util.Bdv;
+import bdv.util.BdvFunctions;
+import bdv.util.BdvOptions;
+import bdv.util.RandomAccessibleIntervalSource4D;
+import de.embl.cba.bdv.utils.behaviour.BdvSelectionEventHandler;
+import de.embl.cba.bdv.utils.converters.argb.SelectableVolatileARGBConverter;
+import de.embl.cba.bdv.utils.converters.argb.VolatileARGBConvertedRealSource;
 import de.embl.cba.tables.Logger;
+import de.embl.cba.tables.ObjectTablePanelBdvConnector;
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTablePanel;
@@ -39,11 +43,12 @@ public class ObjectMeasurementsReviewCommand implements Command
 	@Parameter ( label = "Intensities (optional)", required = false )
 	public File inputIntensitiesFile;
 
-	private SelectableRealVolatileARGBConverter labelsConverter;
+	private SelectableVolatileARGBConverter labelsConverter;
 	private VolatileARGBConvertedRealSource labelsSource;
 	private JTable table;
 	private Bdv bdv;
 	private ObjectTablePanel objectTablePanel;
+	private BdvSelectionEventHandler bdvSelectionEventHandler;
 
 	@Override
 	public void run()
@@ -56,14 +61,18 @@ public class ObjectMeasurementsReviewCommand implements Command
 
 		showTablePanel();
 
-		final BehaviourSelectionEventHandler behaviourSelectionEventHandler = new BehaviourSelectionEventHandler( bdv, labelsSource, labelsConverter );
+		bdvSelectionEventHandler = new BdvSelectionEventHandler(
+				bdv,
+				labelsSource,
+				labelsConverter );
 
+		new ObjectTablePanelBdvConnector( objectTablePanel, bdvSelectionEventHandler );
 
 	}
 
 	public void showTablePanel()
 	{
-		objectTablePanel = new ObjectTablePanel( table, bdv, labelsConverter );
+		objectTablePanel = new ObjectTablePanel( table );
 		objectTablePanel.showPanel();
 		objectTablePanel.setCoordinateColumn( ObjectCoordinate.Label, table.getColumnName( objectLabelsColumnIndex ) );
 	}
@@ -81,7 +90,7 @@ public class ObjectMeasurementsReviewCommand implements Command
 	public void loadLabels()
 	{
 		final RandomAccessibleIntervalSource4D labels = loadImage( inputLabelMasksFile );
-		labelsConverter = new SelectableRealVolatileARGBConverter();
+		labelsConverter = new SelectableVolatileARGBConverter();
 		labelsSource = new VolatileARGBConvertedRealSource( labels, labelsConverter );
 	}
 

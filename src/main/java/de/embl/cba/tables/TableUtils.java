@@ -1,6 +1,6 @@
 package de.embl.cba.tables;
 
-import de.embl.cba.tables.objects.ObjectTableModel;
+import de.embl.cba.tables.models.ColumnClassAwareTableModel;
 import org.scijava.table.GenericTable;
 
 import javax.swing.*;
@@ -133,7 +133,7 @@ public class TableUtils
 		 * Init model and columns
 		 */
 
-		ObjectTableModel model = new ObjectTableModel();
+		ColumnClassAwareTableModel model = new ColumnClassAwareTableModel();
 
 		for ( String colName : colNames )
 		{
@@ -169,7 +169,7 @@ public class TableUtils
 
 		}
 
-		model.setColumnClassesFromFirstRow();
+		model.refreshColumnClasses();
 
 		return new JTable( model );
 	}
@@ -187,9 +187,9 @@ public class TableUtils
 	}
 
 	public static < A, B > TreeMap< A, B > columnsAsTreeMap(
-			JTable table,
-			String fromColumn,
-			String toColumn )
+			final JTable table,
+			final String fromColumn,
+			final String toColumn )
 	{
 
 		final int fromColumnIndex = table.getColumnModel().getColumnIndex( fromColumn );
@@ -197,7 +197,9 @@ public class TableUtils
 
 		final TreeMap< A, B > treeMap = new TreeMap();
 
-		for ( int row = 0; row < table.getRowCount(); row++ )
+		final int rowCount = table.getRowCount();
+
+		for ( int row = 0; row < rowCount; row++ )
 		{
 			treeMap.put( ( A ) table.getValueAt( row, fromColumnIndex ), ( B ) table.getValueAt( row, toColumnIndex ) );
 		}
