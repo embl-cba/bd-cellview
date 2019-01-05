@@ -4,6 +4,7 @@ import ij.gui.GenericDialog;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Set;
 
 public class GroupingUI
 {
@@ -17,7 +18,7 @@ public class GroupingUI
 		this.groupChoice = null;
 	}
 
-	public void assignObjectsToGroup( final Collection< ? extends Number > objectLabels )
+	public void assignObjectsToGroup( final Set< Double > objectLabels )
 	{
 		GenericDialog gd = new GenericDialog( "Choose Group" );
 		final ArrayList< Object > groups = new ArrayList<>( grouping.getGroups() );
@@ -31,7 +32,7 @@ public class GroupingUI
 
 		if ( groupChoice.equals( NEW_GROUP ) )
 		{
-			gd = new GenericDialog( "Enter group" );
+			gd = new GenericDialog( "Group name" );
 			gd.addStringField( "New group name", "", 15 );
 			gd.showDialog();
 			if ( gd.wasCanceled() ) return;

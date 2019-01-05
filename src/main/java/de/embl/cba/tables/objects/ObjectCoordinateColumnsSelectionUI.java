@@ -1,4 +1,4 @@
-package de.embl.cba.tables.objects.ui;
+package de.embl.cba.tables.objects;
 
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.objects.ObjectCoordinate;

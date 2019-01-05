@@ -1,12 +1,15 @@
 package de.embl.cba.tables;
 
 import de.embl.cba.tables.models.ColumnClassAwareTableModel;
+import de.embl.cba.tables.objects.ObjectTablePanel;
+import ij.gui.GenericDialog;
 import org.scijava.table.GenericTable;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 public class TableUtils
 {
@@ -36,6 +39,32 @@ public class TableUtils
 		return new JTable( model );
 	}
 
+
+	public static void newColumnUI( ObjectTablePanel objectTablePanel )
+	{
+		final GenericDialog gd = new GenericDialog( "New column" );
+		gd.addStringField( "Column name", "MyNewColumn", 30 );
+		gd.addStringField( "Default value [String or Number]", "None", 30 );
+
+		gd.showDialog();
+		if( gd.wasCanceled() ) return;
+
+		final String columnName = gd.getNextString();
+
+		final String defaultValueString = gd.getNextString();
+
+		Object defaultValue;
+
+		try	{
+			defaultValue = Double.parseDouble( defaultValueString );
+		}
+		catch ( Exception e )
+		{
+			defaultValue = defaultValueString;
+		}
+
+		objectTablePanel.addColumn( columnName, defaultValue );
+	}
 
 	public static void saveTableUI( JTable table ) throws IOException
 	{

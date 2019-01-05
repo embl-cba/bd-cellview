@@ -54,27 +54,17 @@ public class ExampleInteractiveObjectGrouping
 		 */
 
 		final JTable jTable = Examples.loadObjectTableFor2D16BitLabelMask();
-		final ColumnClassAwareTableModel model = (ColumnClassAwareTableModel ) jTable.getModel();
 
-		// add group column
-		final String[] groups = new String[ model.getRowCount() ];
-		Arrays.fill( groups, "None" );
-		model.addColumn( "Group", groups );
-		final int groupingColumnIndex = model.getColumnCount() - 1;
-
-		// update column classes (needed for proper sorting)
-		model.refreshColumnClasses();
-
-		// show panel and set object label column index
 		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
 		objectTablePanel.showPanel();
 		objectTablePanel.setCoordinateColumn( ObjectCoordinate.Label, jTable.getColumnName( 0 ) );
+		objectTablePanel.addColumn( "Grouping", "None" );
 
 		/**
 		 * Init an table based grouping handler and UI
 		 */
 
-		final Grouping grouping = new Grouping( jTable, 0, groupingColumnIndex );
+		final Grouping grouping = new Grouping( jTable, "Label", "Grouping" );
 		final GroupingUI groupingUI = new GroupingUI( grouping );
 
 		/**

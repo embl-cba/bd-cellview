@@ -12,7 +12,7 @@ import de.embl.cba.tables.TableBdvConnector;
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTablePanel;
-import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
+import de.embl.cba.tables.objects.ObjectCoordinateColumnsSelectionUI;
 import ij.IJ;
 import ij.ImagePlus;
 import net.imglib2.RandomAccessibleInterval;

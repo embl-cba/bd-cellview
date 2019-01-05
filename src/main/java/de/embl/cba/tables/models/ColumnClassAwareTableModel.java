@@ -34,4 +34,9 @@ public class ColumnClassAwareTableModel extends DefaultTableModel
 		}
 	}
 
+	public void addColumnClass( Object aValue )
+	{
+		columnClasses.add( aValue.getClass() );
+	}
+
 }

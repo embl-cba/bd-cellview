@@ -3,7 +3,6 @@ package de.embl.cba.tables.objects;
 import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.models.ColumnClassAwareTableModel;
-import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -56,6 +55,16 @@ public class ObjectTablePanel extends JPanel
         initMenuBar();
     }
 
+	private void initMenuBar()
+	{
+		menuBar = new JMenuBar();
+
+		menuBar.add( createTableMenuItem() );
+
+		menuBar.add( createObjectCoordinateMenuItem() );
+	}
+
+
 	public synchronized void setCoordinateColumn( ObjectCoordinate objectCoordinate, String column )
 	{
 		if ( ! getColumnNames().contains( column ) )
@@ -82,14 +91,6 @@ public class ObjectTablePanel extends JPanel
         }
     }
 
-    private void initMenuBar()
-    {
-        menuBar = new JMenuBar();
-
-        menuBar.add( getFileMenuItem() );
-
-		menuBar.add( getObjectCoordinateMenuItem() );
-	}
 
 	public void addMenu( JMenuItem menuItem )
 	{
@@ -98,30 +99,57 @@ public class ObjectTablePanel extends JPanel
 	}
 
 
-	private JMenu getFileMenuItem()
+	private JMenu createTableMenuItem()
     {
-        JMenu fileMenu = new JMenu( "File" );
-        final JMenuItem saveMenuItem = new JMenuItem( "Save as..." );
-        saveMenuItem.addActionListener( new ActionListener()
-        {
-            @Override
-            public void actionPerformed( ActionEvent e )
-            {
-                try
-                {
-                    TableUtils.saveTableUI( table );
-                }
-                catch ( IOException e1 )
-                {
-                    e1.printStackTrace();
-                }
-            }
-        } );
-        fileMenu.add( saveMenuItem );
-        return fileMenu;
+        JMenu menu = new JMenu( "Table" );
+
+        menu.add( createSaveAsMenuItem() );
+
+		menu.add( addColumnMenuItem() );
+
+		return menu;
     }
 
-	private JMenu getObjectCoordinateMenuItem()
+	private JMenuItem createSaveAsMenuItem()
+	{
+		final JMenuItem menuItem = new JMenuItem( "Save as..." );
+		menuItem.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				try
+				{
+					TableUtils.saveTableUI( table );
+				}
+				catch ( IOException e1 )
+				{
+					e1.printStackTrace();
+				}
+			}
+		} );
+		return menuItem;
+	}
+
+	private JMenuItem addColumnMenuItem()
+	{
+		final JMenuItem menuItem = new JMenuItem( "Add column..." );
+
+		final ObjectTablePanel objectTablePanel = this;
+		menuItem.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				TableUtils.newColumnUI( objectTablePanel );
+			}
+		} );
+
+		return menuItem;
+	}
+
+
+	private JMenu createObjectCoordinateMenuItem()
 	{
 		JMenu menu = new JMenu( "Objects" );
 
@@ -187,17 +215,16 @@ public class ObjectTablePanel extends JPanel
 
 	public void addColumn( String column, Object defaultValue )
 	{
+		if ( model instanceof ColumnClassAwareTableModel )
+		{
+			((ColumnClassAwareTableModel ) model ).addColumnClass( defaultValue );
+		}
 
 		if ( model instanceof DefaultTableModel )
 		{
-			final Object[] rows = new String[ model.getRowCount() ];
+			final Object[] rows = new Object[ model.getRowCount() ];
 			Arrays.fill( rows, defaultValue );
 			((DefaultTableModel) model ).addColumn( column, rows );
-		}
-
-		if ( model instanceof ColumnClassAwareTableModel )
-		{
-			((ColumnClassAwareTableModel ) model ).refreshColumnClasses();
 		}
 	}
 

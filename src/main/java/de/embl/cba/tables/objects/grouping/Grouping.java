@@ -1,54 +1,49 @@
 package de.embl.cba.tables.objects.grouping;
 
+import de.embl.cba.tables.objects.ObjectTablePanel;
+
 import javax.swing.*;
 import javax.swing.table.TableModel;
 import java.util.*;
 
 public class Grouping
 {
-	final JTable table;
-	final Integer objectLabelColumnIndex;
-	final Integer groupingColumnIndex;
+	final ObjectTablePanel objectTablePanel;
+	final String groupingColumn;
 	final private TableModel model;
-	private final TreeMap< Object, Integer > labelRowMap;
+	private final JTable table;
 	private HashSet< Object > groups;
 
-	public Grouping( JTable table, Integer objectLabelColumnIndex, Integer groupingColumnIndex )
+	public Grouping( ObjectTablePanel objectTablePanel, String groupingColumn )
 	{
-		this.table = table;
-		this.model = table.getModel();
-		this.objectLabelColumnIndex = objectLabelColumnIndex;
-		this.groupingColumnIndex = groupingColumnIndex;
+		this.objectTablePanel = objectTablePanel;
+		this.model = objectTablePanel.getTable().getModel();
+		this.table = objectTablePanel.getTable();
 
-		// create TreeMap for fast lookup in which row a given object is
-		this.labelRowMap = new TreeMap<>();
-		initLabelRowMap();
+		this.groupingColumn = groupingColumn;
 	}
 
-	private void initLabelRowMap( )
+	public void assignObjectsToGroup( final Set< Double > objectLabels, final Object group )
 	{
-		final int rowCount = table.getRowCount();
-
-		for ( int row = 0; row < rowCount; row++ )
-		{
-			final Object label = model.getValueAt( row, objectLabelColumnIndex );
-			labelRowMap.put( label, row );
-		}
-	}
-
-	public void assignObjectsToGroup( final Collection objectLabels, final Object group )
-	{
-		for ( Object objectLabel : objectLabels )
+		for ( Double objectLabel : objectLabels )
 		{
 			assignObjectToGroup( objectLabel, group );
 		}
 	}
 
-	private void assignObjectToGroup( Object objectLabel, Object group )
+	private void assignObjectToGroup( Double objectLabel, Object group )
 	{
 		if ( ! exists( group ) ) groups.add( group );
 
-		model.setValueAt( group, labelRowMap.get( objectLabel ), groupingColumnIndex );
+		model.setValueAt(
+				group,
+				objectTablePanel.getRow( objectLabel ),
+				getGroupingColumnIndex() );
+	}
+
+	private int getGroupingColumnIndex()
+	{
+		return table.getColumnModel().getColumnIndex( groupingColumn );
 	}
 
 	public Set< Object > getGroups()
@@ -71,6 +66,8 @@ public class Grouping
 		final int rowCount = table.getRowCount();
 
 		groups = new HashSet();
+
+		final int groupingColumnIndex = getGroupingColumnIndex();
 
 		for ( int row = 0; row < rowCount; row++ )
 		{
