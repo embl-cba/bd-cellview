@@ -1,5 +1,6 @@
 package de.embl.cba.tables.objects;
 
+import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.models.ColumnClassAwareTableModel;
 import de.embl.cba.tables.objects.ui.ObjectCoordinateColumnsSelectionUI;
@@ -57,6 +58,12 @@ public class ObjectTablePanel extends JPanel
 
 	public synchronized void setCoordinateColumn( ObjectCoordinate objectCoordinate, String column )
 	{
+		if ( ! getColumnNames().contains( column ) )
+		{
+			Logger.error( column + " does not exist." );
+			return;
+		}
+
 		objectCoordinateColumnMap.put( objectCoordinate, column );
 	}
 

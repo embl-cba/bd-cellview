@@ -29,8 +29,8 @@ import java.io.File;
 import java.io.IOException;
 
 
-@Plugin(type = Command.class, menuPath = "Plugins>Measurements>Object Measurements Review" )
-public class ObjectMeasurementsReviewCommand implements Command
+@Plugin(type = Command.class, menuPath = "Plugins>Measurements>Linked Table And Image Visualisation" )
+public class LinkedTableAndImageVisualisationCommand implements Command
 {
 	@Parameter ( label = "Results table" )
 	public File inputTableFile;

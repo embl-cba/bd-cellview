@@ -35,14 +35,14 @@ public class TableBdvConnector
 
 		originalConverter = bdvSelectionEventHandler.getSelectableConverter().getWrappedConverter();
 
-		configureBdvTableListening();
+		configureBdvTableConnection();
 
-		configureTableBdvListening();
+		configureTableBdvConnection();
 
 		objectTablePanel.addMenu( createColoringMenuItem() );
 	}
 
-	private void configureTableBdvListening()
+	private void configureBdvTableConnection()
 	{
 		bdvSelectionEventHandler.addSelectionEventListener( new SelectionEventListener()
 		{
@@ -52,11 +52,13 @@ public class TableBdvConnector
 				final int row = objectTablePanel.getRow( objectLabel );
 
 				table.setRowSelectionInterval( row, row );
+
+				table.scrollRectToVisible( table.getCellRect( row,0, true ) );
 			}
 		} );
 	}
 
-	private void configureBdvTableListening( )
+	private void configureTableBdvConnection( )
 	{
 		table.addMouseListener(new MouseInputAdapter()
 		{
@@ -66,7 +68,9 @@ public class TableBdvConnector
 				{
 					final int selectedRow = table.convertRowIndexToModel( table.getSelectedRow() );
 
-//					bdvSelectionEventHandler.addSelection( getObjectLabel( selectedRow ) );
+					bdvSelectionEventHandler.addSelection(
+									objectTablePanel.getObjectCoordinate(
+											ObjectCoordinate.Label, selectedRow ) );
 
 					moveBdvToObjectPosition( selectedRow );
 				}
@@ -75,7 +79,7 @@ public class TableBdvConnector
 
 	}
 
-	public void moveBdvToObjectPosition( int row )
+	private void moveBdvToObjectPosition( int row )
 	{
 		final Double x = objectTablePanel.getObjectCoordinate( ObjectCoordinate.X, row );
 		final Double y = objectTablePanel.getObjectCoordinate( ObjectCoordinate.Y, row );
@@ -88,9 +92,10 @@ public class TableBdvConnector
 			Double t = objectTablePanel.getObjectCoordinate( ObjectCoordinate.T, row );
 			if ( t == null ) t = 0.0;
 
-			BdvUtils.zoomToPosition( bdvSelectionEventHandler.getBdv(),
-					new double[]{ x, y, z, t},
-					null,
+			BdvUtils.moveToPosition(
+					bdvSelectionEventHandler.getBdv(),
+					new double[]{ x, y, z},
+					Double.valueOf( t ).intValue(),
 					500);
 		}
 	}
@@ -139,7 +144,7 @@ public class TableBdvConnector
 		return colorByColumnMenuItem;
 	}
 
-	public Converter< RealType, VolatileARGBType > createSuitableConverter( Object firstValueInColumn, String colorByColumn )
+	private Converter< RealType, VolatileARGBType > createSuitableConverter( Object firstValueInColumn, String colorByColumn )
 	{
 		Converter< RealType, VolatileARGBType > converter = null;
 
@@ -159,7 +164,7 @@ public class TableBdvConnector
 		return converter;
 	}
 
-	public LinearMappingARGBConverter createLinearMappingARGBConverter( String selectedColumn )
+	private LinearMappingARGBConverter createLinearMappingARGBConverter( String selectedColumn )
 	{
 		final int selectedColumnIndex = objectTablePanel.getTable().getColumnModel().getColumnIndex( selectedColumn );
 
@@ -182,7 +187,7 @@ public class TableBdvConnector
 				Luts.BLUE_WHITE_RED );
 	}
 
-	public CategoricalMappingRandomARGBConverter createCategoricalMappingRandomARGBConverter( String selectedColumn )
+	private CategoricalMappingRandomARGBConverter createCategoricalMappingRandomARGBConverter( String selectedColumn )
 	{
 		final int selectedColumnIndex = objectTablePanel.getTable().getColumnModel().getColumnIndex( selectedColumn );
 
