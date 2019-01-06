@@ -49,7 +49,7 @@ public class TableBdvConnector
 			@Override
 			public void valueSelected( double objectLabel )
 			{
-				final int row = objectTablePanel.getRow( objectLabel );
+				final int row = objectTablePanel.getRowIndex( objectLabel );
 
 				table.setRowSelectionInterval( row, row );
 
@@ -173,7 +173,7 @@ public class TableBdvConnector
 			@Override
 			public Double apply( Double objectLabel )
 			{
-				final int row = objectTablePanel.getRow( objectLabel );
+				final int row = objectTablePanel.getRowIndex( objectLabel );
 				return (Double) objectTablePanel.getTable().getValueAt( row, selectedColumnIndex );
 			};
 		};
@@ -196,7 +196,7 @@ public class TableBdvConnector
 			@Override
 			public Object apply( Double objectLabel )
 			{
-				final int row = objectTablePanel.getRow( objectLabel );
+				final int row = objectTablePanel.getRowIndex( objectLabel );
 				return objectTablePanel.getTable().getValueAt( row, selectedColumnIndex );
 			};
 		};

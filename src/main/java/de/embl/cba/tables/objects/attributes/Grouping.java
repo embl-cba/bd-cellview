@@ -1,4 +1,4 @@
-package de.embl.cba.tables.objects.grouping;
+package de.embl.cba.tables.objects.attributes;
 
 import de.embl.cba.tables.objects.ObjectTablePanel;
 
@@ -6,9 +6,16 @@ import javax.swing.*;
 import javax.swing.table.TableModel;
 import java.util.*;
 
+@Deprecated
 public class Grouping
 {
 	final ObjectTablePanel objectTablePanel;
+
+	public String getGroupingColumn()
+	{
+		return groupingColumn;
+	}
+
 	final String groupingColumn;
 	final private TableModel model;
 	private final JTable table;
@@ -37,7 +44,7 @@ public class Grouping
 
 		model.setValueAt(
 				group,
-				objectTablePanel.getRow( objectLabel ),
+				objectTablePanel.getRowIndex( objectLabel ),
 				getGroupingColumnIndex() );
 	}
 

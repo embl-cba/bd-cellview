@@ -40,44 +40,6 @@ public class TableUtils
 	}
 
 
-	public static void newColumnUI( ObjectTablePanel objectTablePanel )
-	{
-		final GenericDialog gd = new GenericDialog( "New column" );
-		gd.addStringField( "Column name", "MyNewColumn", 30 );
-		gd.addStringField( "Default value [String or Number]", "None", 30 );
-
-		gd.showDialog();
-		if( gd.wasCanceled() ) return;
-
-		final String columnName = gd.getNextString();
-
-		final String defaultValueString = gd.getNextString();
-
-		Object defaultValue;
-
-		try	{
-			defaultValue = Double.parseDouble( defaultValueString );
-		}
-		catch ( Exception e )
-		{
-			defaultValue = defaultValueString;
-		}
-
-		objectTablePanel.addColumn( columnName, defaultValue );
-	}
-
-	public static void saveTableUI( JTable table ) throws IOException
-	{
-		final JFileChooser jFileChooser = new JFileChooser( "" );
-
-		if ( jFileChooser.showSaveDialog( null ) == JFileChooser.APPROVE_OPTION )
-		{
-			final File selectedFile = jFileChooser.getSelectedFile();
-
-			saveTable( table, selectedFile );
-		}
-	}
-
 	public static void saveTable( JTable table, File file ) throws IOException
 	{
 		BufferedWriter bfw = new BufferedWriter( new FileWriter( file ) );

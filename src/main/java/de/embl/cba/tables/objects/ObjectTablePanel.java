@@ -2,6 +2,7 @@ package de.embl.cba.tables.objects;
 
 import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableUtils;
+import de.embl.cba.tables.UIs;
 import de.embl.cba.tables.models.ColumnClassAwareTableModel;
 
 import javax.swing.*;
@@ -120,7 +121,7 @@ public class ObjectTablePanel extends JPanel
 			{
 				try
 				{
-					TableUtils.saveTableUI( table );
+					UIs.saveTableUI( table );
 				}
 				catch ( IOException e1 )
 				{
@@ -141,7 +142,7 @@ public class ObjectTablePanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				TableUtils.newColumnUI( objectTablePanel );
+				UIs.addColumnUI( objectTablePanel );
 			}
 		} );
 
@@ -255,7 +256,7 @@ public class ObjectTablePanel extends JPanel
 		}
 	}
 
-	public int getRow( double objectLabel )
+	public int getRowIndex( double objectLabel )
 	{
 		if ( labelRowMap == null )
 		{
