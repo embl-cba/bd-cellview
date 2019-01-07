@@ -2,9 +2,8 @@ import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.RandomAccessibleIntervalSource;
-import de.embl.cba.bdv.utils.behaviour.BdvSelectionEventHandler;
-import de.embl.cba.bdv.utils.converters.argb.SelectableVolatileARGBConverter;
-import de.embl.cba.bdv.utils.converters.argb.VolatileARGBConvertedRealSource;
+import de.embl.cba.bdv.utils.selection.BdvSelectionEventHandler;
+import de.embl.cba.bdv.utils.sources.SelectableVolatileARGBConvertedRealSource;
 import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTablePanel;
 import de.embl.cba.tables.objects.attributes.AssignObjectAttributesUI;
@@ -40,11 +39,10 @@ public class ExampleInteractiveObjectGrouping
 
 		final RandomAccessibleIntervalSource raiSource = Examples.load2D16BitLabelMask();
 
-		final SelectableVolatileARGBConverter argbConverter = new SelectableVolatileARGBConverter();
+		final SelectableVolatileARGBConvertedRealSource selectableSource =
+				new SelectableVolatileARGBConvertedRealSource( raiSource );
 
-		final VolatileARGBConvertedRealSource argbSource = new VolatileARGBConvertedRealSource( raiSource,  argbConverter );
-
-		Bdv bdv = BdvFunctions.show( argbSource, BdvOptions.options().is2D() ).getBdvHandle();
+		Bdv bdv = BdvFunctions.show( selectableSource, BdvOptions.options().is2D() ).getBdvHandle();
 
 		/**
 		 * Load table and add a group column
@@ -63,12 +61,13 @@ public class ExampleInteractiveObjectGrouping
 
 		// Add a behaviour to Bdv, enabling selection of labels by Ctrl + Left-Click
 		//
-		final BdvSelectionEventHandler bdvSelectionEventHandler = new BdvSelectionEventHandler( bdv, argbSource, argbConverter );
+		final BdvSelectionEventHandler bdvSelectionEventHandler =
+				new BdvSelectionEventHandler( bdv, selectableSource );
 
-		// Define an additional behaviour, enabling attributes by Ctrl + G
+		// Define additional behaviour: assigning attributes by Ctrl + G
 		//
 		final Behaviours behaviours = new Behaviours( new InputTriggerConfig() );
-		behaviours.install( bdv.getBdvHandle().getTriggerbindings(), "bdv-object-attributes-" + argbSource.getName() );
+		behaviours.install( bdv.getBdvHandle().getTriggerbindings(), "bdv-object-attributes-" + selectableSource.getName() );
 
 		final AssignObjectAttributesUI assignObjectAttributesUI = new AssignObjectAttributesUI( objectTablePanel );
 
@@ -76,7 +75,7 @@ public class ExampleInteractiveObjectGrouping
 		{
 			assignObjectAttributesUI.showUI( bdvSelectionEventHandler.getSelectedValues()  );
 		}
-		, "fetch-curently-selected-objects-" + argbSource.getName(), Examples.OBJECT_GROUPING_TRIGGER  );
+		, "fetch-curently-selected-objects-" + selectableSource.getName(), Examples.OBJECT_GROUPING_TRIGGER  );
 
 	}
 }

@@ -4,9 +4,8 @@ import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.RandomAccessibleIntervalSource4D;
-import de.embl.cba.bdv.utils.behaviour.BdvSelectionEventHandler;
-import de.embl.cba.bdv.utils.converters.argb.SelectableVolatileARGBConverter;
-import de.embl.cba.bdv.utils.converters.argb.VolatileARGBConvertedRealSource;
+import de.embl.cba.bdv.utils.selection.BdvSelectionEventHandler;
+import de.embl.cba.bdv.utils.sources.SelectableVolatileARGBConvertedRealSource;
 import de.embl.cba.tables.Logger;
 import de.embl.cba.tables.TableBdvConnector;
 import de.embl.cba.tables.TableUtils;
@@ -30,7 +29,7 @@ import java.io.IOException;
 
 
 @Plugin(type = Command.class, menuPath = "Plugins>Measurements>Linked Table And Image Visualisation" )
-public class LinkedTableAndImageVisualisationCommand implements Command
+public class TableBdvConnectionCommand implements Command
 {
 	@Parameter ( label = "Results table" )
 	public File inputTableFile;
@@ -45,8 +44,7 @@ public class LinkedTableAndImageVisualisationCommand implements Command
 	public File inputIntensitiesFile;
 
 	public  ObjectTablePanel objectTablePanel;
-	private SelectableVolatileARGBConverter labelsConverter;
-	private VolatileARGBConvertedRealSource labelsSource;
+	private SelectableVolatileARGBConvertedRealSource labelsSource;
 	private JTable table;
 	private Bdv bdv;
 	private BdvSelectionEventHandler bdvSelectionEventHandler;
@@ -64,8 +62,7 @@ public class LinkedTableAndImageVisualisationCommand implements Command
 
 		bdvSelectionEventHandler = new BdvSelectionEventHandler(
 				bdv,
-				labelsSource,
-				labelsConverter );
+				labelsSource );
 
 		new TableBdvConnector( objectTablePanel, bdvSelectionEventHandler );
 
@@ -92,8 +89,7 @@ public class LinkedTableAndImageVisualisationCommand implements Command
 	public void loadLabels()
 	{
 		final RandomAccessibleIntervalSource4D labels = loadImage( inputLabelMasksFile );
-		labelsConverter = new SelectableVolatileARGBConverter();
-		labelsSource = new VolatileARGBConvertedRealSource( labels, labelsConverter );
+		labelsSource = new SelectableVolatileARGBConvertedRealSource( labels );
 	}
 
 	public JTable loadTable( File file )

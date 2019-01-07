@@ -1,11 +1,11 @@
 package de.embl.cba.tables;
 
 import de.embl.cba.bdv.utils.BdvUtils;
-import de.embl.cba.bdv.utils.behaviour.BdvSelectionEventHandler;
-import de.embl.cba.bdv.utils.behaviour.SelectionEventListener;
-import de.embl.cba.bdv.utils.converters.argb.CategoricalMappingRandomARGBConverter;
-import de.embl.cba.bdv.utils.converters.argb.LinearMappingARGBConverter;
+import de.embl.cba.bdv.utils.converters.CategoricalMappingARGBConverter;
+import de.embl.cba.bdv.utils.converters.LinearMappingARGBConverter;
 import de.embl.cba.bdv.utils.lut.Luts;
+import de.embl.cba.bdv.utils.selection.BdvSelectionEventHandler;
+import de.embl.cba.bdv.utils.selection.SelectionEventListener;
 import de.embl.cba.tables.objects.ObjectCoordinate;
 import de.embl.cba.tables.objects.ObjectTablePanel;
 import net.imglib2.converter.Converter;
@@ -187,7 +187,7 @@ public class TableBdvConnector
 				Luts.BLUE_WHITE_RED );
 	}
 
-	private CategoricalMappingRandomARGBConverter createCategoricalMappingRandomARGBConverter( String selectedColumn )
+	private CategoricalMappingARGBConverter createCategoricalMappingRandomARGBConverter( String selectedColumn )
 	{
 		final int selectedColumnIndex = objectTablePanel.getTable().getColumnModel().getColumnIndex( selectedColumn );
 
@@ -201,7 +201,7 @@ public class TableBdvConnector
 			};
 		};
 
-		return new CategoricalMappingRandomARGBConverter(
+		return new CategoricalMappingARGBConverter(
 				labelColumnMapper,
 				Luts.GLASBEY
 		);
