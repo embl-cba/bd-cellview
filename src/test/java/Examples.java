@@ -1,4 +1,3 @@
-import bdv.util.Bdv;
 import bdv.util.RandomAccessibleIntervalSource;
 import de.embl.cba.tables.TableUtils;
 import de.embl.cba.tables.objects.ObjectCoordinate;

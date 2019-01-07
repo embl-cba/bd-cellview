@@ -71,7 +71,7 @@ public class TableBdvConnectionCommand implements Command
 
 	public void showTablePanel()
 	{
-		objectTablePanel = new ObjectTablePanel( table );
+		objectTablePanel = new ObjectTablePanel( table, inputTableFile.getName() );
 		objectTablePanel.showPanel();
 		objectTablePanel.setCoordinateColumn( ObjectCoordinate.Label, table.getColumnName( objectLabelsColumnIndex ) );
 	}

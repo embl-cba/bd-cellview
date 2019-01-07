@@ -20,8 +20,11 @@ import java.util.TreeMap;
 
 public class ObjectTablePanel extends JPanel
 {
-	public static final String NO_COLUMN_SELECTED = "No column selected";
 	final private JTable table;
+	final String name;
+
+	public static final String NO_COLUMN_SELECTED = "No column selected";
+
 	private final TableModel model;
 	private JFrame frame;
     private JScrollPane scrollPane;
@@ -31,10 +34,20 @@ public class ObjectTablePanel extends JPanel
 	private HashMap< String, double[] > columnsMinMaxMap;
 
 	public ObjectTablePanel( JTable table )
+	{
+		super( new GridLayout(1, 0 ) );
+		this.table = table;
+		this.name = "Table";
+		init();
+		model = table.getModel();
+	}
+
+	public ObjectTablePanel( JTable table, String name )
     {
         super( new GridLayout(1, 0 ) );
         this.table = table;
-        init();
+		this.name = name;
+		init();
 		model = table.getModel();
 	}
 
@@ -174,7 +187,7 @@ public class ObjectTablePanel extends JPanel
     public void showPanel() {
 
         //Create and set up the window.
-        frame = new JFrame("Table");
+        frame = new JFrame( name );
 
         frame.setJMenuBar( menuBar );
 

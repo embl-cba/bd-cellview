@@ -14,7 +14,7 @@ public class TestObjectCoordinateColumnsSelectionUI
 
 		final JTable table = Examples.loadObjectTableFor2D16BitLabelMask();
 
-		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( table );
+		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( table, "Table" );
 
 		objectTablePanel.showPanel();
 

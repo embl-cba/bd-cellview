@@ -50,7 +50,7 @@ public class ExampleInteractiveObjectGrouping
 
 		final JTable jTable = Examples.loadObjectTableFor2D16BitLabelMask();
 
-		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable );
+		final ObjectTablePanel objectTablePanel = new ObjectTablePanel( jTable, "Table" );
 		objectTablePanel.showPanel();
 		objectTablePanel.setCoordinateColumn( ObjectCoordinate.Label, jTable.getColumnName( 0 ) );
 		objectTablePanel.addColumn( "MyGrouping", "None" );
