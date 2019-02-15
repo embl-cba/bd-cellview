@@ -54,7 +54,6 @@
 	</mailingLists>
 	
 	<scm>
-<<<<<<< HEAD
 		<connection>scm:git:git://github.com/tischi/XXX</connection>
 		<developerConnection>scm:git:git@github.com/tischi/XXX</developerConnection>
 		<tag>HEAD</tag>
@@ -63,27 +62,13 @@
 	<issueManagement>
 		<system>GitHub</system>
 		<url>https://github.com/tischi/XXX/issues</url>
-=======
-		<connection>scm:git:git://github.com/tischi/table-utils</connection>
-		<developerConnection>scm:git:git@github.com/tischi/table-utils</developerConnection>
-		<tag>HEAD</tag>
-		<url>https://github.com/tischi/table-utils</url>
-	</scm>
 	<issueManagement>
-		<system>GitHub</system>
-		<url>https://github.com/imglib/table-utils/issues</url>
->>>>>>> a34e547e851ac7ff0dca50bf1848b16ae6451b5c
-	</issueManagement>
 	<ciManagement>
 		<system>None</system>
 	</ciManagement>
 
 	<properties>
-<<<<<<< HEAD
 		<package-name>de.embl.cba</package-name>
-=======
-		<package-name>de.embl.cba.tables</package-name>
->>>>>>> a34e547e851ac7ff0dca50bf1848b16ae6451b5c
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>EMBL</license.copyrightOwners>
 		<imagej.app.directory>/Applications/Fiji.app/</imagej.app.directory>
