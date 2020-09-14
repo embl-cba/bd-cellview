@@ -1,0 +1,11 @@
+id	gate	path	QC	path_processed_jpeg
+id0	G2M	../images/Cell_Cycle_00000000.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00000000.jpg
+id1	G2M	../images/Cell_Cycle_00000001.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00000001.jpg
+id2	G2M	../images/Cell_Cycle_00000002.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00000002.jpg
+id3	G1	../images/Cell_Cycle_00000003.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00000003.jpg
+id4	G1	../images/Cell_Cycle_00000004.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00000004.jpg
+id5	G1	../images/Cell_Cycle_00011082.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00011082.jpg
+id6	S	../images/Cell_Cycle_00013268.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00013268.jpg
+id7	S	../images/Cell_Cycle_00014714.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00014714.jpg
+id8	S	../images/Cell_Cycle_00016839.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00016839.jpg
+id9	NA	../images/Cell_Cycle_00017276.tiff	Passed	../images_processed_jpeg/Cell_Cycle_00017276.jpg
