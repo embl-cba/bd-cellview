@@ -14,7 +14,8 @@ import java.io.File;
 import java.util.List;
 
 @Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Images from Table" )
-public class BDOpenTableCommand implements Command
+@Deprecated
+public class BDOpenTableCommandDeprecated implements Command
 {
 	@Parameter
 	public LogService logService;
@@ -42,12 +43,12 @@ public class BDOpenTableCommand implements Command
 	{
 		loadTable();
 
-		BDImageViewingAndSavingCommand.jTable = jTable;
-		BDImageViewingAndSavingCommand.tableFile = imageTableFile;
-		BDImageViewingAndSavingCommand.imagePathColumnName = imagePathColumnName;
-		BDImageViewingAndSavingCommand.gateColumnName = gateColumnName;
+		BDImageViewingAndSavingCommandDeprecated.jTable = jTable;
+		BDImageViewingAndSavingCommandDeprecated.tableFile = imageTableFile;
+		BDImageViewingAndSavingCommandDeprecated.imagePathColumnName = imagePathColumnName;
+		BDImageViewingAndSavingCommandDeprecated.gateColumnName = gateColumnName;
 
-		commandService.run( BDImageViewingAndSavingCommand.class, true );
+		commandService.run( BDImageViewingAndSavingCommandDeprecated.class, true );
 	}
 
 	private void loadTable()

@@ -27,7 +27,8 @@ import java.util.Random;
 import static de.embl.cba.fccf.FCCF.checkFileSize;
 
 @Plugin( type = Command.class )
-public class BDImageViewingAndSavingCommand extends DynamicCommand implements Initializable
+@Deprecated
+public class BDImageViewingAndSavingCommandDeprecated extends DynamicCommand implements Initializable
 {
 	public static final String QC = "QC";
 	public static final String PATH_PROCESSED_JPEG = "path_processed_jpeg";
@@ -239,7 +240,7 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		Tables.saveTable( jTable, tableOutputFile );
 		IJ.log( "...done: " + tableOutputFile );
 		IJ.log( " " );
-		BDOpenTableCommand.glimpseTable( jTable );
+		BDOpenTableCommandDeprecated.glimpseTable( jTable );
 	}
 
 	@Override
@@ -275,13 +276,12 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		mutableInput.setVisibility( ItemVisibility.MESSAGE );
 	}
 
-	public void setGates()
+	private void setGates()
 	{
 		gateColumnIndex = jTable.getColumnModel().getColumnIndex( gateColumnName );
 		gateToRows = Tables.uniqueColumnEntries( jTable, gateColumnIndex );
 
-		final MutableModuleItem<String> gateChoiceItem = //
-				getInfo().getMutableInput("gateChoice", String.class);
+		final MutableModuleItem<String> gateChoiceItem = getInfo().getMutableInput("gateChoice", String.class);
 
 		gateChoiceItem.setChoices( new ArrayList<>( gateToRows.keySet() ) );
 	}

@@ -1,6 +1,6 @@
 package develop;
 
-import de.embl.cba.fccf.BDOpenTableCommand;
+import de.embl.cba.fccf.BDOpenTableCommandDeprecated;
 import net.imagej.ImageJ;
 
 import java.io.File;
@@ -15,7 +15,7 @@ public class TableBasedBDViewing
 
 		final ImageJ imageJ = new ImageJ();
 		imageJ.ui().showUI();
-		final BDOpenTableCommand command = new BDOpenTableCommand();
+		final BDOpenTableCommandDeprecated command = new BDOpenTableCommandDeprecated();
 
 		command.imageTableFile = new File("/Users/tischer/Documents/fccf/src/test/resources/minimalgated/output/countpath.csv");
 
