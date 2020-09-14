@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import static de.embl.cba.fccf.FCCF.checkFileSize;
 
@@ -80,7 +81,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
-	@Parameter ( label = "Preview Images from Gate")
+	@Parameter ( label = "Preview Images from Gate" )
 	public String gateChoice = "";
 
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
@@ -155,12 +156,12 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		recentImageTablePath = tableFile.getAbsolutePath();
 		experimentDirectory = new File( tableFile.getParent() ).getParent();
 		inputImagesDirectory = new File( experimentDirectory, "images" );
-
-		//getInfo();
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
+
+		getInfo();
+		glimpseTable( jTable );
 		setGates();
 		setMaxNumFiles();
-		glimpseTable( jTable );
 	}
 
 	private void glimpseTable()
@@ -298,7 +299,13 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	{
 		gateColumnIndex = jTable.getColumnModel().getColumnIndex( gateColumnName );
 		gateToRows = Tables.uniqueColumnEntries( jTable, gateColumnIndex );
+		final String gates = gateToRows.keySet().stream().collect( Collectors.joining( "," ) );
+		IJ.log( "Gates: " + gates );
+		//setGatesDropdown();
+	}
 
+	private void setGatesDropdown()
+	{
 		final MutableModuleItem<String> gateChoiceItem = getInfo().getMutableInput("gateChoice", String.class);
 
 		final ArrayList< String > gates = new ArrayList<>( gateToRows.keySet() );
@@ -336,6 +343,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		if ( processedImp != null ) processedImp.close();
 
 		final String filePath = getRandomFilePath();
+		if ( filePath == null ) return;
 
 		if ( ! checkFileSize( filePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
 
@@ -354,6 +362,11 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	{
 		final Random random = new Random();
 		final ArrayList< Integer > rowIndices = gateToRows.get( gateChoice );
+		if ( rowIndices == null )
+		{
+			IJ.showMessage( "There are no images of gate " + gateChoice );
+			return null;
+		}
 		final Integer rowIndex = rowIndices.get( random.nextInt( rowIndices.size() ) );
 		final String absoluteImagePath = getInputImagePath( jTable, rowIndex );
 		return absoluteImagePath;

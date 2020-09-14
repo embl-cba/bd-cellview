@@ -72,7 +72,7 @@
 		<package-name>de.embl.cba</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>EMBL</license.copyrightOwners>
-		<imagej.app.directory>/Users/tischer/Desktop/Fiji-fccf.app</imagej.app.directory>
+		<scijava.app.directory>/Users/tischer/Desktop/Fiji-fccf.app</scijava.app.directory>
 		<enforcer.skip>true</enforcer.skip>
 	</properties>
 
