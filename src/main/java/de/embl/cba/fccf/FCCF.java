@@ -284,7 +284,7 @@ public abstract class FCCF
 		double maxGFP;
 	}
 
-	public static boolean checkFile( String filePath, double minimumFileSizeKiloBytes, double maximumFileSizeKiloBytes )
+	public static boolean checkFileSize( String filePath, double minimumFileSizeKiloBytes, double maximumFileSizeKiloBytes )
 	{
 		final File file = new File( filePath );
 

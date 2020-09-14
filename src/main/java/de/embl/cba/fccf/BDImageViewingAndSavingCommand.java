@@ -7,6 +7,7 @@ import ij.ImagePlus;
 import ij.io.FileSaver;
 import loci.common.DebugTools;
 import org.scijava.Initializable;
+import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.log.LogService;
@@ -17,12 +18,13 @@ import org.scijava.widget.Button;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
-import static de.embl.cba.fccf.FCCF.checkFile;
+import static de.embl.cba.fccf.FCCF.checkFileSize;
 
 @Plugin( type = Command.class )
 public class BDImageViewingAndSavingCommand extends DynamicCommand implements Initializable
@@ -86,7 +88,7 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 	private Button showRandomImage;
 
 	@Parameter ( label = "Output Directory" , style = "directory", persist = false)
-	public File outputDirectory;
+	public File outputImagesDirectory;
 
 	@Parameter ( label = "Maximum Number of Files to Process" )
 	private int maxNumFiles;
@@ -145,10 +147,6 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		}
 	}
 
-	/**
-	 * This is for the folder-based parsing.
-	 *
-	 */
 	public void saveProcessedImages()
 	{
 		final long currentTimeMillis = System.currentTimeMillis();
@@ -156,22 +154,42 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		for ( int i = 0; i < maxNumFiles; i++ )
 		{
 			String inputImagePath = getInputImagePath( i );
-			if ( checkFile( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
+			try
 			{
-				processedImp = createProcessedImagePlus( inputImagePath );
-				String outputImagePath = inputImagePath.replace(
-						inputImagesDirectory.getAbsolutePath(),
-						outputDirectory.getAbsolutePath() );
-				saveImageAsJpeg( outputImagePath, processedImp );
+				saveProcessedImage( currentTimeMillis, i, inputImagePath );
+			} catch ( IOException e )
+			{
+				e.printStackTrace();
 			}
-			Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files saved" );
 		}
 	}
 
-	/**
-	 * This is for the table-based parsing.
-	 *
-	 */
+	private String saveProcessedImage( long currentTimeMillis, int i, String inputImagePath ) throws IOException
+	{
+		Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files processed" );
+
+		if ( checkFileSize( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
+		{
+			processedImp = createProcessedImagePlus( inputImagePath );
+
+			// Images can be in subfolders, thus we only
+			// replace the root path
+			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
+			final String absoluteInputPath = new File( inputImagePath ).getCanonicalPath();
+			final String absoluteOutputRootDirectory = outputImagesDirectory.getCanonicalPath();
+			String outputImagePath = absoluteInputPath.replace(
+					absoluteInputRootDirectory,
+					absoluteOutputRootDirectory );
+			saveImageAsJpeg( outputImagePath, processedImp );
+
+			return outputImagePath;
+		}
+		else
+		{
+			return null;
+		}
+	}
+
 	public void saveProcessedImagesAndTableWithQC()
 	{
 		Tables.addColumn( jTable, QC, "Passed" );
@@ -190,19 +208,25 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		{
 			final String inputImagePath = getInputImagePath( jTable, rowIndex );
 
-			if ( ! checkFile( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
+			String outputImagePath = null;
+			try
 			{
-				jTable.setValueAt( "Failed_FileSizeTooSmall", rowIndex, columnIndexQC );
-				continue;
+				outputImagePath = saveProcessedImage( currentTimeMillis, rowIndex, inputImagePath );
+			} catch ( IOException e )
+			{
+				e.printStackTrace();
+				throw new RuntimeException( "Error during saving of image: " + inputImagePath );
 			}
 
-			processedImp = createProcessedImagePlus( inputImagePath );
-
-			final File path = saveImageAsJpeg( new File( inputImagePath ).getName(), processedImp );
-
-			jTable.setValueAt( relativeProcessedImageDirectory + File.separator + path.getName(), rowIndex, columnIndexPath );
-
-			Logger.progress( rowCount, rowIndex + 1, currentTimeMillis, "Files saved" );
+			if ( outputImagePath != null )
+			{
+				final String pathRelativeToTable = outputImagePath.replace( experimentDirectory, ".." );
+				jTable.setValueAt( pathRelativeToTable , rowIndex, columnIndexPath );
+			}
+			else
+			{
+				jTable.setValueAt( "Failed_FileSizeTooSmall", rowIndex, columnIndexQC );
+			}
 		}
 
 		saveTableWithAdditionalColumns();
@@ -226,7 +250,7 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		if ( jTable != null )
 		{
 			setGates();
-			setProcessedJpegImagesOutputDirectory();
+			initProcessedJpegImagesOutputDirectory();
 			pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
 		}
 		else
@@ -237,17 +261,18 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		}
 	}
 
-	public void setProcessedJpegImagesOutputDirectory()
+	public void initProcessedJpegImagesOutputDirectory()
 	{
-		final MutableModuleItem<File> mutableInput = //
-				getInfo().getMutableInput("outputDirectory", File.class);
+		final MutableModuleItem<File> mutableInput = getInfo().getMutableInput("outputImagesDirectory", File.class);
 
 		experimentDirectory = new File( tableFile.getParent() ).getParent();
+		inputImagesDirectory = new File( experimentDirectory, "images" );
 		relativeProcessedImageDirectory = "../" + IMAGES_PROCESSED_JPEG;
 		final File defaultValue = new File( experimentDirectory + File.separator +
 				IMAGES_PROCESSED_JPEG );
 		mutableInput.setValue( this, defaultValue );
 		mutableInput.setDefaultValue( defaultValue );
+		mutableInput.setVisibility( ItemVisibility.MESSAGE );
 	}
 
 	public void setGates()
@@ -288,7 +313,7 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 
 		final String filePath = getRandomFilePath();
 
-		if ( ! checkFile( filePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
+		if ( ! checkFileSize( filePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
 
 		processedImp = createProcessedImagePlus( filePath );
 
@@ -327,9 +352,9 @@ public class BDImageViewingAndSavingCommand extends DynamicCommand implements In
 		}
 	}
 
-	private String getInputImagePath( int randomInteger )
+	private String getInputImagePath( int i )
 	{
-		return files.get( randomInteger ).getAbsolutePath();
+		return files.get( i ).getAbsolutePath();
 	}
 
 

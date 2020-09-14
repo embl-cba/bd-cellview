@@ -17,8 +17,7 @@ public class TableBasedBDViewing
 		imageJ.ui().showUI();
 		final BDOpenTableCommand command = new BDOpenTableCommand();
 
-		command.imageTableFile = new File("/Users/tischer/Documents/fiji-plugin-morphometry/src/test/resources/test-data/bd/minimalgated/output/countpath.csv");
-//		command.imageTableFile = new File("/Volumes/bdimsort/09_23_2019/Cell_cycle_1/output/tiffpaths_gated.csv");
+		command.imageTableFile = new File("/Users/tischer/Documents/fccf/src/test/resources/minimalgated/output/countpath.csv");
 
 		command.gateColumnName = "gate";
 		command.imagePathColumnName = "path";
