@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Random;
 
 import static de.embl.cba.fccf.FCCF.checkFileSize;
+import static de.embl.cba.fccf.FCCF.getColorToSlice;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Dataset"  )
 public class BDVulcanDatasetProcessor extends DynamicCommand
@@ -36,11 +37,11 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	@Parameter
 	public LogService logService;
 
-	@Parameter ( label = "Images Table", callback = "loadTable")
+	@Parameter ( label = "Images Table", callback = "loadTable", persist = false )
 	public File tableFile;
 
-	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
-	public Button glimpseTable;
+//	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
+//	public Button glimpseTable;
 
 	//@Parameter ( label = "Image Path Column Name" )
 	public String imagePathColumnName = "path";
@@ -55,7 +56,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	public double maximumFileSizeKiloBytes = 100000;
 
 	@Parameter ( label = "Gray Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
-	public String whiteIndexString;
+	public String whiteIndexString = "1";
 
 	@Parameter ( label = "Minimum Gray Intensity" )
 	public double minWhite = 0.0;
@@ -64,7 +65,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	public double maxWhite = 1.0;
 
 	@Parameter ( label = "Green Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
-	public String greenIndexString;
+	public String greenIndexString = "2";
 
 	@Parameter ( label = "Minimum Green Intensity" )
 	public double minGreen = 0.08;
@@ -73,7 +74,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	public double maxGreen = 1.0;
 
 	@Parameter ( label = "Magenta Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
-	public String magentaIndexString;
+	public String magentaIndexString = "3";
 
 	@Parameter ( label = "Minimum Magenta Intensity" )
 	public double minMagenta = 0.08;
@@ -84,7 +85,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
-	@Parameter ( label = "Preview Images from Gate", choices = {"None"} )
+	@Parameter ( label = "Preview Images from Gate", callback = "showRandomImage")
 	public String gateChoice = "";
 
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
@@ -164,8 +165,11 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		recentImageTablePath = tableFile.getAbsolutePath();
 		experimentDirectory = new File( tableFile.getParent() ).getParent();
 
+		getInfo();
+		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
 		setGates();
 		setMaxNumFiles();
+		glimpseTable( jTable );
 	}
 
 	private void glimpseTable()
@@ -335,9 +339,21 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 
 	private void showRandomImage()
 	{
+		if ( tableFile == null )
+		{
+			IJ.showMessage( "Please select [ Browse ] a dataset table first." );
+			return;
+		}
+
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 
 		setColorToSliceAndColorToRange();
+
+		if ( FCCF.getColorToSlice().size() == 0 )
+		{
+			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
+			return;
+		}
 
 		if ( processedImp != null ) processedImp.close();
 
@@ -352,46 +368,17 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 
 	private ImagePlus createProcessedImagePlus( String filePath )
 	{
-		ImagePlus processedImp = FCCF.createProcessedImage(
-				filePath, FCCF.getColorToRange(), FCCF.getColorToSlice(), viewingModality );
+		ImagePlus processedImp = FCCF.createProcessedImage( filePath, FCCF.getColorToRange(), FCCF.getColorToSlice(), viewingModality );
 		return processedImp;
 	}
 
-
 	private String getRandomFilePath()
 	{
-		if ( jTable != null )
-		{
-			final Random random = new Random();
-			final ArrayList< Integer > rowIndices = gateToRows.get( gateChoice );
-			final Integer rowIndex = rowIndices.get( random.nextInt( rowIndices.size() ) );
-			final String absoluteImagePath = getInputImagePath( jTable, rowIndex );
-			return absoluteImagePath;
-		}
-		else if ( inputImagesDirectory != null )
-		{
-			fetchFiles();
-			final Random random = new Random();
-			final int randomInteger = random.nextInt( files.size() );
-			final String absoluteImagePath = getInputImagePath( randomInteger );
-			return absoluteImagePath;
-		}
-		else
-		{
-			return null;
-		}
-	}
-
-	private String getInputImagePath( int i )
-	{
-		return files.get( i ).getAbsolutePath();
-	}
-
-
-	private void fetchFiles()
-	{
-		if ( files != null ) return;
-		files = FCCF.readFileNamesFromDirectoryWithLogging( inputImagesDirectory );
+		final Random random = new Random();
+		final ArrayList< Integer > rowIndices = gateToRows.get( gateChoice );
+		final Integer rowIndex = rowIndices.get( random.nextInt( rowIndices.size() ) );
+		final String absoluteImagePath = getInputImagePath( jTable, rowIndex );
+		return absoluteImagePath;
 	}
 
 	/**
@@ -403,7 +390,8 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	private String getInputImagePath( JTable jTable, Integer rowIndex )
 	{
 		final String relativeImagePath = ( String ) jTable.getValueAt( rowIndex, pathColumnIndex );
-		return tableFile.getParent() + File.separator + relativeImagePath;
+		final String imagePath = tableFile.getParent() + File.separator + relativeImagePath;
+		return imagePath;
 	}
 
 	private File saveImageAsJpeg( String outputPath, ImagePlus outputImp )

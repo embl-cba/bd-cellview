@@ -82,8 +82,8 @@ public class BDImageViewingAndSavingCommandDeprecated extends DynamicCommand imp
 	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
-	@Parameter ( label = "Preview Images from Gate", choices = {} )
-	public String gateChoice = "";
+	@Parameter ( label = "Preview Images from Gate", persist = false )
+	public String gateChoice = "G2M";
 
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
 	private Button showRandomImage;
