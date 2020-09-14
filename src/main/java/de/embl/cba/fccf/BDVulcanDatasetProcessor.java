@@ -1,5 +1,7 @@
 package de.embl.cba.fccf;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import de.embl.cba.fccf.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.Tables;
@@ -27,14 +29,14 @@ import java.util.stream.Collectors;
 import static de.embl.cba.fccf.FCCF.checkFileSize;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Dataset"  )
-public class BDVulcanDatasetProcessor extends DynamicCommand
+public class BDVulcanDatasetProcessor implements Command
 {
-	public static final String NONE = "None";
+	private transient static final String NONE = "None";
 
 	@Parameter
-	public LogService logService;
+	private transient LogService logService;
 
-	@Parameter ( label = "Images Table",  callback = "loadTable", persist = false )
+	@Parameter ( label = "Dataset Table",  callback = "loadTable", persist = false )
 	public File tableFile;
 
 //	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
@@ -85,21 +87,24 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	public String gateChoice = "";
 
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
-	private Button showRandomImage = new MyButton();
+	public Button showRandomImage = new MyButton();
 
-	@Parameter ( label = "Maximum Number of Files to Process" )
-	private int maxNumFiles = 1;
+	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
+	public int maxNumFiles = -1;
 
-	private HashMap< String, ArrayList< Integer > > gateToRows;
-	private ImagePlus processedImp;
-	private int gateColumnIndex;
-	private int pathColumnIndex;
-	private String experimentDirectory;
-	private JTable jTable;
-	private String recentImageTablePath = "";
-	private File inputImagesDirectory;
-	private File outputImagesRootDirectory;
-	public String imagePathColumnName = "path";
+	@Parameter ( label = "Print Headless Command", callback = "printHeadlessCommand" )
+	private transient Button printHeadlessCommand = new MyButton();
+
+	private transient  HashMap< String, ArrayList< Integer > > gateToRows;
+	private transient  ImagePlus processedImp;
+	private transient  int gateColumnIndex;
+	private transient  int pathColumnIndex;
+	private transient  String experimentDirectory;
+	private transient  JTable jTable;
+	private transient  String recentImageTablePath = "";
+	private transient  File inputImagesDirectory;
+	private transient  File outputImagesRootDirectory;
+	private transient  String imagePathColumnName = "path";
 
 	public void run()
 	{
@@ -110,6 +115,13 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		if ( jTable == null ) loadTable();
 
 		processAndSaveImages();
+	}
+
+	private void printHeadlessCommand()
+	{
+		Gson gson = new GsonBuilder().create(); //.setPrettyPrinting()
+		final String json = gson.toJson( this );
+		IJ.log( json );
 	}
 
 	private void setColorToSliceAndColorToRange()
@@ -158,7 +170,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
 
-		getInfo();
+		//getInfo();
 		glimpseTable( jTable );
 		setGates();
 		setMaxNumFiles();
@@ -233,9 +245,7 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 
 		final long currentTimeMillis = System.currentTimeMillis();
 
-		int rowCount = jTable.getRowCount();
-
-		final int rowMax = Math.min( maxNumFiles, rowCount );
+		final int rowMax = getRowMax();
 
 		for ( int rowIndex = 0; rowIndex < rowMax; rowIndex++ )
 		{
@@ -263,6 +273,16 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		}
 
 //		saveTableWithAdditionalColumns();
+	}
+
+	private int getRowMax()
+	{
+		int rowCount = jTable.getRowCount();
+
+		if ( maxNumFiles == -1 )
+			maxNumFiles = rowCount;
+
+		return Math.min( maxNumFiles, rowCount );
 	}
 
 	public void saveTableWithAdditionalColumns()
@@ -306,20 +326,20 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 
 	private void setGatesDropdown()
 	{
-		final MutableModuleItem<String> gateChoiceItem = getInfo().getMutableInput("gateChoice", String.class);
-
-		final ArrayList< String > gates = new ArrayList<>( gateToRows.keySet() );
-		gateChoiceItem.setChoices( gates );
-		final String next = gates.iterator().next();
-		gateChoiceItem.setValue( this, next );
+//		final MutableModuleItem<String> gateChoiceItem = getInfo().getMutableInput("gateChoice", String.class);
+//
+//		final ArrayList< String > gates = new ArrayList<>( gateToRows.keySet() );
+//		gateChoiceItem.setChoices( gates );
+//		final String next = gates.iterator().next();
+//		gateChoiceItem.setValue( this, next );
 	}
 
-	public void setMaxNumFiles()
+	private void setMaxNumFiles()
 	{
-		final MutableModuleItem<Integer> item = //
-				getInfo().getMutableInput("maxNumFiles", Integer.class);
-		item.setDefaultValue( jTable.getRowCount() );
-		item.setValue( this, jTable.getRowCount() );
+//		final MutableModuleItem<Integer> item = //
+//				getInfo().getMutableInput("maxNumFiles", Integer.class);
+//		item.setDefaultValue( jTable.getRowCount() );
+//		item.setValue( this, jTable.getRowCount() );
 	}
 
 	private void showRandomImage()

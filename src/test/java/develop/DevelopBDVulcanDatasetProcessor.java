@@ -11,8 +11,6 @@ public class DevelopBDVulcanDatasetProcessor
 		final ImageJ imageJ = new ImageJ();
 		imageJ.ui().showUI();
 
-		final Recorder recorder = new Recorder();
-
 		imageJ.command().run( BDVulcanDatasetProcessor.class, true );
 	}
 }
