@@ -1,18 +1,18 @@
 package develop;
 
 import de.embl.cba.fccf.BDVulcanDatasetProcessor;
-import ij.plugin.frame.Recorder;
+import de.embl.cba.fccf.devel.callback.TestCallbackCommand;
 import net.imagej.ImageJ;
 
-public class DevelopBDVulcanDatasetProcessor
+public class DevelopCallback
 {
 	public static void main( String[] args )
 	{
 		final ImageJ imageJ = new ImageJ();
 		imageJ.ui().showUI();
 
-		final Recorder recorder = new Recorder();
+		TestCallbackCommand.cs = imageJ.command();
 
-		imageJ.command().run( BDVulcanDatasetProcessor.class, true );
+		imageJ.command().run( TestCallbackCommand.class, true );
 	}
 }

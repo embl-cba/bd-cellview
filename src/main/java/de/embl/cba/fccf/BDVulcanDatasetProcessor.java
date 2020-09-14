@@ -1,12 +1,12 @@
 package de.embl.cba.fccf;
 
+import de.embl.cba.fccf.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.io.FileSaver;
 import loci.common.DebugTools;
-import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.log.LogService;
@@ -24,27 +24,22 @@ import java.util.List;
 import java.util.Random;
 
 import static de.embl.cba.fccf.FCCF.checkFileSize;
-import static de.embl.cba.fccf.FCCF.getColorToSlice;
 
-@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Dataset"  )
+@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Dataset"  )
 public class BDVulcanDatasetProcessor extends DynamicCommand
 {
-	public static final String QC = "QC";
-	public static final String PATH_PROCESSED_JPEG = "path_processed_jpeg";
-	public static final String IMAGES_PROCESSED_JPEG = "images_processed_jpeg";
 	public static final String NONE = "None";
 
 	@Parameter
 	public LogService logService;
 
-	@Parameter ( label = "Images Table", callback = "loadTable", persist = false )
+	@Parameter ( label = "Images Table",  callback = "loadTable", persist = false )
 	public File tableFile;
 
 //	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
 //	public Button glimpseTable;
 
 	//@Parameter ( label = "Image Path Column Name" )
-	public String imagePathColumnName = "path";
 
 	@Parameter ( label = "Gate Column Name" )
 	public String gateColumnName = "gate";
@@ -85,30 +80,25 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
-	@Parameter ( label = "Preview Images from Gate", callback = "showRandomImage")
+	@Parameter ( label = "Preview Images from Gate")
 	public String gateChoice = "";
 
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
-	private Button showRandomImage;
-
-	//@Parameter ( label = "Output Directory" , style = "directory", persist = false)
-	public File outputImagesRootDirectory;
+	private Button showRandomImage = new MyButton();
 
 	@Parameter ( label = "Maximum Number of Files to Process" )
-	private int maxNumFiles;
+	private int maxNumFiles = 1;
 
 	private HashMap< String, ArrayList< Integer > > gateToRows;
-	private ImagePlus rawImp;
 	private ImagePlus processedImp;
 	private int gateColumnIndex;
 	private int pathColumnIndex;
 	private String experimentDirectory;
-	private String relativeProcessedImageDirectory;
-	private List< File > files;
-	private int numFiles;
 	private JTable jTable;
 	private String recentImageTablePath = "";
 	private File inputImagesDirectory;
+	private File outputImagesRootDirectory;
+	public String imagePathColumnName = "path";
 
 	public void run()
 	{
@@ -164,8 +154,9 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 
 		recentImageTablePath = tableFile.getAbsolutePath();
 		experimentDirectory = new File( tableFile.getParent() ).getParent();
+		inputImagesDirectory = new File( experimentDirectory, "images" );
 
-		getInfo();
+		//getInfo();
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
 		setGates();
 		setMaxNumFiles();
@@ -302,19 +293,6 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 //		}
 //	}
 
-	public void initProcessedJpegImagesOutputDirectory()
-	{
-		final MutableModuleItem<File> mutableInput = getInfo().getMutableInput("outputImagesDirectory", File.class);
-
-		experimentDirectory = new File( tableFile.getParent() ).getParent();
-		inputImagesDirectory = new File( experimentDirectory, "images" );
-		relativeProcessedImageDirectory = "../" + IMAGES_PROCESSED_JPEG;
-		final File defaultValue = new File( experimentDirectory + File.separator +
-				IMAGES_PROCESSED_JPEG );
-		mutableInput.setValue( this, defaultValue );
-		mutableInput.setDefaultValue( defaultValue );
-		mutableInput.setVisibility( ItemVisibility.MESSAGE );
-	}
 
 	public void setGates()
 	{
@@ -401,5 +379,4 @@ public class BDVulcanDatasetProcessor extends DynamicCommand
 		new FileSaver( outputImp ).saveAsJpeg( outputPath  );
 		return new File( outputPath );
 	}
-
 }

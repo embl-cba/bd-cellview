@@ -1,4 +1,4 @@
-package de.embl.cba.fccf;
+package de.embl.cba.fccf.devel.deprecated;
 
 import de.embl.cba.tables.Tables;
 import ij.IJ;
@@ -13,7 +13,7 @@ import javax.swing.*;
 import java.io.File;
 import java.util.List;
 
-@Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Images from Table" )
+//@Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Images from Table" )
 @Deprecated
 public class BDOpenTableCommandDeprecated implements Command
 {

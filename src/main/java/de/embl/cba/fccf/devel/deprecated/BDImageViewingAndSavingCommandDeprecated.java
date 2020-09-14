@@ -1,5 +1,6 @@
-package de.embl.cba.fccf;
+package de.embl.cba.fccf.devel.deprecated;
 
+import de.embl.cba.fccf.FCCF;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
@@ -26,7 +27,7 @@ import java.util.Random;
 
 import static de.embl.cba.fccf.FCCF.checkFileSize;
 
-@Plugin( type = Command.class )
+//@Plugin( type = Command.class )
 @Deprecated
 public class BDImageViewingAndSavingCommandDeprecated extends DynamicCommand implements Initializable
 {

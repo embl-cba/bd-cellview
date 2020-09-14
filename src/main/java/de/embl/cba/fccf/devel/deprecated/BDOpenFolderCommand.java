@@ -1,4 +1,4 @@
-package de.embl.cba.fccf;
+package de.embl.cba.fccf.devel.deprecated;
 
 import org.scijava.command.Command;
 import org.scijava.command.CommandService;

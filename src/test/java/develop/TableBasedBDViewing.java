@@ -1,6 +1,6 @@
 package develop;
 
-import de.embl.cba.fccf.BDOpenTableCommandDeprecated;
+import de.embl.cba.fccf.devel.deprecated.BDOpenTableCommandDeprecated;
 import net.imagej.ImageJ;
 
 import java.io.File;
