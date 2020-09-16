@@ -9,7 +9,7 @@
 
 The folder structure must be as shown below:
 
-https://user-images.githubusercontent.com/2157566/93058267-71d7eb00-f66f-11ea-9254-0e4ec986931c.png
+<img src="https://user-images.githubusercontent.com/2157566/93058267-71d7eb00-f66f-11ea-9254-0e4ec986931c.png">
 
 ### Table
 
