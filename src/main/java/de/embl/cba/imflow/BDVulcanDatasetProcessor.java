@@ -5,15 +5,13 @@ import com.google.gson.GsonBuilder;
 import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.Tables;
-import ij.Executer;
 import ij.IJ;
 import ij.ImagePlus;
+import ij.gui.GenericDialog;
 import ij.io.FileSaver;
 import loci.common.DebugTools;
 import org.scijava.command.Command;
-import org.scijava.command.DynamicCommand;
 import org.scijava.command.Interactive;
-import org.scijava.command.InteractiveCommand;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -38,15 +36,15 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 	@Parameter
 	private transient LogService logService;
 
-	@Parameter ( label = "Dataset Table",  callback = "loadTable" )
-	public File tableFile = new File("/g/bdimsort/200807_Dewi_Nsp1/20200830_1634_HeLa RIEN pmaxGFP/output/complete_gated.csv");
+	@Parameter ( label = "Dataset Table",  callback = "loadTable", persist = false )
+	public File tableFile = new File("Please browse to a dataset table file");
 
 //	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
 //	public Button glimpseTable;
 
 	//@Parameter ( label = "Image Path Column Name" )
 
-	@Parameter ( label = "Gate Column Name" )
+	//@Parameter ( label = "Gate Column Name" )
 	public String gateColumnName = "gate";
 
 	@Parameter ( label = "Minimum File Size [kb]")
@@ -58,28 +56,28 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 	@Parameter ( label = "Gray Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String whiteIndexString = "1";
 
-	@Parameter ( label = "Minimum Gray Intensity" )
+	@Parameter ( label = "Minimum Gray Intensity", callback = "showRandomImageFromFilePath" )
 	public double minWhite = 0.0;
 
-	@Parameter ( label = "Maximum Gray Intensity" )
+	@Parameter ( label = "Maximum Gray Intensity", callback = "showRandomImageFromFilePath" )
 	public double maxWhite = 1.0;
 
 	@Parameter ( label = "Green Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String greenIndexString = "2";
 
-	@Parameter ( label = "Minimum Green Intensity" )
+	@Parameter ( label = "Minimum Green Intensity", callback = "showRandomImageFromFilePath"  )
 	public double minGreen = 0.08;
 
-	@Parameter ( label = "Maximum Green Intensity" )
+	@Parameter ( label = "Maximum Green Intensity", callback = "showRandomImageFromFilePath"  )
 	public double maxGreen = 1.0;
 
 	@Parameter ( label = "Magenta Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String magentaIndexString = "3";
 
-	@Parameter ( label = "Minimum Magenta Intensity" )
+	@Parameter ( label = "Minimum Magenta Intensity", callback = "showRandomImageFromFilePath"  )
 	public double minMagenta = 0.08;
 
-	@Parameter ( label = "Maximum Magenta Intensity" )
+	@Parameter ( label = "Maximum Magenta Intensity", callback = "showRandomImageFromFilePath"  )
 	public double maxMagenta = 1.0;
 
 	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
@@ -109,6 +107,7 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 	private transient  File inputImagesDirectory;
 	private transient  File outputImagesRootDirectory;
 	private transient  String imagePathColumnName = "path";
+	private String randomImageFilePath;
 
 	public void run()
 	{
@@ -125,23 +124,20 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 
-		setColorToSliceAndColorToRange();
+		randomImageFilePath = getRandomFilePath();
+		if ( randomImageFilePath == null ) return;
 
-		if ( FCCF.getColorToSlice().size() == 0 )
-		{
-			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
-			return;
-		}
+		if ( ! checkFileSize( randomImageFilePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
 
+		showRandomImageFromFilePath();
+	}
+
+	private void showRandomImageFromFilePath()
+	{
+		if ( ! setColorToSliceAndColorToRange() ) return;
+		if ( randomImageFilePath == null ) return;
 		if ( processedImp != null ) processedImp.close();
-
-		final String filePath = getRandomFilePath();
-		if ( filePath == null ) return;
-
-		if ( ! checkFileSize( filePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
-
-		processedImp = createProcessedImagePlus( filePath );
-
+		processedImp = createProcessedImagePlus( randomImageFilePath );
 		processedImp.show();
 	}
 
@@ -161,7 +157,7 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 		IJ.log( json );
 	}
 
-	private void setColorToSliceAndColorToRange()
+	private boolean setColorToSliceAndColorToRange()
 	{
 		final HashMap< String, Integer > colorToSlice = FCCF.getColorToSlice();
 		colorToSlice.clear();
@@ -185,6 +181,15 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 			colorToSlice.put( FCCF.MAGENTA, Integer.parseInt( magentaIndexString ) );
 			colorToRange.put( FCCF.MAGENTA, new double[]{ minMagenta, maxMagenta} );
 		}
+		if ( FCCF.getColorToSlice().size() == 0 )
+		{
+			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
+			return false;
+		}
+		else
+		{
+			return true;
+		}
 	}
 
 	private void loadTable()
@@ -206,11 +211,27 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 		experimentDirectory = new File( tableFile.getParent() ).getParent();
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
+		gateColumnName = getGateColumnNameDialog();
 
-		//getInfo();
 		glimpseTable( jTable );
 		setGates();
 		setMaxNumFiles();
+	}
+
+	private String getGateColumnNameDialog()
+	{
+		final List< String > columnNames = Tables.getColumnNames( jTable );
+		columnNames.add( "There is no gate column" );
+		final GenericDialog gd = new GenericDialog( "Please select gate column" );
+		final String[] items = columnNames.stream().toArray( String[]::new );
+		gd.addChoice( "Gate colum", items, items[ 0 ] );
+		gd.showDialog();
+		final String selectedColumn = gd.getNextChoice();
+
+		if ( selectedColumn.equals( "There is no gate column" ) )
+			return null;
+		else
+			return selectedColumn;
 	}
 
 	private void glimpseTable()
