@@ -1,4 +1,4 @@
-package de.embl.cba.fccf;
+package de.embl.cba.imflow;
 
 import de.embl.cba.tables.FileUtils;
 import ij.CompositeImage;

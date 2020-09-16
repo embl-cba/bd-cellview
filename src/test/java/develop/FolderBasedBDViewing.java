@@ -1,6 +1,6 @@
 package develop;
 
-import de.embl.cba.fccf.devel.deprecated.BDOpenFolderCommand;
+import de.embl.cba.imflow.devel.deprecated.BDOpenFolderCommand;
 import net.imagej.ImageJ;
 
 import java.io.File;

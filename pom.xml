@@ -9,8 +9,8 @@
 	</parent>
 
 	<groupId>de.embl.cba</groupId>
-	<artifactId>fccf</artifactId>
-	<version>0.1.0</version>
+	<artifactId>imflow</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
 
 	<name>fccf</name>
 	<description>Tools for handling flow cytometry images</description>
@@ -72,7 +72,7 @@
 		<package-name>de.embl.cba</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>EMBL</license.copyrightOwners>
-		<scijava.app.directory>/Users/tischer/Desktop/Fiji-fccf.app</scijava.app.directory>
+		<scijava.app.directory>/Users/tischer/Desktop/Fiji-imflow.app</scijava.app.directory>
 		<enforcer.skip>true</enforcer.skip>
 	</properties>
 

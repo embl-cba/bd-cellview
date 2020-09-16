@@ -1,12 +1,10 @@
-package de.embl.cba.fccf.devel.record;
+package de.embl.cba.imflow.devel.record;
 
-import de.embl.cba.fccf.devel.callback.TestCallbackCommand;
+import de.embl.cba.imflow.devel.callback.TestCallbackCommand;
 import org.scijava.Initializable;
-import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 
 //@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Test Some Command")
 public class TestCommand extends DynamicCommand implements Initializable

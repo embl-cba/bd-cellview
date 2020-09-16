@@ -1,4 +1,4 @@
-package de.embl.cba.fccf;
+package de.embl.cba.imflow;
 
 import java.time.LocalDate;
 import java.time.LocalTime;

@@ -1,18 +1,20 @@
-package de.embl.cba.fccf;
+package de.embl.cba.imflow;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import de.embl.cba.fccf.devel.deprecated.BDOpenTableCommandDeprecated;
+import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.Tables;
+import ij.Executer;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.io.FileSaver;
 import loci.common.DebugTools;
 import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
+import org.scijava.command.Interactive;
+import org.scijava.command.InteractiveCommand;
 import org.scijava.log.LogService;
-import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
@@ -26,18 +28,18 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import static de.embl.cba.fccf.FCCF.checkFileSize;
+import static de.embl.cba.imflow.FCCF.checkFileSize;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Dataset"  )
-public class BDVulcanDatasetProcessor implements Command
+public class BDVulcanDatasetProcessor implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
 	@Parameter
 	private transient LogService logService;
 
-	@Parameter ( label = "Dataset Table",  callback = "loadTable", persist = false )
-	public File tableFile;
+	@Parameter ( label = "Dataset Table",  callback = "loadTable" )
+	public File tableFile = new File("/g/bdimsort/200807_Dewi_Nsp1/20200830_1634_HeLa RIEN pmaxGFP/output/complete_gated.csv");
 
 //	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
 //	public Button glimpseTable;
@@ -86,18 +88,20 @@ public class BDVulcanDatasetProcessor implements Command
 	@Parameter ( label = "Preview Images from Gate" )
 	public String gateChoice = "";
 
+	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
+	public int maxNumFiles = -1;
+
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
 	public Button showRandomImage = new MyButton();
 
-	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
-	public int maxNumFiles = -1;
+	@Parameter ( label = "Process Images", callback = "processImages" )
+	public Button processImages = new MyButton();
 
 	@Parameter ( label = "Print Headless Command", callback = "printHeadlessCommand" )
 	private transient Button printHeadlessCommand = new MyButton();
 
 	private transient  HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient  ImagePlus processedImp;
-	private transient  int gateColumnIndex;
 	private transient  int pathColumnIndex;
 	private transient  String experimentDirectory;
 	private transient  JTable jTable;
@@ -109,7 +113,40 @@ public class BDVulcanDatasetProcessor implements Command
 	public void run()
 	{
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
+	}
 
+	private void showRandomImage()
+	{
+		if ( tableFile == null )
+		{
+			IJ.showMessage( "Please select [ Browse ] a dataset table first." );
+			return;
+		}
+
+		DebugTools.setRootLevel("OFF"); // Bio-Formats
+
+		setColorToSliceAndColorToRange();
+
+		if ( FCCF.getColorToSlice().size() == 0 )
+		{
+			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
+			return;
+		}
+
+		if ( processedImp != null ) processedImp.close();
+
+		final String filePath = getRandomFilePath();
+		if ( filePath == null ) return;
+
+		if ( ! checkFileSize( filePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
+
+		processedImp = createProcessedImagePlus( filePath );
+
+		processedImp.show();
+	}
+
+	public void processImages()
+	{
 		setColorToSliceAndColorToRange();
 
 		if ( jTable == null ) loadTable();
@@ -317,10 +354,18 @@ public class BDVulcanDatasetProcessor implements Command
 
 	public void setGates()
 	{
-		gateColumnIndex = jTable.getColumnModel().getColumnIndex( gateColumnName );
-		gateToRows = Tables.uniqueColumnEntries( jTable, gateColumnIndex );
-		final String gates = gateToRows.keySet().stream().collect( Collectors.joining( "," ) );
-		IJ.log( "Gates: " + gates );
+		try
+		{
+			int gateColumnIndex = jTable.getColumnModel().getColumnIndex( gateColumnName );
+			gateToRows = Tables.uniqueColumnEntries( jTable, gateColumnIndex );
+			final String gates = gateToRows.keySet().stream().collect( Collectors.joining( "," ) );
+			IJ.log( "gates: " + gates );
+		}
+		catch ( Exception e )
+		{
+			IJ.showMessage( "Gate column not found in table: " + gateColumnName );
+			gateToRows = null;
+		}
 		//setGatesDropdown();
 	}
 
@@ -342,36 +387,6 @@ public class BDVulcanDatasetProcessor implements Command
 //		item.setValue( this, jTable.getRowCount() );
 	}
 
-	private void showRandomImage()
-	{
-		if ( tableFile == null )
-		{
-			IJ.showMessage( "Please select [ Browse ] a dataset table first." );
-			return;
-		}
-
-		DebugTools.setRootLevel("OFF"); // Bio-Formats
-
-		setColorToSliceAndColorToRange();
-
-		if ( FCCF.getColorToSlice().size() == 0 )
-		{
-			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
-			return;
-		}
-
-		if ( processedImp != null ) processedImp.close();
-
-		final String filePath = getRandomFilePath();
-		if ( filePath == null ) return;
-
-		if ( ! checkFileSize( filePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
-
-		processedImp = createProcessedImagePlus( filePath );
-
-		processedImp.show();
-	}
-
 	private ImagePlus createProcessedImagePlus( String filePath )
 	{
 		ImagePlus processedImp = FCCF.createProcessedImage( filePath, FCCF.getColorToRange(), FCCF.getColorToSlice(), viewingModality );
@@ -381,14 +396,24 @@ public class BDVulcanDatasetProcessor implements Command
 	private String getRandomFilePath()
 	{
 		final Random random = new Random();
-		final ArrayList< Integer > rowIndices = gateToRows.get( gateChoice );
-		if ( rowIndices == null )
+
+		int randomRowIndex;
+		if ( gateToRows != null )
 		{
-			IJ.showMessage( "There are no images of gate " + gateChoice );
-			return null;
+			final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( gateChoice );
+			if ( rowIndicesOfSelectedGate == null )
+			{
+				IJ.showMessage( "There are no images of gate " + gateChoice );
+				return null;
+			}
+			randomRowIndex = rowIndicesOfSelectedGate.get( random.nextInt( rowIndicesOfSelectedGate.size() ) );
 		}
-		final Integer rowIndex = rowIndices.get( random.nextInt( rowIndices.size() ) );
-		final String absoluteImagePath = getInputImagePath( jTable, rowIndex );
+		else
+		{
+			randomRowIndex = random.nextInt( jTable.getRowCount() );
+		}
+
+		final String absoluteImagePath = getInputImagePath( jTable, randomRowIndex );
 		return absoluteImagePath;
 	}
 

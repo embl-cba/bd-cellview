@@ -1,4 +1,4 @@
-package de.embl.cba.fccf;
+package de.embl.cba.imflow;
 
 import org.scijava.widget.Button;
 

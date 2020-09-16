@@ -1,22 +1,13 @@
-package de.embl.cba.fccf.devel.callback;
+package de.embl.cba.imflow.devel.callback;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import de.embl.cba.tables.FileAndUrlUtils;
 import ij.IJ;
 import ij.ImagePlus;
-import org.scijava.Initializable;
 import org.scijava.command.Command;
-import org.scijava.command.CommandService;
-import org.scijava.command.DynamicCommand;
-import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 
-import javax.swing.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 //@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Command")
 public class TestSomeCommand implements Command

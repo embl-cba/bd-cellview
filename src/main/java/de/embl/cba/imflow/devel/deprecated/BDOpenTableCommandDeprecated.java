@@ -1,4 +1,4 @@
-package de.embl.cba.fccf.devel.deprecated;
+package de.embl.cba.imflow.devel.deprecated;
 
 import de.embl.cba.tables.Tables;
 import ij.IJ;
@@ -6,7 +6,6 @@ import org.scijava.command.Command;
 import org.scijava.command.CommandService;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
 
 import javax.swing.*;

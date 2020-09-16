@@ -1,13 +1,9 @@
-package de.embl.cba.fccf.devel.callback;
+package de.embl.cba.imflow.devel.callback;
 
 
-import org.scijava.command.Command;
 import org.scijava.command.CommandService;
-import org.scijava.command.DefaultCommandService;
 import org.scijava.command.DynamicCommand;
-import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 
 import java.io.File;
 

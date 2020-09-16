@@ -1,8 +1,6 @@
 package develop;
 
-import de.embl.cba.fccf.devel.callback.TestCallbackCommand;
-import de.embl.cba.fccf.devel.callback.TestSomeCommand;
-import de.embl.cba.fccf.devel.record.TestCommand;
+import de.embl.cba.imflow.devel.callback.TestSomeCommand;
 import ij.plugin.frame.Recorder;
 import net.imagej.ImageJ;
 

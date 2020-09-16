@@ -1,6 +1,6 @@
-package de.embl.cba.fccf.devel.deprecated;
+package de.embl.cba.imflow.devel.deprecated;
 
-import de.embl.cba.fccf.FCCF;
+import de.embl.cba.imflow.FCCF;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
@@ -9,12 +9,10 @@ import ij.io.FileSaver;
 import loci.common.DebugTools;
 import org.scijava.Initializable;
 import org.scijava.ItemVisibility;
-import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.log.LogService;
 import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
 
 import javax.swing.*;
@@ -25,7 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
-import static de.embl.cba.fccf.FCCF.checkFileSize;
+import static de.embl.cba.imflow.FCCF.checkFileSize;
 
 //@Plugin( type = Command.class )
 @Deprecated

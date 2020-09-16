@@ -1,9 +1,7 @@
 package develop;
 
 import com.google.gson.Gson;
-import de.embl.cba.fccf.BDVulcanDatasetProcessor;
-import de.embl.cba.fccf.devel.callback.TestCallbackCommand;
-import de.embl.cba.fccf.devel.callback.TestSomeCommand;
+import de.embl.cba.imflow.devel.callback.TestSomeCommand;
 import net.imagej.ImageJ;
 
 public class DevelopCommandFromAndToJson
