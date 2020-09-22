@@ -162,7 +162,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void saveHeadlessCommand() throws IOException
 	{
-		Gson gson = new GsonBuilder().create(); //.setPrettyPrinting()
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		final String json = gson.toJson( this );
 
 		final File file = new File( experimentDirectory, "batchProcess.json" );
