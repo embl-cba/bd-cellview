@@ -8,6 +8,7 @@ import ij.plugin.Duplicator;
 import ij.plugin.RGBStackConverter;
 import ij.plugin.RGBStackMerge;
 import ij.plugin.StackInserter;
+import ij.plugin.filter.Convolver;
 import ij.process.ColorProcessor;
 import ij.process.LUT;
 import loci.formats.FormatException;
@@ -140,7 +141,16 @@ public abstract class FCCF
 	public static ImagePlus processImage( ImagePlus inputImp )
 	{
 		IJ.run(inputImp, "Scale...", "x=1.0 y=0.8 z=1.0 interpolation=Bilinear average process title=stack");
-		IJ.run(inputImp, "Convolve...", "text1=[0 1.6 4 1.6 0\n] normalize stack");
+
+		final Convolver convolver = new Convolver();
+		convolver.setNormalize( true );
+		for (int i = 1; i <= inputImp.getStackSize(); i++)
+		{
+			convolver.convolve(
+					inputImp.getStack().getProcessor(i),
+					new float[]{0, 1.6F, 4, 1.6F, 0}, 5, 1 );
+			//IJ.run(inputImp, "Convolve...", "text1=[0 1.6 4 1.6 0\n] normalize stack");
+		}
 
 		return inputImp;
 	}

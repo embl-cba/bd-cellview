@@ -172,6 +172,8 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 		IJ.log( "Settings: " + json );
 		IJ.log( "Wrote settings to file: " + file.getAbsolutePath() );
+		IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
+		IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ file.getAbsolutePath() +"'\"");
 	}
 
 	private boolean setColorToSliceAndColorToRange()

@@ -69,8 +69,7 @@ public class BDVulcanBatchProcessorCommand implements Command
 		imageJ.command().run( BDVulcanBatchProcessorCommand.class, true );
 
 		/**
-		 * run("Batch Process BD Vulcan Dataset", 'settingsfile="/Users/tischer/Documents/fccf/src/test/resources/minimalgated/batchProcess.json"');
-		 * /Applications/Fiji.app/Contents/MacOS/ImageJ-macosx --ij2 --headless --run hello.py "name='Mr Kraken'"
+		 *  /Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run "Batch Process BD Vulcan Dataset" "settingsFile='/Users/tischer/Documents/fccf/src/test/resources/minimalgated/batchProcess.json'"
 		 */
 	}
 }
