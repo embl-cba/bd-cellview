@@ -4,12 +4,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
+import de.embl.cba.tables.FileUtils;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.io.FileSaver;
 import loci.common.DebugTools;
+import net.imagej.ImageJ;
 import org.scijava.command.Command;
 import org.scijava.command.Interactive;
 import org.scijava.log.LogService;
@@ -19,6 +21,7 @@ import org.scijava.widget.Button;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +32,7 @@ import java.util.stream.Collectors;
 import static de.embl.cba.imflow.FCCF.checkFileSize;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Dataset"  )
-public class BDVulcanDatasetProcessor implements Command, Interactive
+public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
@@ -90,27 +93,30 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 	public int maxNumFiles = -1;
 
 	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
-	public Button showRandomImage = new MyButton();
+	private transient Button showRandomImage = new MyButton();
 
 	@Parameter ( label = "Process Images", callback = "processImages" )
-	public Button processImages = new MyButton();
+	private transient Button processImages = new MyButton();
 
-	@Parameter ( label = "Print Headless Command", callback = "printHeadlessCommand" )
-	private transient Button printHeadlessCommand = new MyButton();
+	@Parameter ( label = "Save Settings for Running Headless", callback = "saveHeadlessCommand" )
+	private transient Button saveHeadlessCommand = new MyButton();
 
-	private transient  HashMap< String, ArrayList< Integer > > gateToRows;
-	private transient  ImagePlus processedImp;
-	private transient  int pathColumnIndex;
-	private transient  String experimentDirectory;
-	private transient  JTable jTable;
-	private transient  String recentImageTablePath = "";
-	private transient  File inputImagesDirectory;
-	private transient  File outputImagesRootDirectory;
-	private transient  String imagePathColumnName = "path";
-	private String randomImageFilePath;
+	public String experimentDirectory;
+
+	private transient HashMap< String, ArrayList< Integer > > gateToRows;
+	private transient ImagePlus processedImp;
+	private transient int pathColumnIndex;
+	private transient JTable jTable;
+	private transient String recentImageTablePath = "";
+	private transient File inputImagesDirectory;
+	private transient File outputImagesRootDirectory;
+	private transient String imagePathColumnName = "path";
+	private transient String randomImageFilePath;
+	private transient boolean batchMode = true;
 
 	public void run()
 	{
+		batchMode = false;
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 	}
 
@@ -143,21 +149,29 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 
 	public void processImages()
 	{
+		DebugTools.setRootLevel("OFF"); // Bio-Formats
+
+		// the new thread is necessary for the progress logging in the IJ.log window
 		new Thread( () ->
 		{
 			setColorToSliceAndColorToRange();
-
 			if ( jTable == null ) loadTable();
-
 			processAndSaveImages();
 		}).start();
 	}
 
-	private void printHeadlessCommand()
+	private void saveHeadlessCommand() throws IOException
 	{
 		Gson gson = new GsonBuilder().create(); //.setPrettyPrinting()
 		final String json = gson.toJson( this );
-		IJ.log( json );
+
+		final File file = new File( experimentDirectory, "batchProcess.json" );
+		final FileWriter writer = new FileWriter( file ) ;
+		writer.write( json );
+		writer.close();
+
+		IJ.log( "Settings: " + json );
+		IJ.log( "Wrote settings to file: " + file.getAbsolutePath() );
 	}
 
 	private boolean setColorToSliceAndColorToRange()
@@ -203,22 +217,29 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 			throw new UnsupportedOperationException( "Could not open file: " + tableFile );
 		}
 
-		if ( recentImageTablePath.equals( tableFile.getAbsolutePath() ) ) return;
+		// final String absolutePath = tableFile.getAbsolutePath(); this does not work when loading from json for some reason...
+		final String absolutePath = tableFile.toString();
+
+		if ( recentImageTablePath.equals( absolutePath ) ) return;
 
 		final long currentTimeMillis = System.currentTimeMillis();
 		IJ.log("Loading table; please wait...");
-		jTable = Tables.loadTable( tableFile.getAbsolutePath() );
+		jTable = Tables.loadTable( absolutePath );
 		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
 
-		recentImageTablePath = tableFile.getAbsolutePath();
+		recentImageTablePath = absolutePath;
 		experimentDirectory = new File( tableFile.getParent() ).getParent();
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
-		gateColumnName = getGateColumnNameDialog();
+
+		if ( ! batchMode )
+		{
+			gateColumnName = getGateColumnNameDialog();
+			setGates();
+		}
 
 		glimpseTable( jTable );
-		setGates();
-		setMaxNumFiles();
+
 	}
 
 	private String getGateColumnNameDialog()
@@ -268,12 +289,12 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 	private String saveProcessedImage( long currentTimeMillis, int i, String inputImagePath ) throws IOException
 	{
 		new Thread( () -> {
-			Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files processed" );
+			if ( (i+1) % 100 == 0 || i + 1 == 1 || i + 1 == maxNumFiles )
+				Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files processed" );
 		}).start();
 
 		if ( checkFileSize( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
 		{
-			IJ.wait( 500 );
 			processedImp = createProcessedImagePlus( inputImagePath );
 
 			// Images can be in subfolders, thus we only
@@ -294,14 +315,12 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 		}
 	}
 
-	public void processAndSaveImages()
+	private void processAndSaveImages()
 	{
 		String relativeImageRootDirectory = "images-processed-" + Utils.getLocalDateAndHourAndMinute();
 		outputImagesRootDirectory = new File( experimentDirectory, relativeImageRootDirectory );
 
-		new Thread( () -> {
-			IJ.log( "\nSaving processed images to directory: " + outputImagesRootDirectory );
-		} ).start();
+		IJ.log( "\nSaving processed images to directory: " + outputImagesRootDirectory );
 
 //		Tables.addColumn( jTable, QC, "Passed" );
 //		final int columnIndexQC = jTable.getColumnModel().getColumnIndex( QC );
@@ -408,14 +427,6 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 //		gateChoiceItem.setValue( this, next );
 	}
 
-	private void setMaxNumFiles()
-	{
-//		final MutableModuleItem<Integer> item = //
-//				getInfo().getMutableInput("maxNumFiles", Integer.class);
-//		item.setDefaultValue( jTable.getRowCount() );
-//		item.setValue( this, jTable.getRowCount() );
-	}
-
 	private ImagePlus createProcessedImagePlus( String filePath )
 	{
 		ImagePlus processedImp = FCCF.createProcessedImage( filePath, FCCF.getColorToRange(), FCCF.getColorToSlice(), viewingModality );
@@ -465,5 +476,13 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 		new File( outputPath ).mkdirs();
 		new FileSaver( outputImp ).saveAsJpeg( outputPath  );
 		return new File( outputPath );
+	}
+
+	public static void main( String[] args )
+	{
+		final ImageJ imageJ = new ImageJ();
+		imageJ.ui().showUI();
+
+		imageJ.command().run( BDVulcanDatasetProcessorCommand.class, true );
 	}
 }
