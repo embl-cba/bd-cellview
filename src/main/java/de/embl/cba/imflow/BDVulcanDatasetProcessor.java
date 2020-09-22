@@ -143,11 +143,14 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 
 	public void processImages()
 	{
-		setColorToSliceAndColorToRange();
+		new Thread( () ->
+		{
+			setColorToSliceAndColorToRange();
 
-		if ( jTable == null ) loadTable();
+			if ( jTable == null ) loadTable();
 
-		processAndSaveImages();
+			processAndSaveImages();
+		}).start();
 	}
 
 	private void printHeadlessCommand()
@@ -264,10 +267,13 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 
 	private String saveProcessedImage( long currentTimeMillis, int i, String inputImagePath ) throws IOException
 	{
-		Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files processed" );
+		new Thread( () -> {
+			Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files processed" );
+		}).start();
 
 		if ( checkFileSize( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
 		{
+			IJ.wait( 500 );
 			processedImp = createProcessedImagePlus( inputImagePath );
 
 			// Images can be in subfolders, thus we only
@@ -293,7 +299,9 @@ public class BDVulcanDatasetProcessor implements Command, Interactive
 		String relativeImageRootDirectory = "images-processed-" + Utils.getLocalDateAndHourAndMinute();
 		outputImagesRootDirectory = new File( experimentDirectory, relativeImageRootDirectory );
 
-		IJ.log( "\nSaving processed images to directory: " + outputImagesRootDirectory );
+		new Thread( () -> {
+			IJ.log( "\nSaving processed images to directory: " + outputImagesRootDirectory );
+		} ).start();
 
 //		Tables.addColumn( jTable, QC, "Passed" );
 //		final int columnIndexQC = jTable.getColumnModel().getColumnIndex( QC );
