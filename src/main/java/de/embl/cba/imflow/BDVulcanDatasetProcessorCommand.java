@@ -173,29 +173,41 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void processImagesOnCluster()
 	{
-		IJ.showMessage( "Cluster processing is not yet implemented." );
+		new Thread( () ->
+		{
+			IJ.showMessage( "Cluster processing is not yet implemented." );
+		});
 	}
 
 	private void processImages()
 	{
-		for ( File file : tableFiles )
-		{
-			selectedTableFile = file;
-			processImagesFromSelectedTableFile();
-		}
-	}
-
-	public void processImagesFromSelectedTableFile()
-	{
-		DebugTools.setRootLevel("OFF"); // Bio-Formats
-
 		// the new thread is necessary for the progress logging in the IJ.log window
 		new Thread( () ->
 		{
-			setColorToSliceAndColorToRange();
-			if ( jTable == null ) loadTable( true );
-			processAndSaveImages();
+			for ( File file : tableFiles )
+			{
+				selectedTableFile = file;
+				processImagesFromSelectedTableFile();
+			}
 		}).start();
+	}
+
+	// this public function is only for the headless (cluster) batch processing
+	public void headlessProcessImagesFromSelectedTableFile()
+	{
+		// the new thread is necessary for the progress logging in the IJ.log window
+		new Thread( () ->
+		{
+			batchMode = true;
+			processImagesFromSelectedTableFile();
+		}).start();
+	}
+
+	private void processImagesFromSelectedTableFile()
+	{
+		setColorToSliceAndColorToRange();
+		if ( jTable == null ) loadTable( true );
+		processAndSaveImages();
 	}
 
 	private void selectTable()

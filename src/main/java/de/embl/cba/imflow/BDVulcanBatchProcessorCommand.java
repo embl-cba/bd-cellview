@@ -1,35 +1,19 @@
 package de.embl.cba.imflow;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
-import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
-import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.FileAndUrlUtils;
-import de.embl.cba.tables.Tables;
-import ij.IJ;
-import ij.ImagePlus;
-import ij.gui.GenericDialog;
-import ij.io.FileSaver;
 import ij.plugin.frame.Recorder;
-import jdk.nashorn.internal.parser.JSONParser;
 import loci.common.DebugTools;
 import net.imagej.ImageJ;
 import org.scijava.command.Command;
-import org.scijava.command.Interactive;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.widget.Button;
 
-import javax.swing.*;
 import java.io.*;
 import java.lang.reflect.Type;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static de.embl.cba.imflow.FCCF.checkFileSize;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Batch Process BD Vulcan Dataset"  )
 public class BDVulcanBatchProcessorCommand implements Command
@@ -52,7 +36,7 @@ public class BDVulcanBatchProcessorCommand implements Command
 			Gson gson = new Gson();
 			Type type = new TypeToken< BDVulcanDatasetProcessorCommand >() {}.getType();
 			BDVulcanDatasetProcessorCommand command = gson.fromJson( reader, type );
-			command.processImagesFromSelectedTableFile();
+			command.headlessProcessImagesFromSelectedTableFile();
 		} catch ( IOException e )
 		{
 			e.printStackTrace();
