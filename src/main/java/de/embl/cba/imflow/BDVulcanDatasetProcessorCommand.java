@@ -207,6 +207,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	{
 		setColorToSliceAndColorToRange();
 		if ( jTable == null ) loadTable( true );
+		IJ.log( "Processing table: " + selectedTableFile );
 		processAndSaveImages();
 	}
 
