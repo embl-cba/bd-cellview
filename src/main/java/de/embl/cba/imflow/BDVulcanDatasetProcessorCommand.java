@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
-import de.embl.cba.tables.FileUtils;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
 import ij.ImagePlus;
@@ -23,13 +22,11 @@ import javax.swing.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static de.embl.cba.imflow.FCCF.checkFileSize;
+import static org.scijava.ItemVisibility.MESSAGE;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Dataset"  )
 public class BDVulcanDatasetProcessorCommand implements Command, Interactive
@@ -39,8 +36,8 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	@Parameter
 	private transient LogService logService;
 
-	@Parameter ( label = "Dataset Table",  callback = "loadTable", persist = false )
-	public File tableFile = new File("Please browse to a dataset table file");
+	@Parameter ( label = "Dataset Tables" )
+	public File[] tableFiles;// = new File("Please browse to a dataset table file");
 
 //	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
 //	public Button glimpseTable;
@@ -86,14 +83,26 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
-	@Parameter ( label = "Preview Images from Gate" )
-	public String gateChoice = "";
-
 	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
 	public int maxNumFiles = -1;
 
-	@Parameter ( label = "Preview Random Image", callback = "showRandomImage" )
-	private transient Button showRandomImage = new MyButton();
+	@Parameter ( visibility = MESSAGE )
+	private transient String preview = "--- Preview ---";
+
+	@Parameter ( label = "Select Table", callback = "selectTable" )
+	public transient Button selectTableButton;
+
+//	@Parameter ( label = "Select Gate Column", callback = "selectGateColumn" )
+//	public transient Button selectGateColumnButton;
+
+	@Parameter ( label = "Select Gate", callback = "selectGate" )
+	public transient Button selectGateButton;
+
+	@Parameter ( label = "Preview Image", callback = "showRandomImage" )
+	private transient Button previewImageButton = new MyButton();
+
+	@Parameter ( visibility = MESSAGE )
+	private transient String process = "--- Process ---";
 
 	@Parameter ( label = "Process Images", callback = "processImages" )
 	private transient Button processImages = new MyButton();
@@ -101,12 +110,15 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Save Settings for Running Headless", callback = "saveHeadlessCommand" )
 	private transient Button saveHeadlessCommand = new MyButton();
 
+
 	public String experimentDirectory;
+	public File tableFile;
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
 	private transient int pathColumnIndex;
 	private transient JTable jTable;
+	private transient String gateChoice;
 	private transient String recentImageTablePath = "";
 	private transient File inputImagesDirectory;
 	private transient File outputImagesRootDirectory;
@@ -122,10 +134,19 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void showRandomImage()
 	{
+		if ( tableFiles == null || tableFiles.length == 0 )
+		{
+			IJ.showMessage( "Please select some tables first!" );
+		}
+
 		if ( tableFile == null )
 		{
-			IJ.showMessage( "Please select [ Browse ] a dataset table first." );
-			return;
+			selectTable();
+		}
+
+		if ( jTable == null )
+		{
+			loadTable( false );
 		}
 
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
@@ -140,6 +161,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void showRandomImageFromFilePath()
 	{
+		IJ.log( "Preview image. Table: " + tableFile + "; Gate: " + gateChoice );
 		if ( ! setColorToSliceAndColorToRange() ) return;
 		if ( randomImageFilePath == null ) return;
 		if ( processedImp != null ) processedImp.close();
@@ -155,9 +177,35 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		new Thread( () ->
 		{
 			setColorToSliceAndColorToRange();
-			if ( jTable == null ) loadTable();
+			if ( jTable == null ) loadTable( true );
 			processAndSaveImages();
 		}).start();
+	}
+
+	private void selectTable()
+	{
+		final GenericDialog gd = new GenericDialog( "Please select table for image preview" );
+		final String[] tablePaths = Arrays.stream( tableFiles ).map( x -> x.toString() ).toArray( String[]::new );
+		gd.addChoice( "Table", tablePaths, tablePaths[ 0 ] );
+		gd.showDialog();
+		if ( gd.wasCanceled() ) return;
+		tableFile = new File( gd.getNextChoice() );
+		IJ.log( "Selected Table: " + tableFile );
+		loadTable( false );
+	}
+
+	private void selectGate()
+	{
+		if ( jTable == null )
+			selectTable();
+
+		final GenericDialog gd = new GenericDialog( "Please select gate for image preview" );
+		final String[] choices = gateToRows.keySet().stream().toArray( String[]::new );
+		gd.addChoice( "Gate", choices, choices[ 0 ] );
+		gd.showDialog();
+		if ( gd.wasCanceled() ) return;
+		gateChoice = gd.getNextChoice();
+		IJ.log( "Selected Gate: " + gateChoice );
 	}
 
 	private void saveHeadlessCommand() throws IOException
@@ -211,7 +259,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		}
 	}
 
-	private void loadTable()
+	private void loadTable( boolean batchMode )
 	{
 		if ( ! tableFile.exists() )
 		{
@@ -258,13 +306,6 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 			return null;
 		else
 			return selectedColumn;
-	}
-
-	private void glimpseTable()
-	{
-		if ( jTable == null ) loadTable();
-
-		glimpseTable( jTable );
 	}
 
 	public static void glimpseTable( JTable jTable )
@@ -440,8 +481,12 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		final Random random = new Random();
 
 		int randomRowIndex;
+
 		if ( gateToRows != null )
 		{
+			if ( gateChoice == null || ! gateToRows.keySet().contains( gateChoice ) )
+				selectGate();
+
 			final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( gateChoice );
 			if ( rowIndicesOfSelectedGate == null )
 			{
