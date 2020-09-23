@@ -52,7 +52,7 @@ public class BDVulcanBatchProcessorCommand implements Command
 			Gson gson = new Gson();
 			Type type = new TypeToken< BDVulcanDatasetProcessorCommand >() {}.getType();
 			BDVulcanDatasetProcessorCommand command = gson.fromJson( reader, type );
-			command.processImages();
+			command.processImagesFromSelectedTableFile();
 		} catch ( IOException e )
 		{
 			e.printStackTrace();

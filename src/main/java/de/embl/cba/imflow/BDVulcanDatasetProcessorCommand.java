@@ -104,21 +104,23 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	@Parameter ( visibility = MESSAGE )
 	private transient String process = "--- Process ---";
 
-	@Parameter ( label = "Process Images", callback = "processImages" )
-	private transient Button processImages = new MyButton();
+	@Parameter ( label = "Process Images from all Tables on Local Computer", callback = "processImages" )
+	private transient Button processImagesButton = new MyButton();
 
-	@Parameter ( label = "Save Settings for Running Headless", callback = "saveHeadlessCommand" )
-	private transient Button saveHeadlessCommand = new MyButton();
+	@Parameter ( label = "Process Images from all Tables on Computer Cluster", callback = "processImagesOnCluster" )
+	private transient Button processImagesOnClusterButton = new MyButton();
 
+//	@Parameter ( label = "Save Settings for Running Headless", callback = "saveHeadlessCommand" )
+//	private transient Button saveHeadlessCommand = new MyButton();
 
 	public String experimentDirectory;
-	public File tableFile;
+	public File selectedTableFile;
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
 	private transient int pathColumnIndex;
 	private transient JTable jTable;
-	private transient String gateChoice;
+	private transient String selectedGate;
 	private transient String recentImageTablePath = "";
 	private transient File inputImagesDirectory;
 	private transient File outputImagesRootDirectory;
@@ -139,7 +141,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 			IJ.showMessage( "Please select some tables first!" );
 		}
 
-		if ( tableFile == null )
+		if ( selectedTableFile == null )
 		{
 			selectTable();
 		}
@@ -161,7 +163,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void showRandomImageFromFilePath()
 	{
-		IJ.log( "Preview image. Table: " + tableFile + "; Gate: " + gateChoice );
+		IJ.log( "Preview image. Table: " + selectedTableFile + "; Gate: " + selectedGate );
 		if ( ! setColorToSliceAndColorToRange() ) return;
 		if ( randomImageFilePath == null ) return;
 		if ( processedImp != null ) processedImp.close();
@@ -169,7 +171,21 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		processedImp.show();
 	}
 
-	public void processImages()
+	private void processImagesOnCluster()
+	{
+		IJ.showMessage( "Cluster processing is not yet implemented." );
+	}
+
+	private void processImages()
+	{
+		for ( File file : tableFiles )
+		{
+			selectedTableFile = file;
+			processImagesFromSelectedTableFile();
+		}
+	}
+
+	public void processImagesFromSelectedTableFile()
 	{
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 
@@ -189,8 +205,8 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		gd.addChoice( "Table", tablePaths, tablePaths[ 0 ] );
 		gd.showDialog();
 		if ( gd.wasCanceled() ) return;
-		tableFile = new File( gd.getNextChoice() );
-		IJ.log( "Selected Table: " + tableFile );
+		selectedTableFile = new File( gd.getNextChoice() );
+		IJ.log( "Selected Table: " + selectedTableFile );
 		loadTable( false );
 	}
 
@@ -204,8 +220,8 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		gd.addChoice( "Gate", choices, choices[ 0 ] );
 		gd.showDialog();
 		if ( gd.wasCanceled() ) return;
-		gateChoice = gd.getNextChoice();
-		IJ.log( "Selected Gate: " + gateChoice );
+		selectedGate = gd.getNextChoice();
+		IJ.log( "Selected Gate: " + selectedGate );
 	}
 
 	private void saveHeadlessCommand() throws IOException
@@ -261,14 +277,14 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void loadTable( boolean batchMode )
 	{
-		if ( ! tableFile.exists() )
+		if ( ! selectedTableFile.exists() )
 		{
-			logService.error( "Table file does not exist: " + tableFile );
-			throw new UnsupportedOperationException( "Could not open file: " + tableFile );
+			logService.error( "Table file does not exist: " + selectedTableFile );
+			throw new UnsupportedOperationException( "Could not open file: " + selectedTableFile );
 		}
 
 		// final String absolutePath = tableFile.getAbsolutePath(); this does not work when loading from json for some reason...
-		final String absolutePath = tableFile.toString();
+		final String absolutePath = selectedTableFile.toString();
 
 		if ( recentImageTablePath.equals( absolutePath ) ) return;
 
@@ -278,7 +294,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
 
 		recentImageTablePath = absolutePath;
-		experimentDirectory = new File( tableFile.getParent() ).getParent();
+		experimentDirectory = new File( selectedTableFile.getParent() ).getParent();
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
 
@@ -416,7 +432,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	public void saveTableWithAdditionalColumns()
 	{
 		IJ.log( "\nSaving table with additional columns..." );
-		final File tableOutputFile = new File( tableFile.getAbsolutePath().replace( ".csv", "-processed-images.csv" ) );
+		final File tableOutputFile = new File( selectedTableFile.getAbsolutePath().replace( ".csv", "-processed-images.csv" ) );
 		Tables.saveTable( jTable, tableOutputFile );
 		IJ.log( "...done: " + tableOutputFile );
 		IJ.log( " " );
@@ -484,13 +500,13 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 		if ( gateToRows != null )
 		{
-			if ( gateChoice == null || ! gateToRows.keySet().contains( gateChoice ) )
+			if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
 				selectGate();
 
-			final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( gateChoice );
+			final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( selectedGate );
 			if ( rowIndicesOfSelectedGate == null )
 			{
-				IJ.showMessage( "There are no images of gate " + gateChoice );
+				IJ.showMessage( "There are no images of gate " + selectedGate );
 				return null;
 			}
 			randomRowIndex = rowIndicesOfSelectedGate.get( random.nextInt( rowIndicesOfSelectedGate.size() ) );
@@ -513,7 +529,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	private String getInputImagePath( JTable jTable, Integer rowIndex )
 	{
 		final String relativeImagePath = ( String ) jTable.getValueAt( rowIndex, pathColumnIndex );
-		final String imagePath = tableFile.getParent() + File.separator + relativeImagePath;
+		final String imagePath = selectedTableFile.getParent() + File.separator + relativeImagePath;
 		return imagePath;
 	}
 
