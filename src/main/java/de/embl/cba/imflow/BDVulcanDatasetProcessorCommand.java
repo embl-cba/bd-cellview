@@ -39,13 +39,6 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Dataset Tables" )
 	public File[] tableFiles;// = new File("Please browse to a dataset table file");
 
-//	@Parameter ( label = "Glimpse Table", callback = "glimpseTable" )
-//	public Button glimpseTable;
-
-	//@Parameter ( label = "Image Path Column Name" )
-
-	//@Parameter ( label = "Gate Column Name" )
-	public String gateColumnName = "gate";
 
 	@Parameter ( label = "Minimum File Size [kb]")
 	public double minimumFileSizeKiloBytes = 10;
@@ -102,12 +95,12 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	private transient Button previewImageButton = new MyButton();
 
 	@Parameter ( visibility = MESSAGE )
-	private transient String process = "--- Process ---";
+	private transient String process = "--- Process Images from Selected Gate from All Tables ---";
 
-	@Parameter ( label = "Process Images from all Tables on Local Computer", callback = "processImages" )
+	@Parameter ( label = "Process on Local Computer", callback = "processImages" )
 	private transient Button processImagesButton = new MyButton();
 
-	@Parameter ( label = "Process Images from all Tables on Computer Cluster", callback = "processImagesOnCluster" )
+	@Parameter ( label = "Process on Computer Cluster", callback = "processImagesOnCluster" )
 	private transient Button processImagesOnClusterButton = new MyButton();
 
 //	@Parameter ( label = "Save Settings for Running Headless", callback = "saveHeadlessCommand" )
@@ -115,12 +108,13 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	public String experimentDirectory;
 	public File selectedTableFile;
+	public String gateColumnName = "gate";
+	private transient String selectedGate;
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
 	private transient int pathColumnIndex;
 	private transient JTable jTable;
-	private transient String selectedGate;
 	private transient String recentImageTablePath = "";
 	private transient File inputImagesDirectory;
 	private transient File outputImagesRootDirectory;
@@ -184,6 +178,9 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		// the new thread is necessary for the progress logging in the IJ.log window
 		new Thread( () ->
 		{
+			if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
+				selectGate();
+
 			for ( File file : tableFiles )
 			{
 				selectedTableFile = file;
@@ -358,11 +355,11 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		}
 	}
 
-	private String saveProcessedImage( long currentTimeMillis, int i, String inputImagePath ) throws IOException
+	private String saveProcessedImage( int maxNumItems, long currentTimeMillis, int i, String inputImagePath ) throws IOException
 	{
 		new Thread( () -> {
-			if ( (i+1) % 100 == 0 || i + 1 == 1 || i + 1 == maxNumFiles )
-				Logger.progress( maxNumFiles, i + 1, currentTimeMillis, "Files processed" );
+			if ( (i+1) % 100 == 0 || i + 1 == 1 || i + 1 == maxNumItems )
+				Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
 		}).start();
 
 		if ( checkFileSize( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
@@ -389,10 +386,6 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void processAndSaveImages()
 	{
-		String relativeImageRootDirectory = "images-processed-" + Utils.getLocalDateAndHourAndMinute();
-		outputImagesRootDirectory = new File( experimentDirectory, relativeImageRootDirectory );
-
-		IJ.log( "\nSaving processed images to directory: " + outputImagesRootDirectory );
 
 //		Tables.addColumn( jTable, QC, "Passed" );
 //		final int columnIndexQC = jTable.getColumnModel().getColumnIndex( QC );
@@ -402,17 +395,28 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 		final long currentTimeMillis = System.currentTimeMillis();
 
-		final int rowMax = getRowMax();
+		final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( selectedGate );
+		IJ.log( "Processing images from gate: " + selectedGate  );
+		IJ.log( "Number of images of above gate in above table: " + rowIndicesOfSelectedGate.size() );
 
-		for ( int rowIndex = 0; rowIndex < rowMax; rowIndex++ )
+		final int maxNumItems = getMaxNumItems( rowIndicesOfSelectedGate.size() );
+		IJ.log( "Number of images to be processed: " + maxNumItems );
+
+		String relativeImageRootDirectory = "images-processed-" + Utils.getLocalDateAndHourAndMinute();
+		outputImagesRootDirectory = new File( experimentDirectory, relativeImageRootDirectory );
+		IJ.log( "Saving processed images to directory: " + outputImagesRootDirectory );
+
+		for ( int i = 0; i < maxNumItems; i++ )
 		{
+			int rowIndex = rowIndicesOfSelectedGate.get( i );
+
 			final String inputImagePath = getInputImagePath( jTable, rowIndex );
 
-			String outputImagePath = null;
 			try
 			{
-				outputImagePath = saveProcessedImage( currentTimeMillis, rowIndex, inputImagePath );
-			} catch ( IOException e )
+				String outputImagePath = saveProcessedImage( maxNumItems, currentTimeMillis, rowIndex, inputImagePath );
+			}
+			catch ( IOException e )
 			{
 				e.printStackTrace();
 				throw new RuntimeException( "Error during saving of image: " + inputImagePath );
@@ -432,14 +436,12 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 //		saveTableWithAdditionalColumns();
 	}
 
-	private int getRowMax()
+	private int getMaxNumItems( int size )
 	{
-		int rowCount = jTable.getRowCount();
-
 		if ( maxNumFiles == -1 )
-			maxNumFiles = rowCount;
-
-		return Math.min( maxNumFiles, rowCount );
+			return size;
+		else
+			return maxNumFiles;
 	}
 
 	public void saveTableWithAdditionalColumns()
