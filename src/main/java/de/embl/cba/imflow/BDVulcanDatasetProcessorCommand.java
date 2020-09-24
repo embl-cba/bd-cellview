@@ -355,21 +355,22 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		}
 	}
 
-	private String saveProcessedImage( int maxNumItems, long currentTimeMillis, int i, String inputImagePath ) throws IOException
+	private String saveProcessedImage( int maxNumItems, long currentTimeMillis, int i, String inputPath ) throws IOException
 	{
 		new Thread( () -> {
 			if ( (i+1) % 100 == 0 || i + 1 == 1 || i + 1 == maxNumItems )
 				Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
 		}).start();
 
-		if ( checkFileSize( inputImagePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
+		final String absoluteInputPath = new File( inputPath ).getCanonicalPath();
+
+		if ( checkFileSize( absoluteInputPath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
 		{
-			processedImp = createProcessedImagePlus( inputImagePath );
+			processedImp = createProcessedImagePlus( inputPath );
 
 			// Images can be in subfolders, thus we only
 			// replace the root path
 			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
-			final String absoluteInputPath = new File( inputImagePath ).getCanonicalPath();
 			final String absoluteOutputRootDirectory = outputImagesRootDirectory.getCanonicalPath();
 			String outputImagePath = absoluteInputPath.replace(
 					absoluteInputRootDirectory,
@@ -386,6 +387,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	private void processAndSaveImages()
 	{
+		DebugTools.setRootLevel("OFF"); // Bio-Formats
 
 //		Tables.addColumn( jTable, QC, "Passed" );
 //		final int columnIndexQC = jTable.getColumnModel().getColumnIndex( QC );
