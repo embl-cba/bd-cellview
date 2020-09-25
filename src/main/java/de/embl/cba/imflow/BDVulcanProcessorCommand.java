@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
+import de.embl.cba.cluster.PathMapper;
 import de.embl.cba.cluster.commands.Commands;
 import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
@@ -21,6 +22,7 @@ import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
+import weka.core.PropertyPath;
 
 import javax.swing.*;
 import java.io.*;
@@ -35,9 +37,6 @@ import static org.scijava.ItemVisibility.MESSAGE;
 public class BDVulcanProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
-
-	@Parameter
-	private transient LogService logService;
 
 	@Parameter ( label = "Dataset Tables" )
 	public File[] tableFiles;// = new File("Please browse to a dataset table file");
@@ -105,15 +104,14 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 //	@Parameter ( label = "Process on Computer Cluster", callback = "processImagesOnCluster" )
 //	private transient Button processImagesOnClusterButton = new MyButton();
 
-	@Parameter ( label = "Save Settings for Running Headless", callback = "saveSettings" )
+	@Parameter ( label = "Save Settings for Running Headless On Linux", callback = "saveSettings" )
 	private transient Button saveSettingsCommand = new MyButton();
 
 	public String experimentDirectory;
 	public File selectedTableFile;
 	public String gateColumnName = "gate";
 	public boolean quitAfterRun = false;
-
-	private transient String selectedGate;
+	public String selectedGate;
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
@@ -213,7 +211,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			batchMode = true;
 			quitAfterRun = true; // this is also in the settings file, thus could be removed here
 			processImagesFromSelectedTableFile();
-			if ( quitAfterRun ) Commands.quitImageJ( logService );
+			if ( quitAfterRun ) Commands.quitImageJ();
 		}).start();
 	}
 
@@ -262,29 +260,43 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	 */
 	private void saveSettings() throws IOException
 	{
-		// TODO: add a path mapping option UI for the table path!
+		if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
+			selectGate();
+
+		// remember fields
+		File selectedTableFile = this.selectedTableFile;
+		String experimentDirectory = this.experimentDirectory;
 
 		for ( File file : tableFiles )
 		{
-			selectedTableFile = file;
-			experimentDirectory = new File( selectedTableFile.getParent() ).getParent();
-			quitAfterRun = true; // important for running headless on cluster, otherwise the job does not end!
-
-			Gson gson = new GsonBuilder().setPrettyPrinting().create();
-			final String json = gson.toJson( this );
-
-			final File settingsFile = new File( experimentDirectory, "batchProcess.json" );
-			final FileWriter writer = new FileWriter( settingsFile ) ;
-			writer.write( json );
-			writer.close();
-
-			IJ.log( "Settings: " + json );
-			IJ.log( "Wrote settings to file: " + settingsFile.getAbsolutePath() );
-			IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
-			IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ settingsFile.getAbsolutePath() +"'\"");
+			createSettingsJsonFile( file );
 		}
 
+		// reset fields
 		quitAfterRun = false;
+		this.selectedTableFile = selectedTableFile;
+		this.experimentDirectory = experimentDirectory;
+	}
+
+	private void createSettingsJsonFile( File file ) throws IOException
+	{
+		// adapt fields to be stored as json
+		this.selectedTableFile = new File( PathMapper.asEMBLClusterMounted( file ) );
+		this.experimentDirectory = PathMapper.asEMBLClusterMounted( new File( this.selectedTableFile.getParent() ).getParent() );
+		this.quitAfterRun = true; // important for running headless on cluster, otherwise the job does not end!
+
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		final String json = gson.toJson( this );
+
+		final File settingsFile = new File( this.experimentDirectory, "batchProcess.json" );
+		final FileWriter writer = new FileWriter( settingsFile ) ;
+		writer.write( json );
+		writer.close();
+
+		IJ.log( "Settings: " + json );
+		IJ.log( "Wrote settings to file: " + settingsFile.getAbsolutePath() );
+		IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
+		IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ settingsFile.getAbsolutePath() +"'\"");
 	}
 
 	private boolean setColorToSliceAndColorToRange()
@@ -322,11 +334,11 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		}
 	}
 
-	private void loadTable( boolean batchMode )
+	public void loadTable( boolean batchMode )
 	{
 		if ( ! selectedTableFile.exists() )
 		{
-			logService.error( "Table file does not exist: " + selectedTableFile );
+			IJ.log( "Table file does not exist: " + selectedTableFile );
 			throw new UnsupportedOperationException( "Could not open file: " + selectedTableFile );
 		}
 
@@ -348,11 +360,10 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		if ( ! batchMode )
 		{
 			gateColumnName = getGateColumnNameDialog();
-			setGates();
 		}
 
+		setGates();
 		glimpseTable( jTable );
-
 	}
 
 	private String getGateColumnNameDialog()
@@ -434,8 +445,8 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 		final long currentTimeMillis = System.currentTimeMillis();
 
-		final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( selectedGate );
 		IJ.log( "Processing images from gate: " + selectedGate  );
+		final ArrayList< Integer > rowIndicesOfSelectedGate = getSelectedGateIndices();
 		IJ.log( "Number of images of above gate in above table: " + rowIndicesOfSelectedGate.size() );
 
 		final int maxNumItems = getMaxNumItems( rowIndicesOfSelectedGate.size() );
@@ -473,6 +484,11 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		}
 
 //		saveTableWithAdditionalColumns();
+	}
+
+	public ArrayList< Integer > getSelectedGateIndices()
+	{
+		return gateToRows.get( selectedGate );
 	}
 
 	private int getMaxNumItems( int size )
@@ -557,7 +573,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
 				selectGate();
 
-			final ArrayList< Integer > rowIndicesOfSelectedGate = gateToRows.get( selectedGate );
+			final ArrayList< Integer > rowIndicesOfSelectedGate = getSelectedGateIndices();
 			if ( rowIndicesOfSelectedGate == null )
 			{
 				IJ.showMessage( "There are no images of gate " + selectedGate );
