@@ -112,6 +112,8 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	public String gateColumnName = "gate";
 	public boolean quitAfterRun = false;
 	public String selectedGate;
+	public int numberOfImagesToBeProcessed;
+
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
@@ -264,6 +266,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			selectGate();
 
 		// remember fields
+		this.numberOfImagesToBeProcessed = getSelectedGateIndices().size();
 		File selectedTableFile = this.selectedTableFile;
 		String experimentDirectory = this.experimentDirectory;
 
@@ -295,8 +298,8 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 		IJ.log( "Settings: " + json );
 		IJ.log( "Wrote settings to file: " + settingsFile.getAbsolutePath() );
-		IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
-		IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ settingsFile.getAbsolutePath() +"'\"");
+		//IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
+		//IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ settingsFile.getAbsolutePath() +"'\"");
 	}
 
 	private boolean setColorToSliceAndColorToRange()
@@ -486,9 +489,14 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 //		saveTableWithAdditionalColumns();
 	}
 
-	public ArrayList< Integer > getSelectedGateIndices()
+	private ArrayList< Integer > getSelectedGateIndices()
 	{
 		return gateToRows.get( selectedGate );
+	}
+
+	public int getNumberOfImagesToBeProcessed()
+	{
+		return numberOfImagesToBeProcessed;
 	}
 
 	private int getMaxNumItems( int size )

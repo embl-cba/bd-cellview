@@ -9,24 +9,22 @@ import de.embl.cba.imflow.BDVulcanProcessorCommand;
 import de.embl.cba.log.IJLazySwingLogger;
 import de.embl.cba.morphometry.Utils;
 import de.embl.cba.util.PathMapper;
+import ij.IJ;
 import net.imagej.ImageJ;
-import net.imglib2.FinalInterval;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.widget.TextWidget;
-import weka.Run;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 
 @Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Images on Slurm" )
-public class ProcessBDVulcanImagesOnSlurmCommand implements Command
+public class BDVulcanSlurmProcessorCommand implements Command
 {
     public static final String FIJI_HEADLESS = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64 --mem=MEMORY_MB --ij2 --allow-multiple --headless --run";
 
@@ -44,15 +42,11 @@ public class ProcessBDVulcanImagesOnSlurmCommand implements Command
     private String password;
     public static String PASSWORD = "password";
 
-    @Parameter( label = "Maximum number of jobs" )
-    public int numJobs = 100;
-    public static String NUM_JOBS = "numJobs";
-
     @Parameter( label = "Number of CPUs per job" )
     public int numWorkers = 1;
     public static final String NUM_WORKERS = "numWorkers";
 
-    @Parameter( label = "Batch files (must be cluster accessible)" )
+    @Parameter( label = "Batch files" )
     public File[] batchFiles;
     public static final String BATCH_FILES = "batchFiles";
 
@@ -62,8 +56,6 @@ public class ProcessBDVulcanImagesOnSlurmCommand implements Command
 
     @Parameter( label = "Maximum number of failed job resubmissions" )
     public int maxNumResubmissions = 0;
-
-    public boolean quitAfterRun = true;
 
     public void run()
     {
@@ -104,9 +96,11 @@ public class ProcessBDVulcanImagesOnSlurmCommand implements Command
         try
         {
             BDVulcanProcessorCommand command = BDVulcanProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
+            int numImages = command.getNumberOfImagesToBeProcessed();
 
-            command.loadTable( true );
-            int numImages = command.getSelectedGateIndices().size();
+            IJ.log( "Table: " + command.selectedTableFile );
+            IJ.log( "Gate: " + command.selectedGate );
+            IJ.log( "Number of images: " + numImages );
 
             JobSettings jobSettings = new JobSettings();
             jobSettings.numWorkersPerNode = numWorkers;
@@ -129,8 +123,8 @@ public class ProcessBDVulcanImagesOnSlurmCommand implements Command
 
     private int getApproximatelyNeededTimeInMinutes( int numImages )
     {
-        // about 1 second per image
-        return (int) Math.ceil( numImages / 60.0 ) ;
+        // less than 100 milliseconds per image
+        return (int) Math.ceil( numImages * ( 0.200 / 60.0 ) ) ;
     }
 
     private void setCommandAndParameterStrings( ImageJCommandsSubmitter commandsSubmitter, File batchFile )
@@ -160,7 +154,7 @@ public class ProcessBDVulcanImagesOnSlurmCommand implements Command
         final ImageJ ij = new ImageJ();
         ij.ui().showUI();
 
-        ij.command().run( ProcessBDVulcanImagesOnSlurmCommand.class, true );
+        ij.command().run( BDVulcanSlurmProcessorCommand.class, true );
 
     }
 }
