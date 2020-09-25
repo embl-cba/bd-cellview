@@ -2,8 +2,12 @@ package de.embl.cba.imflow;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import de.embl.cba.cluster.commands.Commands;
 import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
+import de.embl.cba.tables.FileAndUrlUtils;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
 import ij.ImagePlus;
@@ -19,17 +23,16 @@ import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
 
 import javax.swing.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static de.embl.cba.imflow.FCCF.checkFileSize;
 import static org.scijava.ItemVisibility.MESSAGE;
 
-@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Dataset"  )
-public class BDVulcanDatasetProcessorCommand implements Command, Interactive
+@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Multiple BD Vulcan Datasets"  )
+public class BDVulcanProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
@@ -38,7 +41,6 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 
 	@Parameter ( label = "Dataset Tables" )
 	public File[] tableFiles;// = new File("Please browse to a dataset table file");
-
 
 	@Parameter ( label = "Minimum File Size [kb]")
 	public double minimumFileSizeKiloBytes = 10;
@@ -100,15 +102,17 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Process on Local Computer", callback = "processImages" )
 	private transient Button processImagesButton = new MyButton();
 
-	@Parameter ( label = "Process on Computer Cluster", callback = "processImagesOnCluster" )
-	private transient Button processImagesOnClusterButton = new MyButton();
+//	@Parameter ( label = "Process on Computer Cluster", callback = "processImagesOnCluster" )
+//	private transient Button processImagesOnClusterButton = new MyButton();
 
-//	@Parameter ( label = "Save Settings for Running Headless", callback = "saveHeadlessCommand" )
-//	private transient Button saveHeadlessCommand = new MyButton();
+	@Parameter ( label = "Save Settings for Running Headless", callback = "saveSettings" )
+	private transient Button saveSettingsCommand = new MyButton();
 
 	public String experimentDirectory;
 	public File selectedTableFile;
 	public String gateColumnName = "gate";
+	public boolean quitAfterRun = false;
+
 	private transient String selectedGate;
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
@@ -121,6 +125,16 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 	private transient String imagePathColumnName = "path";
 	private transient String randomImageFilePath;
 	private transient boolean batchMode = true;
+
+	public static BDVulcanProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
+	{
+		InputStream inputStream = FileAndUrlUtils.getInputStream( jsonFile.getAbsolutePath() );
+		final JsonReader reader = new JsonReader( new InputStreamReader( inputStream, "UTF-8" ) );
+		DebugTools.setRootLevel("OFF"); // Bio-Formats
+		Gson gson = new Gson();
+		Type type = new TypeToken< BDVulcanProcessorCommand >() {}.getType();
+		return gson.fromJson( reader, type );
+	}
 
 	public void run()
 	{
@@ -184,6 +198,7 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 			for ( File file : tableFiles )
 			{
 				selectedTableFile = file;
+				jTable = null; // in order to force loading of the table in below code
 				processImagesFromSelectedTableFile();
 			}
 		}).start();
@@ -196,7 +211,9 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		new Thread( () ->
 		{
 			batchMode = true;
+			quitAfterRun = true; // this is also in the settings file, thus could be removed here
 			processImagesFromSelectedTableFile();
+			if ( quitAfterRun ) Commands.quitImageJ( logService );
 		}).start();
 	}
 
@@ -234,20 +251,40 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		IJ.log( "Selected Gate: " + selectedGate );
 	}
 
-	private void saveHeadlessCommand() throws IOException
+
+	/**
+	 * Save a settings file that can be used to run the processing in headless mode,
+	 * for example on a computer cluster.
+	 *
+	 * The settings file can be executed by the {@code BDVulcanHeadlessProcessorCommand}
+	 *
+	 * @throws IOException
+	 */
+	private void saveSettings() throws IOException
 	{
-		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		final String json = gson.toJson( this );
+		// TODO: add a path mapping option UI for the table path!
 
-		final File file = new File( experimentDirectory, "batchProcess.json" );
-		final FileWriter writer = new FileWriter( file ) ;
-		writer.write( json );
-		writer.close();
+		for ( File file : tableFiles )
+		{
+			selectedTableFile = file;
+			experimentDirectory = new File( selectedTableFile.getParent() ).getParent();
+			quitAfterRun = true; // important for running headless on cluster, otherwise the job does not end!
 
-		IJ.log( "Settings: " + json );
-		IJ.log( "Wrote settings to file: " + file.getAbsolutePath() );
-		IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
-		IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ file.getAbsolutePath() +"'\"");
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			final String json = gson.toJson( this );
+
+			final File settingsFile = new File( experimentDirectory, "batchProcess.json" );
+			final FileWriter writer = new FileWriter( settingsFile ) ;
+			writer.write( json );
+			writer.close();
+
+			IJ.log( "Settings: " + json );
+			IJ.log( "Wrote settings to file: " + settingsFile.getAbsolutePath() );
+			IJ.log( "Please run like below (replacing the path to the Fiji executable)" );
+			IJ.log( "/Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run \"Batch Process BD Vulcan Dataset\" \"settingsFile='"+ settingsFile.getAbsolutePath() +"'\"");
+		}
+
+		quitAfterRun = false;
 	}
 
 	private boolean setColorToSliceAndColorToRange()
@@ -563,6 +600,6 @@ public class BDVulcanDatasetProcessorCommand implements Command, Interactive
 		final ImageJ imageJ = new ImageJ();
 		imageJ.ui().showUI();
 
-		imageJ.command().run( BDVulcanDatasetProcessorCommand.class, true );
+		imageJ.command().run( BDVulcanProcessorCommand.class, true );
 	}
 }
