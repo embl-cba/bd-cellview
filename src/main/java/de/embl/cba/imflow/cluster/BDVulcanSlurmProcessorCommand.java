@@ -123,8 +123,8 @@ public class BDVulcanSlurmProcessorCommand implements Command
 
     private int getApproximatelyNeededTimeInMinutes( int numImages )
     {
-        // less than 100 milliseconds per image
-        return (int) Math.ceil( numImages * ( 0.200 / 60.0 ) ) ;
+        // less than 500 milliseconds per image
+        return (int) Math.ceil( numImages * ( 0.500 / 60.0 ) ) ;
     }
 
     private void setCommandAndParameterStrings( ImageJCommandsSubmitter commandsSubmitter, File batchFile )

@@ -467,7 +467,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 			try
 			{
-				String outputImagePath = saveProcessedImage( maxNumItems, currentTimeMillis, rowIndex, inputImagePath );
+				String outputImagePath = saveProcessedImage( maxNumItems, currentTimeMillis, i, inputImagePath );
 			}
 			catch ( IOException e )
 			{
