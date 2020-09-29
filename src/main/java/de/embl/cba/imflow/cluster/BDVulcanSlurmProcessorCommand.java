@@ -1,9 +1,9 @@
 package de.embl.cba.imflow.cluster;
 
-import de.embl.cba.cluster.ImageJCommandsSubmitter;
 import de.embl.cba.cluster.JobFuture;
+import de.embl.cba.cluster.JobMonitor;
 import de.embl.cba.cluster.JobSettings;
-import de.embl.cba.cluster.SlurmJobMonitor;
+import de.embl.cba.cluster.JobSubmitter;
 import de.embl.cba.imflow.BDVulcanHeadlessProcessorCommand;
 import de.embl.cba.imflow.BDVulcanProcessorCommand;
 import de.embl.cba.log.IJLazySwingLogger;
@@ -26,7 +26,7 @@ import java.util.Map;
 @Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Images on Slurm" )
 public class BDVulcanSlurmProcessorCommand implements Command
 {
-    public static final String FIJI_HEADLESS = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64 --mem=MEMORY_MB --ij2 --allow-multiple --headless --run";
+    public static final String FIJI_BD_VULCAN_HEADLESS = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64 --mem=MEMORY_MB --ij2 --allow-multiple --headless --run";
 
     /*
     @Parameter( label = "ImageJ executable (must be linux and cluster accessible)", required = false)
@@ -61,16 +61,16 @@ public class BDVulcanSlurmProcessorCommand implements Command
     {
         String jobDirectory = "/g/cba/cluster/" + userName;
 
-        ArrayList< JobFuture > jobFutures = submitJobsOnSlurm( FIJI_HEADLESS, jobDirectory, batchFiles );
+        ArrayList< JobFuture > jobFutures = submitJobsOnSlurm( FIJI_BD_VULCAN_HEADLESS, jobDirectory, batchFiles );
 
-        SlurmJobMonitor jobMonitor = new SlurmJobMonitor( new IJLazySwingLogger() );
+        JobMonitor jobMonitor = new JobMonitor( new IJLazySwingLogger() );
         jobMonitor.monitorJobProgress( jobFutures, jobStatusMonitoringInterval, maxNumResubmissions );
     }
 
     private ArrayList< JobFuture > submitJobsOnSlurm( String imageJ, String jobDirectory, File[] batchFiles )
     {
-        ImageJCommandsSubmitter commandsSubmitter = new ImageJCommandsSubmitter(
-                ImageJCommandsSubmitter.EXECUTION_SYSTEM_EMBL_SLURM,
+        JobSubmitter commandsSubmitter = new JobSubmitter(
+                JobSubmitter.EXECUTION_SYSTEM_EMBL_SLURM,
                 jobDirectory ,
                 imageJ,
                 userName,
@@ -83,7 +83,7 @@ public class BDVulcanSlurmProcessorCommand implements Command
             commandsSubmitter.clearCommands();
             setCommandAndParameterStrings( commandsSubmitter, batchFile );
             JobSettings jobSettings = getJobSettings( batchFile );
-            jobFutures.add( commandsSubmitter.submitCommands( jobSettings ) );
+            jobFutures.add( commandsSubmitter.submitJob( jobSettings ) );
 
             Utils.wait( 500 );
         }
@@ -118,7 +118,7 @@ public class BDVulcanSlurmProcessorCommand implements Command
 
     private int getApproximatelyNeededMemoryMB( )
     {
-        return 1000;
+        return 2000;
     }
 
     private int getApproximatelyNeededTimeInMinutes( int numImages )
@@ -127,7 +127,7 @@ public class BDVulcanSlurmProcessorCommand implements Command
         return (int) Math.ceil( numImages * ( 0.500 / 60.0 ) ) ;
     }
 
-    private void setCommandAndParameterStrings( ImageJCommandsSubmitter commandsSubmitter, File batchFile )
+    private void setCommandAndParameterStrings( JobSubmitter commandsSubmitter, File batchFile )
     {
         Map< String, Object > parameters = new HashMap<>();
 

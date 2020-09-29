@@ -4,9 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
+import de.embl.cba.cluster.Commands;
 import de.embl.cba.cluster.PathMapper;
-import de.embl.cba.cluster.commands.Commands;
-import de.embl.cba.imflow.devel.deprecated.BDOpenTableCommandDeprecated;
 import de.embl.cba.morphometry.Logger;
 import de.embl.cba.tables.FileAndUrlUtils;
 import de.embl.cba.tables.Tables;
@@ -18,11 +17,9 @@ import loci.common.DebugTools;
 import net.imagej.ImageJ;
 import org.scijava.command.Command;
 import org.scijava.command.Interactive;
-import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
-import weka.core.PropertyPath;
 
 import javax.swing.*;
 import java.io.*;
@@ -114,12 +111,10 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	public String selectedGate;
 	public int numberOfImagesToBeProcessed;
 
-
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
 	private transient int pathColumnIndex;
 	private transient JTable jTable;
-	private transient String recentImageTablePath = "";
 	private transient File inputImagesDirectory;
 	private transient File outputImagesRootDirectory;
 	private transient String imagePathColumnName = "path";
@@ -213,15 +208,15 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			batchMode = true;
 			quitAfterRun = true; // this is also in the settings file, thus could be removed here
 			processImagesFromSelectedTableFile();
-			if ( quitAfterRun ) Commands.quitImageJ();
+			if ( quitAfterRun ) Commands.quitImageJ(); // otherwise fiji does not quit when running headless
 		}).start();
 	}
 
 	private void processImagesFromSelectedTableFile()
 	{
-		setColorToSliceAndColorToRange();
-		if ( jTable == null ) loadTable( true );
 		IJ.log( "Processing table: " + selectedTableFile );
+		if ( jTable == null ) loadTable( true );
+		setColorToSliceAndColorToRange();
 		processAndSaveImages();
 	}
 
@@ -348,14 +343,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		// final String absolutePath = tableFile.getAbsolutePath(); this does not work when loading from json for some reason...
 		final String absolutePath = selectedTableFile.toString();
 
-		if ( recentImageTablePath.equals( absolutePath ) ) return;
-
-		final long currentTimeMillis = System.currentTimeMillis();
-		IJ.log("Loading table; please wait...");
-		jTable = Tables.loadTable( absolutePath );
-		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
-
-		recentImageTablePath = absolutePath;
+		loadTable( absolutePath );
 		experimentDirectory = new File( selectedTableFile.getParent() ).getParent();
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
@@ -367,6 +355,14 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 		setGates();
 		glimpseTable( jTable );
+	}
+
+	private void loadTable( String absolutePath )
+	{
+		final long currentTimeMillis = System.currentTimeMillis();
+		IJ.log("Loading table; please wait...");
+		jTable = Tables.loadTable( absolutePath );
+		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
 	}
 
 	private String getGateColumnNameDialog()
@@ -514,7 +510,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		Tables.saveTable( jTable, tableOutputFile );
 		IJ.log( "...done: " + tableOutputFile );
 		IJ.log( " " );
-		BDOpenTableCommandDeprecated.glimpseTable( jTable );
+		glimpseTable( jTable );
 	}
 
 //	@Override
