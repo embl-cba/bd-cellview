@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-@Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process Images on Slurm" )
+@Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Images on Slurm" )
 public class BDVulcanSlurmProcessorCommand implements Command
 {
     public static final String FIJI_BD_VULCAN_HEADLESS = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64 --mem=MEMORY_MB --ij2 --allow-multiple --headless --run";
@@ -96,17 +96,17 @@ public class BDVulcanSlurmProcessorCommand implements Command
         try
         {
             BDVulcanProcessorCommand command = BDVulcanProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
-            int numImages = command.getNumberOfImagesToBeProcessed();
 
             IJ.log( "Table: " + command.selectedTableFile );
             IJ.log( "Gate: " + command.selectedGate );
-            IJ.log( "Number of images: " + numImages );
+            IJ.log( "Number of images to be processed: " + command.numImagesToBeProcessed );
 
             JobSettings jobSettings = new JobSettings();
             jobSettings.numWorkersPerNode = numWorkers;
             jobSettings.queue = JobSettings.DEFAULT_QUEUE;
             jobSettings.memoryPerJobInMegaByte = getApproximatelyNeededMemoryMB();
-            jobSettings.timePerJobInMinutes = getApproximatelyNeededTimeInMinutes( numImages );
+            jobSettings.timePerJobInMinutes = getApproximatelyNeededTimeInMinutes( command.numImagesToBeProcessed );
+
             return jobSettings;
 
         } catch ( IOException e )

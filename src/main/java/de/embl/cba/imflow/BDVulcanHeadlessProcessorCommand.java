@@ -12,7 +12,7 @@ import java.io.*;
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>" + BDVulcanHeadlessProcessorCommand.COMMAND_NAME )
 public class BDVulcanHeadlessProcessorCommand implements Command
 {
-	public static final String COMMAND_NAME = "Headless Process Single BD Vulcan Dataset";
+	public static final String COMMAND_NAME = "Process BD Vulcan Images Headless";
 	private transient static final String NONE = "None";
 
 	@Parameter
@@ -27,7 +27,7 @@ public class BDVulcanHeadlessProcessorCommand implements Command
 		try
 		{
 			BDVulcanProcessorCommand command = BDVulcanProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
-			command.headlessProcessImagesFromSelectedTableFile();
+			command.processImagesHeadless();
 		} catch ( IOException e )
 		{
 			e.printStackTrace();
