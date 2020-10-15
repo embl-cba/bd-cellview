@@ -77,7 +77,6 @@
 		<enforcer.skip>true</enforcer.skip>
 	</properties>
 
-
 	<repositories>
 		<!-- NB: for SciJava dependencies -->
 		<repository>
