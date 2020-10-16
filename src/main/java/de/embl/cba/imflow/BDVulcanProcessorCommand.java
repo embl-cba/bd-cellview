@@ -84,28 +84,28 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	@Parameter ( visibility = MESSAGE )
 	private transient String preview = "--- Preview ---";
 
-	@Parameter ( label = "Select Table", callback = "selectTableDialog" )
+	@Parameter ( label = "Select Table", callback = "selectTableButtonCallback" )
 	public transient Button selectTableButton;
 
 //	@Parameter ( label = "Select Gate Column", callback = "selectGateColumn" )
 //	public transient Button selectGateColumnButton;
 
-	@Parameter ( label = "Select Gate", callback = "selectGateDialog" )
+	@Parameter ( label = "Select Gate", callback = "selectGateButtonCallback" )
 	public transient Button selectGateButton;
 
-	@Parameter ( label = "Preview Image", callback = "showRandomImage" )
+	@Parameter ( label = "Preview Image", callback = "showRandomImageButtonCallback" )
 	private transient Button previewImageButton = new MyButton();
 
 	@Parameter ( visibility = MESSAGE )
 	private transient String process = "--- Process Images from Selected Gate from All Tables ---";
 
-	@Parameter ( label = "Process on Local Computer", callback = "processImages" )
+	@Parameter ( label = "Process on Local Computer", callback = "processImagesButtonCallback" )
 	private transient Button processImagesButton = new MyButton();
 
 //	@Parameter ( label = "Process on Computer Cluster", callback = "processImagesOnCluster" )
 //	private transient Button processImagesOnClusterButton = new MyButton();
 
-	@Parameter ( label = "Save Settings for Headless Processing", callback = "saveSettings" )
+	@Parameter ( label = "Save Settings for Headless Processing", callback = "saveSettingsButtonCallback" )
 	private transient Button saveSettingsCommand = new MyButton();
 
 	public String experimentDirectory;
@@ -115,7 +115,6 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	public String selectedGate;
 	public int numImagesToBeProcessed;
 
-
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
 	private transient int pathColumnIndex;
@@ -124,7 +123,6 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	private transient File outputImagesRootDirectory;
 	private transient String imagePathColumnName = "path";
 	private transient String randomImageFilePath;
-	private transient boolean batchMode = true;
 	private transient ArrayList< Integer > selectedGateIndices;
 
 	public static BDVulcanProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
@@ -139,28 +137,29 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	public void run()
 	{
-		batchMode = false;
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 	}
 
-	private void showRandomImage()
+	private void showRandomImageButtonCallback()
 	{
 		if ( tableFiles == null || tableFiles.length == 0 )
 		{
 			IJ.showMessage( "Please select some tables first!" );
+			return;
 		}
 
 		if ( selectedTableFile == null )
 		{
-			selectTableDialog();
+			selectedTableFile = selectTableDialog( tableFiles );
+			jTable = null; // force table loading;
 		}
 
 		if ( jTable == null )
 		{
-			loadTable();
-			gateColumnName = selectGateColumnDialog();
+			loadTableAndUpdateRelatedFields( selectedTableFile );
+			gateColumnName = selectGateColumnDialog( jTable );
 			setGatesIndices();
-			selectedGate = selectGateDialog();
+			selectedGate = selectGateDialog( selectedGate, gateToRows.keySet() );
 			setSelectedGateIndices();
 		}
 
@@ -192,13 +191,28 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		});
 	}
 
-	private void processImages()
+	private void processImagesButtonCallback()
 	{
 		// the new thread is necessary for the progress logging in the IJ.log window
 		new Thread( () ->
 		{
+			/**
+			 * Ensure that there is a valid gate selected.
+			 * For this we may need to load a table first
+			 *
+			 */
+			if ( jTable == null )
+			{
+				selectedTableFile = tableFiles[ 0 ];
+				loadTableAndUpdateRelatedFields( selectedTableFile );
+				setGatesIndices();
+			}
+
 			if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
-				selectedGate = selectGateDialog();
+			{
+				selectedGate = selectGateDialog( selectedGate, gateToRows.keySet() );
+				setSelectedGateIndices();
+			}
 
 			for ( File file : tableFiles )
 			{
@@ -213,17 +227,15 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	{
 		new Thread( () ->
 		{
-			batchMode = true;
-			quitAfterRun = true; // this is also in the settings file, thus could be removed here
 			processImagesFromSelectedTableFile();
-			if ( quitAfterRun ) Commands.quitImageJ(); // otherwise fiji does not quit when running headless
+			if ( quitAfterRun ) Commands.quitImageJ();
 		}).start();
 	}
 
 	private void processImagesFromSelectedTableFile()
 	{
 		IJ.log( "Processing table: " + selectedTableFile );
-		loadTable();
+		loadTableAndUpdateRelatedFields( selectedTableFile );
 		setColorToSliceAndColorToRange();
 		setGatesIndices();
 		setSelectedGateIndices();
@@ -231,42 +243,63 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		processAndSaveImages();
 	}
 
-	private void selectTableDialog()
+	private void selectTableButtonCallback()
+	{
+		if ( tableFiles == null || tableFiles.length == 0 )
+		{
+			IJ.showMessage( "Please add some tables first." );
+			return;
+		}
+
+		selectTableDialog( tableFiles );
+	}
+
+
+	private static File selectTableDialog( File[] tableFiles )
 	{
 		final GenericDialog gd = new GenericDialog( "Please select table for image preview" );
 		final String[] tablePaths = Arrays.stream( tableFiles ).map( x -> x.toString() ).toArray( String[]::new );
 		gd.addChoice( "Table", tablePaths, tablePaths[ 0 ] );
 		gd.showDialog();
-		if ( gd.wasCanceled() ) return;
-		selectedTableFile = new File( gd.getNextChoice() );
+		if ( gd.wasCanceled() ) return null;
+		File selectedTableFile = new File( gd.getNextChoice() );
 		IJ.log( "Selected Table: " + selectedTableFile );
-		loadTable();
+		return selectedTableFile;
 	}
 
-	private String selectGateDialog()
+	private void selectGateButtonCallback()
 	{
 		if ( jTable == null )
 		{
-			selectedTableFile = tableFiles[ 0 ];
-			loadTable();
+			if ( selectedTableFile == null )
+			{
+				selectTableDialog( tableFiles );
+			}
+
+			loadTableAndUpdateRelatedFields( selectedTableFile );
+			gateColumnName = selectGateColumnDialog( jTable );
 			setGatesIndices();
 		}
 
-		final GenericDialog gd = new GenericDialog( "Please select gate for image preview" );
-		final String[] choices = gateToRows.keySet().stream().toArray( String[]::new );
+		selectGateDialog( selectedGate, gateToRows.keySet() );
+		setSelectedGateIndices();
+	}
 
-		gd.addChoice( "Gate", choices, selectedGate );
+	private static String selectGateDialog( String currentSelectedGate, Set< String > gates )
+	{
+		final GenericDialog gd = new GenericDialog( "Please select gate for image preview" );
+		final String[] choices = gates.stream().toArray( String[]::new );
+
+		gd.addChoice( "Gate", choices, currentSelectedGate );
 		gd.showDialog();
 
 		if ( gd.wasCanceled() )
-			return selectedGate;
+			return currentSelectedGate;
 
 		String selectedGate = gd.getNextChoice();
-		setSelectedGateIndices();
 
 		return selectedGate;
 	}
-
 
 	/**
 	 * Save a settings file that can be used to run the processing in headless mode,
@@ -276,18 +309,15 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	 *
 	 * @throws IOException
 	 */
-	private void saveSettings()
+	private void saveSettingsButtonCallback()
 	{
 		new Thread( () -> {
 
-			if ( jTable == null )
+			if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
 			{
-				selectedTableFile = tableFiles[ 0 ];
-				loadTable();
+				IJ.showMessage( "Please first select a Gate from which to process the images!" );
+				return;
 			}
-
-			if ( selectedGate == null || !gateToRows.keySet().contains( selectedGate ) )
-				selectedGate = selectGateDialog();
 
 			// remember fields
 			File selectedTableFile = this.selectedTableFile;
@@ -307,7 +337,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			}
 
 			// reset fields
-			quitAfterRun = false;
+			this.quitAfterRun = false;
 			this.selectedTableFile = selectedTableFile;
 			this.experimentDirectory = experimentDirectory;
 			this.numImagesToBeProcessed = numImagesToBeProcessed;
@@ -327,7 +357,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	private void createSettingsJsonFile( File tableFile ) throws IOException
 	{
-		loadTable();
+		loadTableAndUpdateRelatedFields( selectedTableFile );
 		setGatesIndices();
 		setSelectedGateIndices();
 		setNumImagesToBeProcessed();
@@ -383,7 +413,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		}
 	}
 
-	public void loadTable()
+	public void loadTableAndUpdateRelatedFields( File selectedTableFile )
 	{
 		if ( ! selectedTableFile.exists()  )
 		{
@@ -395,6 +425,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		final String absolutePath = selectedTableFile.toString();
 
 		loadTable( absolutePath );
+
 		experimentDirectory = new File( selectedTableFile.getParent() ).getParent();
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
@@ -410,7 +441,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
 	}
 
-	private String selectGateColumnDialog()
+	private static String selectGateColumnDialog( JTable jTable )
 	{
 		final List< String > columnNames = Tables.getColumnNames( jTable );
 		columnNames.add( "There is no gate column" );
