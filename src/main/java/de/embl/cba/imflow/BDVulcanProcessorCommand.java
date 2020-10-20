@@ -357,7 +357,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	private void createSettingsJsonFile( File tableFile ) throws IOException
 	{
-		loadTableAndUpdateRelatedFields( selectedTableFile );
+		loadTableAndUpdateRelatedFields( tableFile );
 		setGatesIndices();
 		setSelectedGateIndices();
 		setNumImagesToBeProcessed();
@@ -436,7 +436,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	private void loadTable( String absolutePath )
 	{
 		final long currentTimeMillis = System.currentTimeMillis();
-		IJ.log("Loading table; please wait...");
+		IJ.log("\nLoading table: " + absolutePath );
 		jTable = Tables.loadTable( absolutePath );
 		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
 	}
