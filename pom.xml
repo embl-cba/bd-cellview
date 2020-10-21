@@ -10,7 +10,7 @@
 
 	<groupId>de.embl.cba</groupId>
 	<artifactId>imflow</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.2.0</version>
 
 	<name>fccf</name>
 	<description>Tools for handling flow cytometry images</description>

@@ -251,7 +251,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			return;
 		}
 
-		selectTableDialog( tableFiles );
+		selectedTableFile = selectTableDialog( tableFiles );
 	}
 
 
@@ -273,7 +273,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		{
 			if ( selectedTableFile == null )
 			{
-				selectTableDialog( tableFiles );
+				selectedTableFile = selectTableDialog( tableFiles );
 			}
 
 			loadTableAndUpdateRelatedFields( selectedTableFile );
@@ -281,7 +281,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 			setGatesIndices();
 		}
 
-		selectGateDialog( selectedGate, gateToRows.keySet() );
+		selectedGate = selectGateDialog( selectedGate, gateToRows.keySet() );
 		setSelectedGateIndices();
 	}
 
