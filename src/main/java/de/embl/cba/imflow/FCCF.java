@@ -4,15 +4,13 @@ import de.embl.cba.tables.FileUtils;
 import ij.CompositeImage;
 import ij.IJ;
 import ij.ImagePlus;
-import ij.plugin.Duplicator;
-import ij.plugin.RGBStackConverter;
-import ij.plugin.RGBStackMerge;
-import ij.plugin.StackInserter;
+import ij.plugin.*;
 import ij.plugin.filter.Convolver;
 import ij.process.ColorProcessor;
 import ij.process.LUT;
 import loci.formats.FormatException;
 import loci.plugins.BF;
+import mdbtools.libmdb.file;
 
 import java.awt.*;
 import java.io.File;
@@ -56,23 +54,30 @@ public abstract class FCCF
 			String filePath,
 			Map< String, double[] > nameToRange,
 			Map< String, Integer > nameToSlice,
+			int horizontalCropNumPixels,
 			String viewingModality )
 	{
-		ImagePlus inputImp = tryOpenImage( filePath );
+		ImagePlus imp = tryOpenImage( filePath );
 
-		if ( viewingModality.equals( FCCF.VIEW_RAW ) ) return inputImp;
+		if ( viewingModality.equals( FCCF.VIEW_RAW ) ) return imp;
 
-		inputImp = processImage( inputImp );
+		imp = processImage( imp );
 
-		final Map< String, ImagePlus > colorToImp = extractChannels( inputImp, nameToRange, nameToSlice );
+		if ( horizontalCropNumPixels > 0 )
+		{
+			imp.setRoi( new Rectangle( horizontalCropNumPixels, 0, imp.getWidth() - 2 * horizontalCropNumPixels, imp.getHeight() ) );
+			imp = imp.crop( "stack" );
+		}
+
+		final Map< String, ImagePlus > colorToImp = extractChannels( imp, nameToRange, nameToSlice );
 
 		addOverlayAndConvertImagesToRGB( colorToImp );
 
-		ImagePlus outputImp = createOutputImp( colorToImp, viewingModality );
+		imp = createOutputImp( colorToImp, viewingModality );
 
-		outputImp.setTitle( new File( filePath ).getName() );
+		imp.setTitle( new File( filePath ).getName() );
 
-		return outputImp;
+		return imp;
 	}
 
 	public static ImagePlus tryOpenImage( String filePath )
@@ -138,21 +143,24 @@ public abstract class FCCF
 		return imps[ 0 ];
 	}
 
-	public static ImagePlus processImage( ImagePlus inputImp )
+	public static ImagePlus processImage( ImagePlus imp )
 	{
-		IJ.run(inputImp, "Scale...", "x=1.0 y=0.8 z=1.0 interpolation=Bilinear average process title=stack");
+		int height = imp.getHeight();
+		int scaledHeight = (int) ( 0.8 * height );
+		imp = Scaler.resize( imp, imp.getWidth(), scaledHeight, imp.getStackSize(), "bilinear" );
+		//IJ.run(imp, "Scale...", "x=1.0 y=0.8 z=1.0 interpolation=Bilinear average process create title=scaled");
 
 		final Convolver convolver = new Convolver();
 		convolver.setNormalize( true );
-		for (int i = 1; i <= inputImp.getStackSize(); i++)
+		for (int i = 1; i <= imp.getStackSize(); i++)
 		{
 			convolver.convolve(
-					inputImp.getStack().getProcessor(i),
+					imp.getStack().getProcessor(i),
 					new float[]{0, 1.6F, 4, 1.6F, 0}, 5, 1 );
 			//IJ.run(inputImp, "Convolve...", "text1=[0 1.6 4 1.6 0\n] normalize stack");
 		}
 
-		return inputImp;
+		return imp;
 	}
 
 	public static void addOverlayAndConvertImagesToRGB( Map< String, ImagePlus > colorToImp )
