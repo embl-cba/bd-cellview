@@ -49,7 +49,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	public double maximumFileSizeKiloBytes = 100000;
 
 	@Parameter ( label = "Horizontal Crop [pixels]", callback = "showRandomImageFromFilePath" )
-	public int horizontalCropNumPixels = 0;
+	public int horizontalCropPixels = 0;
 
 	@Parameter ( label = "Gray Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String whiteIndexString = "1";
@@ -182,7 +182,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		if ( ! setColorToSliceAndColorToRange() ) return;
 		if ( randomImageFilePath == null ) return;
 		if ( processedImp != null ) processedImp.close();
-		processedImp = createProcessedImagePlus( randomImageFilePath, horizontalCropNumPixels );
+		processedImp = createProcessedImagePlus( randomImageFilePath, horizontalCropPixels );
 		processedImp.show();
 	}
 
@@ -492,7 +492,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 		if ( checkFileSize( absoluteInputPath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
 		{
-			processedImp = createProcessedImagePlus( inputPath, horizontalCropNumPixels );
+			processedImp = createProcessedImagePlus( inputPath, horizontalCropPixels );
 
 			// Images can be in subfolders, thus we only
 			// replace the root path

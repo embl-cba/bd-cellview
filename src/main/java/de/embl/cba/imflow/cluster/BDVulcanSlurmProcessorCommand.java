@@ -46,6 +46,10 @@ public class BDVulcanSlurmProcessorCommand implements Command
     public int numWorkers = 1;
     public static final String NUM_WORKERS = "numWorkers";
 
+    @Parameter( label = "Memory per job [MB]" )
+    public int memory = 32000;
+    public static final String MEMORY = "memory";
+
     @Parameter( label = "Batch files" )
     public File[] batchFiles;
     public static final String BATCH_FILES = "batchFiles";
@@ -104,7 +108,7 @@ public class BDVulcanSlurmProcessorCommand implements Command
             JobSettings jobSettings = new JobSettings();
             jobSettings.numWorkersPerNode = numWorkers;
             jobSettings.queue = JobSettings.DEFAULT_QUEUE;
-            jobSettings.memoryPerJobInMegaByte = getApproximatelyNeededMemoryMB();
+            jobSettings.memoryPerJobInMegaByte = memory;
             jobSettings.timePerJobInMinutes = getApproximatelyNeededTimeInMinutes( command.numImagesToBeProcessed );
 
             return jobSettings;
@@ -114,11 +118,6 @@ public class BDVulcanSlurmProcessorCommand implements Command
             e.printStackTrace();
             throw new RuntimeException(  );
         }
-    }
-
-    private int getApproximatelyNeededMemoryMB( )
-    {
-        return 2000;
     }
 
     private int getApproximatelyNeededTimeInMinutes( int numImages )
