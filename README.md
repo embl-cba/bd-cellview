@@ -28,3 +28,7 @@ id7;S;../images/Cell_Cycle_00014714.tiff
 id8;S;../images/Cell_Cycle_00016839.tiff
 id9;NA;../images/Cell_Cycle_00017276.tiff
 ```
+
+### Log files
+
+Slurm process and error logs are located in: /Volumes/cba/cluster/schraivo
