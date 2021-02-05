@@ -1,9 +1,6 @@
 package de.embl.cba.imflow.cluster;
 
-import de.embl.cba.cluster.JobFuture;
-import de.embl.cba.cluster.JobMonitor;
-import de.embl.cba.cluster.JobSettings;
-import de.embl.cba.cluster.JobSubmitter;
+import de.embl.cba.cluster.*;
 import de.embl.cba.imflow.BDVulcanHeadlessProcessorCommand;
 import de.embl.cba.imflow.BDVulcanProcessorCommand;
 import de.embl.cba.log.IJLazySwingLogger;
@@ -22,18 +19,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-
 @Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Images on Slurm" )
 public class BDVulcanSlurmProcessorCommand implements Command
 {
-    @Parameter( label = "ImageJ cluster executable path")
-    public String clusterFijiPath = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64";
+    @Parameter( label = "SSH accessible execution host" )
+    private String executionHost = "login.cluster.embl.de";
 
     @Parameter( label = "Username" )
     private String userName = "tischer";
 
     @Parameter( label = "Password", style = TextWidget.PASSWORD_STYLE, persist = false )
     private String password;
+
+    @Parameter( label = "Path to Fiji from execution host")
+    public String clusterFijiPath = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64";
 
     @Parameter( label = "Number of CPUs per job" )
     public int numWorkers = 1;
@@ -54,7 +53,7 @@ public class BDVulcanSlurmProcessorCommand implements Command
 
     public void run()
     {
-        String jobDirectory = "/g/cba/cluster/" + userName;
+        String jobDirectory = "/g/cba/cluster/" + executionHost;
 
         ArrayList< JobFuture > jobFutures = submitJobsOnSlurm( clusterFijiPath + FIJI_OPTIONS, jobDirectory, settingsFiles );
 
@@ -64,11 +63,15 @@ public class BDVulcanSlurmProcessorCommand implements Command
 
     private ArrayList< JobFuture > submitJobsOnSlurm( String imageJ, String jobDirectory, File[] batchFiles )
     {
+        final JobExecutor jobExecutor = new JobExecutor();
+        jobExecutor.hostName = executionHost;
+        jobExecutor.scriptType = JobExecutor.ScriptType.SlurmJob;
+
         JobSubmitter commandsSubmitter = new JobSubmitter(
-                JobSubmitter.EXECUTION_SYSTEM_EMBL_SLURM,
+                jobExecutor,
                 jobDirectory ,
                 imageJ,
-                userName,
+                executionHost,
                 password );
 
         ArrayList< JobFuture > jobFutures = new ArrayList<>( );

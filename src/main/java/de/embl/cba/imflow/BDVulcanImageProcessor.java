@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class BDVulcanProcessor
+public abstract class BDVulcanImageProcessor
 {
 	public static final String OVERLAY = "Overlay";
 	public static final String FORWARD_SCATTER = "ForewardScatter";
@@ -58,7 +58,7 @@ public abstract class BDVulcanProcessor
 	{
 		ImagePlus imp = tryOpenImage( filePath );
 
-		if ( viewingModality.equals( BDVulcanProcessor.VIEW_RAW ) ) return imp;
+		if ( viewingModality.equals( BDVulcanImageProcessor.VIEW_RAW ) ) return imp;
 
 		imp = processImage( imp );
 
@@ -156,7 +156,7 @@ public abstract class BDVulcanProcessor
 			convolver.convolve(
 					imp.getStack().getProcessor(i),
 					new float[]{0, 1.6F, 4, 1.6F, 0}, 5, 1 );
-			//IJ.run(inputImp, "Convolve...", "text1=[0 1.6 4 1.6 0\n] normalize stack");
+					// normalised: 0.0 0.24 0.55 0.24 0.0
 		}
 
 		return imp;
@@ -205,7 +205,7 @@ public abstract class BDVulcanProcessor
 
 			return montageImp;
 		}
-		else if ( viewingModality.equals( BDVulcanProcessor.VIEW_PROCESSED_MONTAGE ) )
+		else if ( viewingModality.equals( BDVulcanImageProcessor.VIEW_PROCESSED_MONTAGE ) )
 		{
 			// NOTE: This viewing modality is currently not used
 
