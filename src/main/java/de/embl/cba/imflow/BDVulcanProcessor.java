@@ -10,7 +10,6 @@ import ij.process.ColorProcessor;
 import ij.process.LUT;
 import loci.formats.FormatException;
 import loci.plugins.BF;
-import mdbtools.libmdb.file;
 
 import java.awt.*;
 import java.io.File;
@@ -20,10 +19,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class FCCF
+public abstract class BDVulcanProcessor
 {
 	public static final String OVERLAY = "Overlay";
-	public static final String FOREWARD_SCATTER = "ForewardScatter";
+	public static final String FORWARD_SCATTER = "ForewardScatter";
 	public static final String SIDE_SCATTER = "SideScatter";
 	public static final String WHITE = "White";
 	public static final String GREEN = "Green";
@@ -59,7 +58,7 @@ public abstract class FCCF
 	{
 		ImagePlus imp = tryOpenImage( filePath );
 
-		if ( viewingModality.equals( FCCF.VIEW_RAW ) ) return imp;
+		if ( viewingModality.equals( BDVulcanProcessor.VIEW_RAW ) ) return imp;
 
 		imp = processImage( imp );
 
@@ -206,8 +205,10 @@ public abstract class FCCF
 
 			return montageImp;
 		}
-		else if ( viewingModality.equals( FCCF.VIEW_PROCESSED_MONTAGE ) )
+		else if ( viewingModality.equals( BDVulcanProcessor.VIEW_PROCESSED_MONTAGE ) )
 		{
+			// NOTE: This viewing modality is currently not used
+
 			// make montage
 			final int width = colorToImp.get( WHITE ).getWidth();
 			final int height = colorToImp.get( WHITE ).getHeight();
@@ -222,7 +223,7 @@ public abstract class FCCF
 			inserter.insert( colorToImp.get( GREEN ), montageImp, width, 0 );
 			inserter.insert( colorToImp.get( OVERLAY ), montageImp, 2 * width, 0 );
 			inserter.insert( colorToImp.get( SIDE_SCATTER ), montageImp, 0, height );
-			inserter.insert( colorToImp.get( FOREWARD_SCATTER ), montageImp, width, height );
+			inserter.insert( colorToImp.get( FORWARD_SCATTER ), montageImp, width, height );
 
 			return montageImp;
 		}

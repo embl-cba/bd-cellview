@@ -28,7 +28,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static de.embl.cba.imflow.FCCF.checkFileSize;
+import static de.embl.cba.imflow.BDVulcanProcessor.checkFileSize;
 import static org.scijava.ItemVisibility.MESSAGE;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Images"  )
@@ -78,8 +78,8 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Maximum Magenta Intensity", callback = "showRandomImageFromFilePath"  )
 	public double maxMagenta = 1.0;
 
-	@Parameter ( label = "Processing Modality", choices = { FCCF.VIEW_RAW, FCCF.VIEW_PROCESSED_OVERLAY, FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
-	public String viewingModality = FCCF.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
+	@Parameter ( label = "Processing Modality", choices = { BDVulcanProcessor.VIEW_RAW, BDVulcanProcessor.VIEW_PROCESSED_OVERLAY, BDVulcanProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
+	public String viewingModality = BDVulcanProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
 	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
 	public int maxNumFiles = -1;
@@ -383,29 +383,30 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	private boolean setColorToSliceAndColorToRange()
 	{
-		final HashMap< String, Integer > colorToSlice = FCCF.getColorToSlice();
+		final HashMap< String, Integer > colorToSlice = BDVulcanProcessor.getColorToSlice();
 		colorToSlice.clear();
-		final HashMap< String, double[] > colorToRange = FCCF.getColorToRange();
+		final HashMap< String, double[] > colorToRange = BDVulcanProcessor.getColorToRange();
 		colorToRange.clear();
 
 		if ( ! whiteIndexString.equals( NONE ) )
 		{
-			colorToSlice.put( FCCF.WHITE, Integer.parseInt( whiteIndexString ) );
-			colorToRange.put( FCCF.WHITE, new double[]{ minWhite, maxWhite} );
+			colorToSlice.put( BDVulcanProcessor.WHITE, Integer.parseInt( whiteIndexString ) );
+			colorToRange.put( BDVulcanProcessor.WHITE, new double[]{ minWhite, maxWhite} );
 		}
 
 		if ( ! greenIndexString.equals( NONE ) )
 		{
-			colorToSlice.put( FCCF.GREEN, Integer.parseInt( greenIndexString ) );
-			colorToRange.put( FCCF.GREEN, new double[]{ minGreen, maxGreen} );
+			colorToSlice.put( BDVulcanProcessor.GREEN, Integer.parseInt( greenIndexString ) );
+			colorToRange.put( BDVulcanProcessor.GREEN, new double[]{ minGreen, maxGreen} );
 		}
 
 		if ( ! magentaIndexString.equals( NONE ) )
 		{
-			colorToSlice.put( FCCF.MAGENTA, Integer.parseInt( magentaIndexString ) );
-			colorToRange.put( FCCF.MAGENTA, new double[]{ minMagenta, maxMagenta} );
+			colorToSlice.put( BDVulcanProcessor.MAGENTA, Integer.parseInt( magentaIndexString ) );
+			colorToRange.put( BDVulcanProcessor.MAGENTA, new double[]{ minMagenta, maxMagenta} );
 		}
-		if ( FCCF.getColorToSlice().size() == 0 )
+
+		if ( BDVulcanProcessor.getColorToSlice().size() == 0 )
 		{
 			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
 			return false;
@@ -632,7 +633,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	private ImagePlus createProcessedImagePlus( String filePath, int horizontalCropNumPixels )
 	{
-		ImagePlus processedImp = FCCF.createProcessedImage( filePath, FCCF.getColorToRange(), FCCF.getColorToSlice(), horizontalCropNumPixels, viewingModality );
+		ImagePlus processedImp = BDVulcanProcessor.createProcessedImage( filePath, BDVulcanProcessor.getColorToRange(), BDVulcanProcessor.getColorToSlice(), horizontalCropNumPixels, viewingModality );
 
 		return processedImp;
 	}
