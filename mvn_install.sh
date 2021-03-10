@@ -1,8 +1,8 @@
 #!/bin/sh
 
-IJ_UTILS="0.5.6"
-IMFLOW="0.2.1"
-IJ_CLUSTER="0.6.5"
+IJ_UTILS="0.6.1"
+IMFLOW="0.2.2"
+IJ_CLUSTER="0.6.7"
 
 mvn clean package
 
