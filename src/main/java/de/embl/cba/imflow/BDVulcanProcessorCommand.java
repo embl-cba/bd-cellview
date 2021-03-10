@@ -19,7 +19,6 @@ import org.scijava.command.Command;
 import org.scijava.command.Interactive;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.plugin.PluginService;
 import org.scijava.widget.Button;
 
 import javax.swing.*;
@@ -29,17 +28,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static de.embl.cba.imflow.BDVulcanImageProcessor.checkFileSize;
-import static org.scijava.ItemVisibility.MESSAGE;
 
 @Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Images"  )
 public class BDVulcanProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
-	@Parameter
-	private transient PluginService pluginService;
-
-	@Parameter ( label = "Dataset Tables", persist = true )
+	@Parameter ( label = "Dataset Tables", persist = true, required = false )
 	public transient File[] tableFiles;
 
 	@Parameter ( label = "Minimum File Size [kb]" )
@@ -48,68 +43,59 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Maximum File Size [kb]" )
 	public double maximumFileSizeKiloBytes = 100000;
 
-	@Parameter ( label = "Horizontal Crop [pixels]", callback = "showRandomImageFromFilePath" )
+	@Parameter ( label = "Horizontal Crop [pixels]", callback = "processAndShowImageFromFilePath" )
 	public int horizontalCropPixels = 0;
 
 	@Parameter ( label = "Gray Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String whiteIndexString = "1";
 
-	@Parameter ( label = "Minimum Gray Intensity", callback = "showRandomImageFromFilePath" )
+	@Parameter ( label = "Minimum Gray Intensity", callback = "processAndShowImageFromFilePath" )
 	public double minWhite = 0.0;
 
-	@Parameter ( label = "Maximum Gray Intensity", callback = "showRandomImageFromFilePath" )
+	@Parameter ( label = "Maximum Gray Intensity", callback = "processAndShowImageFromFilePath" )
 	public double maxWhite = 1.0;
 
 	@Parameter ( label = "Green Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String greenIndexString = "2";
 
-	@Parameter ( label = "Minimum Green Intensity", callback = "showRandomImageFromFilePath"  )
+	@Parameter ( label = "Minimum Green Intensity", callback = "processAndShowImageFromFilePath"  )
 	public double minGreen = 0.08;
 
-	@Parameter ( label = "Maximum Green Intensity", callback = "showRandomImageFromFilePath"  )
+	@Parameter ( label = "Maximum Green Intensity", callback = "processAndShowImageFromFilePath"  )
 	public double maxGreen = 1.0;
 
 	@Parameter ( label = "Magenta Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
 	public String magentaIndexString = "3";
 
-	@Parameter ( label = "Minimum Magenta Intensity", callback = "showRandomImageFromFilePath"  )
+	@Parameter ( label = "Minimum Magenta Intensity", callback = "processAndShowImageFromFilePath"  )
 	public double minMagenta = 0.08;
 
-	@Parameter ( label = "Maximum Magenta Intensity", callback = "showRandomImageFromFilePath"  )
+	@Parameter ( label = "Maximum Magenta Intensity", callback = "processAndShowImageFromFilePath"  )
 	public double maxMagenta = 1.0;
 
 	@Parameter ( label = "Processing Modality", choices = { BDVulcanImageProcessor.VIEW_RAW, BDVulcanImageProcessor.VIEW_PROCESSED_OVERLAY, BDVulcanImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = BDVulcanImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
-	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
-	public int maxNumFiles = -1;
-
-	@Parameter ( visibility = MESSAGE )
-	private transient String preview = "--- Preview ---";
+	@Parameter ( label = "Process Image File", callback = "processImageFileButtonCallback", required = false )
+	private transient File imageFile;
 
 	@Parameter ( label = "Select Table", callback = "selectTableButtonCallback" )
 	public transient Button selectTableButton;
 
-//	@Parameter ( label = "Select Gate Column", callback = "selectGateColumn" )
-//	public transient Button selectGateColumnButton;
-
 	@Parameter ( label = "Select Gate", callback = "selectGateButtonCallback" )
 	public transient Button selectGateButton;
 
-	@Parameter ( label = "Preview Image", callback = "showRandomImageButtonCallback" )
-	private transient Button previewImageButton = new MyButton();
+	@Parameter ( label = "Process Random Image of Selected Gate from Selected Table", callback = "processAndShowRandomImageFromSelectedGateButtonCallback" )
+	private transient Button processAndShowRandomImageButton;
 
-	@Parameter ( visibility = MESSAGE )
-	private transient String process = "--- Process Images from Selected Gate from All Tables ---";
-
-	@Parameter ( label = "Process on Local Computer", callback = "processImagesButtonCallback" )
-	private transient Button processImagesButton = new MyButton();
-
-//	@Parameter ( label = "Process on Computer Cluster", callback = "processImagesOnCluster" )
-//	private transient Button processImagesOnClusterButton = new MyButton();
+	@Parameter ( label = "Process All Images of Selected Gate from All Tables ", callback = "processImagesButtonCallback" )
+	private transient Button processAllImagesButton;
 
 	@Parameter ( label = "Save Settings for Headless Processing", callback = "saveSettingsButtonCallback" )
-	private transient Button saveSettingsCommand = new MyButton();
+	private transient Button saveHeadlessSettingsButton;
+
+	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
+	public int maxNumFiles = -1;
 
 	public String experimentDirectory;
 	public File selectedTableFile;
@@ -125,7 +111,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	private transient File inputImagesDirectory;
 	private transient File outputImagesRootDirectory;
 	private transient String imagePathColumnName = "path";
-	private transient String randomImageFilePath;
+	private transient String imageFilePath;
 	private transient ArrayList< Integer > selectedGateIndices;
 
 	public static BDVulcanProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
@@ -143,7 +129,13 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 	}
 
-	private void showRandomImageButtonCallback()
+	private void processImageFileButtonCallback()
+	{
+		imageFilePath = imageFile.getPath();
+		processAndShowImageFromFilePath();
+	}
+
+	private void processAndShowRandomImageFromSelectedGateButtonCallback()
 	{
 		if ( tableFiles == null || tableFiles.length == 0 )
 		{
@@ -168,30 +160,23 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 
-		randomImageFilePath = getRandomFilePath();
-		if ( randomImageFilePath == null ) return;
+		imageFilePath = getRandomFilePath();
+		if ( imageFilePath == null ) return;
 
-		if ( ! checkFileSize( randomImageFilePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
+		if ( ! checkFileSize( imageFilePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
 
-		showRandomImageFromFilePath();
+		processAndShowImageFromFilePath();
 	}
 
-	private void showRandomImageFromFilePath()
+	private void processAndShowImageFromFilePath()
 	{
+		DebugTools.setRootLevel( "OFF" ); // Bio-Formats
 		IJ.log( "Preview image. Table: " + selectedTableFile + "; Gate: " + selectedGate );
 		if ( ! setColorToSliceAndColorToRange() ) return;
-		if ( randomImageFilePath == null ) return;
+		if ( imageFilePath == null ) return;
 		if ( processedImp != null ) processedImp.close();
-		processedImp = createProcessedImagePlus( randomImageFilePath, horizontalCropPixels );
+		processedImp = createProcessedImagePlus( imageFilePath, horizontalCropPixels );
 		processedImp.show();
-	}
-
-	private void processImagesOnCluster()
-	{
-		new Thread( () ->
-		{
-			IJ.showMessage( "Cluster processing is not yet implemented." );
-		});
 	}
 
 	private void processImagesButtonCallback()
@@ -201,8 +186,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		{
 			/**
 			 * Ensure that there is a valid gate selected.
-			 * For this we may need to load a table first
-			 *
+			 * For this we need to load a table.
 			 */
 			if ( jTable == null )
 			{
