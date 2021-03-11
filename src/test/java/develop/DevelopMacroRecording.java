@@ -1,6 +1,6 @@
 package develop;
 
-import de.embl.cba.imflow.devel.callback.TestSomeCommand;
+import de.embl.cba.cellview.devel.callback.TestSomeCommand;
 import ij.plugin.frame.Recorder;
 import net.imagej.ImageJ;
 

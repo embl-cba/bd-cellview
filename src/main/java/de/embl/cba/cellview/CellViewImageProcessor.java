@@ -1,4 +1,4 @@
-package de.embl.cba.imflow;
+package de.embl.cba.cellview;
 
 import de.embl.cba.tables.FileUtils;
 import ij.CompositeImage;
@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class BDVulcanImageProcessor
+public abstract class CellViewImageProcessor
 {
 	public static final String OVERLAY = "Overlay";
 	public static final String FORWARD_SCATTER = "ForewardScatter";
@@ -58,7 +58,7 @@ public abstract class BDVulcanImageProcessor
 	{
 		ImagePlus imp = tryOpenImage( filePath );
 
-		if ( viewingModality.equals( BDVulcanImageProcessor.VIEW_RAW ) ) return imp;
+		if ( viewingModality.equals( CellViewImageProcessor.VIEW_RAW ) ) return imp;
 
 		imp = processImage( imp );
 
@@ -205,7 +205,7 @@ public abstract class BDVulcanImageProcessor
 
 			return montageImp;
 		}
-		else if ( viewingModality.equals( BDVulcanImageProcessor.VIEW_PROCESSED_MONTAGE ) )
+		else if ( viewingModality.equals( CellViewImageProcessor.VIEW_PROCESSED_MONTAGE ) )
 		{
 			// NOTE: This viewing modality is currently not used
 

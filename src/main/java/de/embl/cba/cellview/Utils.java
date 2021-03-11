@@ -1,4 +1,4 @@
-package de.embl.cba.imflow;
+package de.embl.cba.cellview;
 
 import java.time.LocalDate;
 import java.time.LocalTime;

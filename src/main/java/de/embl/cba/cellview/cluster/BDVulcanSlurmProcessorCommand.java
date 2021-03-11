@@ -1,8 +1,8 @@
-package de.embl.cba.imflow.cluster;
+package de.embl.cba.cellview.cluster;
 
 import de.embl.cba.cluster.*;
-import de.embl.cba.imflow.BDVulcanHeadlessProcessorCommand;
-import de.embl.cba.imflow.BDVulcanProcessorCommand;
+import de.embl.cba.cellview.CellViewHeadlessProcessorCommand;
+import de.embl.cba.cellview.CellViewProcessorCommand;
 import de.embl.cba.log.IJLazySwingLogger;
 import de.embl.cba.morphometry.Utils;
 import de.embl.cba.util.PathMapper;
@@ -93,7 +93,7 @@ public class BDVulcanSlurmProcessorCommand implements Command
     {
         try
         {
-            BDVulcanProcessorCommand command = BDVulcanProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
+            CellViewProcessorCommand command = CellViewProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
 
             IJ.log( "Table: " + command.selectedTableFile );
             IJ.log( "Gate: " + command.selectedGate );
@@ -124,9 +124,9 @@ public class BDVulcanSlurmProcessorCommand implements Command
     {
         Map< String, Object > parameters = new HashMap<>();
         parameters.clear();
-        parameters.put( BDVulcanHeadlessProcessorCommand.SETTINGS_FILE, PathMapper.asEMBLClusterMounted( batchFile) );
+        parameters.put( CellViewHeadlessProcessorCommand.SETTINGS_FILE, PathMapper.asEMBLClusterMounted( batchFile) );
 
-        commandsSubmitter.addIJCommandWithParameters( BDVulcanHeadlessProcessorCommand.COMMAND_NAME , parameters );
+        commandsSubmitter.addIJCommandWithParameters( CellViewHeadlessProcessorCommand.COMMAND_NAME , parameters );
     }
 
     public static void main(final String... args) throws Exception

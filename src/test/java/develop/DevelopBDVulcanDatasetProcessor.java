@@ -1,6 +1,6 @@
 package develop;
 
-import de.embl.cba.imflow.BDVulcanProcessorCommand;
+import de.embl.cba.cellview.CellViewProcessorCommand;
 import net.imagej.ImageJ;
 
 public class DevelopBDVulcanDatasetProcessor
@@ -10,6 +10,6 @@ public class DevelopBDVulcanDatasetProcessor
 		final ImageJ imageJ = new ImageJ();
 		imageJ.ui().showUI();
 
-		imageJ.command().run( BDVulcanProcessorCommand.class, true );
+		imageJ.command().run( CellViewProcessorCommand.class, true );
 	}
 }

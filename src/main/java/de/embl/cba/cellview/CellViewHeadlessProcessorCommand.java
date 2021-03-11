@@ -1,4 +1,4 @@
-package de.embl.cba.imflow;
+package de.embl.cba.cellview;
 
 import ij.plugin.frame.Recorder;
 import net.imagej.ImageJ;
@@ -9,10 +9,10 @@ import org.scijava.plugin.Plugin;
 
 import java.io.*;
 
-@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>" + BDVulcanHeadlessProcessorCommand.COMMAND_NAME )
-public class BDVulcanHeadlessProcessorCommand implements Command
+@Plugin( type = Command.class, menuPath = "Plugins>CellView>" + CellViewHeadlessProcessorCommand.COMMAND_NAME )
+public class CellViewHeadlessProcessorCommand implements Command
 {
-	public static final String COMMAND_NAME = "Process BD Vulcan Images Headless";
+	public static final String COMMAND_NAME = "Process CellView Images Headless";
 	private transient static final String NONE = "None";
 
 	@Parameter
@@ -26,7 +26,7 @@ public class BDVulcanHeadlessProcessorCommand implements Command
 	{
 		try
 		{
-			BDVulcanProcessorCommand command = BDVulcanProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
+			CellViewProcessorCommand command = CellViewProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
 			command.processImagesHeadless();
 		} catch ( IOException e )
 		{
@@ -41,7 +41,7 @@ public class BDVulcanHeadlessProcessorCommand implements Command
 
 		new Recorder();
 
-		imageJ.command().run( BDVulcanHeadlessProcessorCommand.class, true );
+		imageJ.command().run( CellViewHeadlessProcessorCommand.class, true );
 
 		/**
 		 *  /Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run "Batch Process BD Vulcan Dataset" "settingsFile='/Users/tischer/Documents/fccf/src/test/resources/minimalgated/batchProcess.json'"

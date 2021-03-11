@@ -1,7 +1,7 @@
 package develop;
 
 import com.google.gson.Gson;
-import de.embl.cba.imflow.devel.callback.TestSomeCommand;
+import de.embl.cba.cellview.devel.callback.TestSomeCommand;
 import net.imagej.ImageJ;
 
 public class DevelopCommandFromAndToJson

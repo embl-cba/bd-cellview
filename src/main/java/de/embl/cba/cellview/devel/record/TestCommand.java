@@ -1,6 +1,6 @@
-package de.embl.cba.imflow.devel.record;
+package de.embl.cba.cellview.devel.record;
 
-import de.embl.cba.imflow.devel.callback.TestCallbackCommand;
+import de.embl.cba.cellview.devel.callback.TestCallbackCommand;
 import org.scijava.Initializable;
 import org.scijava.command.DynamicCommand;
 import org.scijava.module.MutableModuleItem;

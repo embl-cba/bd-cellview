@@ -1,4 +1,4 @@
-package de.embl.cba.imflow.devel.callback;
+package de.embl.cba.cellview.devel.callback;
 
 
 import org.scijava.command.CommandService;

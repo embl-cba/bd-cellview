@@ -1,4 +1,4 @@
-package de.embl.cba.imflow;
+package de.embl.cba.cellview;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -27,10 +27,10 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static de.embl.cba.imflow.BDVulcanImageProcessor.checkFileSize;
+import static de.embl.cba.cellview.CellViewImageProcessor.checkFileSize;
 
-@Plugin( type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Images"  )
-public class BDVulcanProcessorCommand implements Command, Interactive
+@Plugin( type = Command.class, menuPath = "Plugins>CellView>Process CellView Images"  )
+public class CellViewProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
@@ -73,8 +73,8 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Maximum Magenta Intensity", callback = "processAndShowImageFromFilePath"  )
 	public double maxMagenta = 1.0;
 
-	@Parameter ( label = "Processing Modality", choices = { BDVulcanImageProcessor.VIEW_RAW, BDVulcanImageProcessor.VIEW_PROCESSED_OVERLAY, BDVulcanImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
-	public String viewingModality = BDVulcanImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
+	@Parameter ( label = "Processing Modality", choices = { CellViewImageProcessor.VIEW_RAW, CellViewImageProcessor.VIEW_PROCESSED_OVERLAY, CellViewImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
+	public String viewingModality = CellViewImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
 
 	@Parameter ( label = "Process Image File", callback = "processImageFileButtonCallback", required = false )
 	private transient File imageFile;
@@ -114,13 +114,13 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 	private transient String imageFilePath;
 	private transient ArrayList< Integer > selectedGateIndices;
 
-	public static BDVulcanProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
+	public static CellViewProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
 	{
 		InputStream inputStream = FileAndUrlUtils.getInputStream( jsonFile.getAbsolutePath() );
 		final JsonReader reader = new JsonReader( new InputStreamReader( inputStream, "UTF-8" ) );
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 		Gson gson = new Gson();
-		Type type = new TypeToken< BDVulcanProcessorCommand >() {}.getType();
+		Type type = new TypeToken< CellViewProcessorCommand >() {}.getType();
 		return gson.fromJson( reader, type );
 	}
 
@@ -367,30 +367,30 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	private boolean setColorToSliceAndColorToRange()
 	{
-		final HashMap< String, Integer > colorToSlice = BDVulcanImageProcessor.getColorToSlice();
+		final HashMap< String, Integer > colorToSlice = CellViewImageProcessor.getColorToSlice();
 		colorToSlice.clear();
-		final HashMap< String, double[] > colorToRange = BDVulcanImageProcessor.getColorToRange();
+		final HashMap< String, double[] > colorToRange = CellViewImageProcessor.getColorToRange();
 		colorToRange.clear();
 
 		if ( ! whiteIndexString.equals( NONE ) )
 		{
-			colorToSlice.put( BDVulcanImageProcessor.WHITE, Integer.parseInt( whiteIndexString ) );
-			colorToRange.put( BDVulcanImageProcessor.WHITE, new double[]{ minWhite, maxWhite} );
+			colorToSlice.put( CellViewImageProcessor.WHITE, Integer.parseInt( whiteIndexString ) );
+			colorToRange.put( CellViewImageProcessor.WHITE, new double[]{ minWhite, maxWhite} );
 		}
 
 		if ( ! greenIndexString.equals( NONE ) )
 		{
-			colorToSlice.put( BDVulcanImageProcessor.GREEN, Integer.parseInt( greenIndexString ) );
-			colorToRange.put( BDVulcanImageProcessor.GREEN, new double[]{ minGreen, maxGreen} );
+			colorToSlice.put( CellViewImageProcessor.GREEN, Integer.parseInt( greenIndexString ) );
+			colorToRange.put( CellViewImageProcessor.GREEN, new double[]{ minGreen, maxGreen} );
 		}
 
 		if ( ! magentaIndexString.equals( NONE ) )
 		{
-			colorToSlice.put( BDVulcanImageProcessor.MAGENTA, Integer.parseInt( magentaIndexString ) );
-			colorToRange.put( BDVulcanImageProcessor.MAGENTA, new double[]{ minMagenta, maxMagenta} );
+			colorToSlice.put( CellViewImageProcessor.MAGENTA, Integer.parseInt( magentaIndexString ) );
+			colorToRange.put( CellViewImageProcessor.MAGENTA, new double[]{ minMagenta, maxMagenta} );
 		}
 
-		if ( BDVulcanImageProcessor.getColorToSlice().size() == 0 )
+		if ( CellViewImageProcessor.getColorToSlice().size() == 0 )
 		{
 			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
 			return false;
@@ -617,7 +617,7 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 
 	private ImagePlus createProcessedImagePlus( String filePath, int horizontalCropNumPixels )
 	{
-		ImagePlus processedImp = BDVulcanImageProcessor.createProcessedImage( filePath, BDVulcanImageProcessor.getColorToRange(), BDVulcanImageProcessor.getColorToSlice(), horizontalCropNumPixels, viewingModality );
+		ImagePlus processedImp = CellViewImageProcessor.createProcessedImage( filePath, CellViewImageProcessor.getColorToRange(), CellViewImageProcessor.getColorToSlice(), horizontalCropNumPixels, viewingModality );
 
 		return processedImp;
 	}
@@ -663,6 +663,6 @@ public class BDVulcanProcessorCommand implements Command, Interactive
 		final ImageJ imageJ = new ImageJ();
 		imageJ.ui().showUI();
 
-		imageJ.command().run( BDVulcanProcessorCommand.class, true );
+		imageJ.command().run( CellViewProcessorCommand.class, true );
 	}
 }
