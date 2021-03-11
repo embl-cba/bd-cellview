@@ -1,4 +1,4 @@
-package de.embl.cba.cellview;
+package de.embl.cba.cellview.command;
 
 import ij.plugin.frame.Recorder;
 import net.imagej.ImageJ;

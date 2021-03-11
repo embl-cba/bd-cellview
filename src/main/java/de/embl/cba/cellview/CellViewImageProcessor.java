@@ -1,8 +1,6 @@
 package de.embl.cba.cellview;
 
-import de.embl.cba.tables.FileUtils;
 import ij.CompositeImage;
-import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.*;
 import ij.plugin.filter.Convolver;
@@ -10,53 +8,39 @@ import ij.process.ColorProcessor;
 import ij.process.LUT;
 import loci.formats.FormatException;
 import loci.plugins.BF;
+import net.imglib2.type.numeric.ARGBType;
+import weka.Run;
 
 import java.awt.*;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-public abstract class CellViewImageProcessor
+public class CellViewImageProcessor
 {
-	public static final String OVERLAY = "Overlay";
+	public static final String MERGE = "Overlay";
 	public static final String FORWARD_SCATTER = "ForewardScatter";
 	public static final String SIDE_SCATTER = "SideScatter";
 	public static final String WHITE = "White";
-	public static final String GREEN = "Green";
-	public static final String MAGENTA = "Magenta";
-	public static final String[] MONTAGE_SEQUENCE = { OVERLAY, WHITE, GREEN, MAGENTA };
+
 
 	public static final String VIEW_RAW = "Raw";
 	public static final String VIEW_PROCESSED_MONTAGE = "Processed Montage";
 	public static final String VIEW_PROCESSED_BF_GF_OVERLAY = "Processed BrightField GreenFluo Overlay";
 	public static final String VIEW_PROCESSED_OVERLAY = "Processed Overlay";
 	public static final String VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS = "Processed Overlay And Individual Channels";
-
 	public static final String VIEW_RAW_AND_MONTAGE = "Raw and Processed Montage";
-	private static HashMap< String, Integer > colorToSlice = new HashMap<>(  );
-	private static HashMap< String, double[] > colorToRange = new HashMap<>(  );
 
-	public static HashMap< String, Integer > getColorToSlice()
-	{
-		return colorToSlice;
-	}
-
-	public static HashMap< String, double[] > getColorToRange()
-	{
-		return colorToRange;
-	}
-
-	public static ImagePlus createProcessedImage(
+	public ImagePlus run(
 			String filePath,
-			Map< String, double[] > nameToRange,
-			Map< String, Integer > nameToSlice,
+			ArrayList< CellViewChannel > channels,
 			int horizontalCropNumPixels,
 			String viewingModality )
 	{
-		ImagePlus imp = tryOpenImage( filePath );
+		ImagePlus imp = CellViewUtils.tryOpenImage( filePath );
 
 		if ( viewingModality.equals( CellViewImageProcessor.VIEW_RAW ) ) return imp;
 
@@ -68,72 +52,37 @@ public abstract class CellViewImageProcessor
 			imp = imp.crop( "stack" );
 		}
 
-		final Map< String, ImagePlus > colorToImp = extractChannels( imp, nameToRange, nameToSlice );
+		extractChannelsAsImagePlus( imp, channels );
 
-		addOverlayAndConvertImagesToRGB( colorToImp );
+		addMergeAndConvertImagesToRGB( channels );
 
-		imp = createOutputImp( colorToImp, viewingModality );
+		imp = createOutputImp( channels, viewingModality );
 
 		imp.setTitle( new File( filePath ).getName() );
 
 		return imp;
 	}
 
-	public static ImagePlus tryOpenImage( String filePath )
-	{
-		ImagePlus inputImp = null;
-		try
-		{
-			inputImp = openImage( filePath );
-		} catch ( FormatException e )
-		{
-			e.printStackTrace();
-		} catch ( IOException e )
-		{
-			e.printStackTrace();
-		}
-		return inputImp;
-	}
-
-	public static HashMap< String, ImagePlus > extractChannels(
+	private static void extractChannelsAsImagePlus(
 			ImagePlus inputImp,
-			Map< String, double[] > colorToRange,
-			Map< String, Integer > colorToSlice )
+			ArrayList< CellViewChannel > channels )
 	{
-		final HashMap< String, ImagePlus > nameToImagePlus = new HashMap<>();
+		final Map< String, ImagePlus > colorToImagePlus = new LinkedHashMap<>();
 
-		for( String color : colorToSlice.keySet() )
+		for ( CellViewChannel channel : channels )
 		{
-			final ImagePlus channel =
+			final ImagePlus imagePlus =
 					extractChannelFromImagePlus(
 							inputImp,
-							colorToSlice.get( color ),
-							color,
-							colorToRange.get( color )[ 0 ],
-							colorToRange.get( color )[ 1 ] );
+							channel.sliceIndex,
+							channel.color,
+							channel.contrastLimits[ 0 ],
+							channel.contrastLimits[ 1 ] );
 
-			nameToImagePlus.put( color, channel );
+			final Color color = CellViewUtils.getColor( channel.color );
+			imagePlus.setLut( LUT.createLutFromColor( color ) );
+			channel.imagePlus = imagePlus;
 		}
-
-		return nameToImagePlus;
-	}
-
-	public static void putImagePlus(
-			ImagePlus inputImp,
-			HashMap< String, ImagePlus > nameToImp,
-			String name,
-			Map< String, double[] > nameToRange,
-			Map< String, Integer > nameToSlice )
-	{
-		final ImagePlus channel =
-				extractChannelFromImagePlus(
-						inputImp,
-						nameToSlice.get( name ),
-						name,
-						nameToRange.get( name )[ 0 ],
-						nameToRange.get( name )[ 1 ] );
-
-		nameToImp.put( name, channel );
 	}
 
 	public static ImagePlus openImage( String filePath ) throws FormatException, IOException
@@ -162,13 +111,16 @@ public abstract class CellViewImageProcessor
 		return imp;
 	}
 
-	public static void addOverlayAndConvertImagesToRGB( Map< String, ImagePlus > colorToImp )
+	private static void addMergeAndConvertImagesToRGB( ArrayList< CellViewChannel > channels )
 	{
-		final CompositeImage overlay = createOverlay( colorToImp );
-		colorToImp.put( OVERLAY, overlay );
+		channels.add( createMergedImage( channels ) );
 
-		for ( String color : colorToImp.keySet() )
-			colorToImp.put( color, toRGB( colorToImp.get( color ) ) );
+		for ( CellViewChannel channel : channels )
+		{
+			if ( channel.color == MERGE ) continue;
+
+			channel.imagePlus = toRGB( channel.imagePlus );
+		}
 	}
 
 	public static ImagePlus toRGB( ImagePlus imp )
@@ -176,54 +128,45 @@ public abstract class CellViewImageProcessor
 		return new ImagePlus( "", imp.getProcessor().convertToColorProcessor() );
 	}
 
-	public static ImagePlus createOutputImp( final Map< String, ImagePlus > colorToImp, String viewingModality )
+	public static ImagePlus createOutputImp( final ArrayList< CellViewChannel > channels, String viewingModality )
 	{
 		if ( viewingModality.equals( VIEW_PROCESSED_OVERLAY ) )
 		{
-			return colorToImp.get( OVERLAY );
+			for ( CellViewChannel channel : channels )
+			{
+				if ( channel.color.equals( MERGE ) )
+					return channel.imagePlus;
+			}
+
+			throw new RuntimeException( "MERGE channel not found!" + viewingModality );
 		}
 		else if ( viewingModality.equals( VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS ))
 		{
 			// make montage
-			final ImagePlus firstImp = colorToImp.values().iterator().next();
-			final int width = firstImp.getWidth();
-			final int height = firstImp.getHeight();
-
-			int montageWidth = colorToImp.size() * width;
+			final int width = channels.get( 0 ).imagePlus.getWidth();
+			final int height = channels.get( 0 ).imagePlus.getHeight();
+			int montageWidth = channels.size() * width;
 			int montageHeight = height;
 
 			final ImagePlus montageImp = new ImagePlus( "montage", new ColorProcessor( montageWidth, montageHeight ) );
-
 			final StackInserter inserter = new StackInserter();
 
-			int i = 0;
-			for ( String color : MONTAGE_SEQUENCE )
+			// put overlay first
+			for ( CellViewChannel channel : channels )
 			{
-				if ( colorToImp.keySet().contains( color ) )
-					inserter.insert( colorToImp.get( color ), montageImp, (i++) * width, 0 );
+				if ( channel.color.equals( MERGE ) )
+				{
+					inserter.insert( channel.imagePlus, montageImp, 0, 0 );
+					break;
+				}
 			}
 
-			return montageImp;
-		}
-		else if ( viewingModality.equals( CellViewImageProcessor.VIEW_PROCESSED_MONTAGE ) )
-		{
-			// NOTE: This viewing modality is currently not used
-
-			// make montage
-			final int width = colorToImp.get( WHITE ).getWidth();
-			final int height = colorToImp.get( WHITE ).getHeight();
-
-			int montageWidth = 3 * width;
-			int montageHeight = 2 * height;
-
-			final ImagePlus montageImp = new ImagePlus( "montage", new ColorProcessor( montageWidth, montageHeight ) );
-
-			final StackInserter inserter = new StackInserter();
-			inserter.insert( colorToImp.get( WHITE ), montageImp, 0, 0 );
-			inserter.insert( colorToImp.get( GREEN ), montageImp, width, 0 );
-			inserter.insert( colorToImp.get( OVERLAY ), montageImp, 2 * width, 0 );
-			inserter.insert( colorToImp.get( SIDE_SCATTER ), montageImp, 0, height );
-			inserter.insert( colorToImp.get( FORWARD_SCATTER ), montageImp, width, height );
+			// then put the individual images
+			for ( int c = 0; c < channels.size(); c++ )
+			{
+				if ( channels.get( c ).color.equals( MERGE ) ) continue;
+				inserter.insert( channels.get( c ).imagePlus, montageImp, (c + 1) * width, 0 );
+			}
 
 			return montageImp;
 		}
@@ -233,107 +176,51 @@ public abstract class CellViewImageProcessor
 		}
 	}
 
-	public static CompositeImage createOverlay( ImagePlus gray, ImagePlus green )
+	public static CellViewChannel createMergedImage( ArrayList< CellViewChannel > channels )
 	{
-		final CompositeImage overlay = ( CompositeImage ) RGBStackMerge.mergeChannels( new ImagePlus[]{ gray, green }, true );
+		final ArrayList< CellViewChannel > mergeChannels = ( ArrayList ) channels.stream().filter( c -> c.color.contains( "*" ) ).collect( Collectors.toList() );
 
-		overlay.setC( 1 );
-		overlay.setChannelLut( LUT.createLutFromColor( Color.WHITE ) );
-		overlay.setDisplayRange( 0, 255 );
-		overlay.setC( 2 );
-		overlay.setChannelLut( LUT.createLutFromColor( Color.GREEN ) );
-		overlay.setDisplayRange( 0, 255 );
+		final ImagePlus[] imagePluses = mergeChannels.stream().map( c -> c.imagePlus ).toArray( ImagePlus[]::new );
 
-		RGBStackConverter.convertToRGB( overlay );
+		final CompositeImage merge = ( CompositeImage ) RGBStackMerge.mergeChannels( imagePluses, true );
 
-		return overlay;
-	}
-
-	public static CompositeImage createOverlay( Map< String, ImagePlus > colorToImp )
-	{
-		final CompositeImage overlay = ( CompositeImage ) RGBStackMerge.mergeChannels( colorToImp.values().toArray( new ImagePlus[ colorToImp.size() ] ), true );
-
-		int channelIndex = 1;
-		for ( String color : colorToImp.keySet() )
+		for ( int c = 0; c < imagePluses.length; c++ )
 		{
-			overlay.setC( channelIndex++ );
-			overlay.setChannelLut( LUT.createLutFromColor( getColor( color ) ) );
-			if ( ! color.equals( WHITE ) )
-			{
+			merge.setC( c + 1 );
+			final CellViewChannel channel = mergeChannels.get( c );
+			final Color color = CellViewUtils.getColor( channel.color );
+			merge.setChannelLut( LUT.createLutFromColor( color ) );
 
-				final double min = colorToImp.get( color ).getDisplayRangeMin();
-				final double max = colorToImp.get( color ).getDisplayRangeMax();
-				overlay.setDisplayRange(
+			if ( ! color.equals( Color.WHITE ) )
+			{
+				// dim the level of the colored channels, such that they do not just look white when added
+				final double min = imagePluses[ c ].getDisplayRangeMin();
+				final double max = imagePluses[ c ].getDisplayRangeMax();
+				merge.setDisplayRange(
 						min,
-						min + ( colorToImp.size() - 0 ) * ( max - min ) );
+						min + ( imagePluses.length ) * ( max - min ) );
 			}
 		}
 
-		RGBStackConverter.convertToRGB( overlay );
+		merge.duplicate().show();
+		RGBStackConverter.convertToRGB( merge );
 
-		return overlay;
+		final CellViewChannel mergedChannel = new CellViewChannel( -1, MERGE, null );
+		mergedChannel.imagePlus = merge;
+		return mergedChannel;
 	}
 
-	public static Color getColor(String name) {
-		try {
-			return (Color)Color.class.getField(name.toUpperCase()).get(null);
-		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	public static List< File > readFileNamesFromDirectoryWithLogging( File inputImagesDirectory )
-	{
-		final long startMillis = System.currentTimeMillis();
-		IJ.log( "Fetching file list. Please wait..." );
-		final List< File > fileList = FileUtils.getFileList( inputImagesDirectory, ".*.tiff", true );
-
-//		final String[] fileNames = getValidFileNames( inputImagesDirectory );
-		IJ.log( "Fetched file list in " + ( System.currentTimeMillis() - startMillis) + " ms; number of files: " + fileList.size() );
-
-		return fileList;
-	}
-
-	public class IntensityRanges
-	{
-		double minBF;
-		double maxBF;
-		double minGFP;
-		double maxGFP;
-	}
-
-	public static boolean checkFileSize( String filePath, double minimumFileSizeKiloBytes, double maximumFileSizeKiloBytes )
-	{
-		final File file = new File( filePath );
-
-		if ( ! file.exists() )
-		{
-			throw new UnsupportedOperationException( "File does not exist: " + file );
-		}
-
-		final double fileSizeKiloBytes = getFileSizeKiloBytes( file );
-
-		if ( fileSizeKiloBytes < minimumFileSizeKiloBytes )
-		{
-			IJ.log( "Skipped too small file: " + file.getName() + "; size [kB]: " + fileSizeKiloBytes);
-			return false;
-		}
-		else if ( fileSizeKiloBytes > maximumFileSizeKiloBytes )
-		{
-			IJ.log( "Skipped too large file: " + file.getName() + "; size [kB]: " + fileSizeKiloBytes);
-			return false;
-		}
-		else
-		{
-			return true;
-		}
-	}
-
-	public static double getFileSizeKiloBytes( File file )
-	{
-		return file.length() / 1024.0 ;
-	}
+//	public static List< File > readFileNamesFromDirectoryWithLogging( File inputImagesDirectory )
+//	{
+//		final long startMillis = System.currentTimeMillis();
+//		IJ.log( "Fetching file list. Please wait..." );
+//		final List< File > fileList = FileUtils.getFileList( inputImagesDirectory, ".*.tiff", true );
+//
+////		final String[] fileNames = getValidFileNames( inputImagesDirectory );
+//		IJ.log( "Fetched file list in " + ( System.currentTimeMillis() - startMillis) + " ms; number of files: " + fileList.size() );
+//
+//		return fileList;
+//	}
 
 	public static ImagePlus extractChannelFromImagePlus( ImagePlus imp, int slice, String title, double min, double max )
 	{
@@ -343,16 +230,4 @@ public abstract class CellViewImageProcessor
 		return new ImagePlus( title, impBf.getProcessor().convertToByteProcessor() );
 	}
 
-	public static String[] getValidFileNames( File inputDirectory )
-	{
-		return inputDirectory.list( new FilenameFilter()
-		{
-			@Override
-			public boolean accept( File dir, String name )
-			{
-				if ( ! name.contains( ".tif" ) ) return false;
-					return true;
-			}
-		} );
-	}
 }

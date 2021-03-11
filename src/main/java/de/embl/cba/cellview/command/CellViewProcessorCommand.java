@@ -1,9 +1,12 @@
-package de.embl.cba.cellview;
+package de.embl.cba.cellview.command;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
+import de.embl.cba.cellview.CellViewChannel;
+import de.embl.cba.cellview.CellViewImageProcessor;
+import de.embl.cba.cellview.CellViewUtils;
 import de.embl.cba.cluster.Commands;
 import de.embl.cba.cluster.PathMapper;
 import de.embl.cba.morphometry.Logger;
@@ -27,14 +30,14 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static de.embl.cba.cellview.CellViewImageProcessor.checkFileSize;
+import static de.embl.cba.cellview.CellViewUtils.checkFileSize;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CellView>Process CellView Images"  )
 public class CellViewProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
-	@Parameter ( label = "Dataset Tables", persist = true, required = false )
+	@Parameter ( label = "Image Tables", persist = true, required = false )
 	public transient File[] tableFiles;
 
 	@Parameter ( label = "Minimum File Size [kb]" )
@@ -46,32 +49,20 @@ public class CellViewProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Horizontal Crop [pixels]", callback = "processAndShowImageFromFilePath" )
 	public int horizontalCropPixels = 0;
 
-	@Parameter ( label = "Gray Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
-	public String whiteIndexString = "1";
+	@Parameter ( label = "Channel Indices" )
+	public String channelIndexCSV = "1,2,4,3,5";
 
-	@Parameter ( label = "Minimum Gray Intensity", callback = "processAndShowImageFromFilePath" )
-	public double minWhite = 0.0;
+	@Parameter ( label = "Colors (* : include in merge)" )
+	public String colorCSV = "White*,Green*,Magenta*,White,White";
 
-	@Parameter ( label = "Maximum Gray Intensity", callback = "processAndShowImageFromFilePath" )
-	public double maxWhite = 1.0;
+	@Parameter ( label = "Minimum Gray Levels" )
+	public String minimumGrayLevelCSV = "0.0,0.0,0.0,0.0,0.0";
 
-	@Parameter ( label = "Green Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
-	public String greenIndexString = "2";
+	@Parameter ( label = "Maximum Gray Levels" )
+	public String maximumGrayLevelCSV = "1.0,1.0,1.0,1.0,1.0";
 
-	@Parameter ( label = "Minimum Green Intensity", callback = "processAndShowImageFromFilePath"  )
-	public double minGreen = 0.08;
-
-	@Parameter ( label = "Maximum Green Intensity", callback = "processAndShowImageFromFilePath"  )
-	public double maxGreen = 1.0;
-
-	@Parameter ( label = "Magenta Channel Index", choices = { NONE, "1", "2", "3", "4", "5", "6", "7", "8", "9"} )
-	public String magentaIndexString = "3";
-
-	@Parameter ( label = "Minimum Magenta Intensity", callback = "processAndShowImageFromFilePath"  )
-	public double minMagenta = 0.08;
-
-	@Parameter ( label = "Maximum Magenta Intensity", callback = "processAndShowImageFromFilePath"  )
-	public double maxMagenta = 1.0;
+	@Parameter( label = "Update Current Image", callback = "processAndShowImageFromFilePath" )
+	public Button updateButton;
 
 	@Parameter ( label = "Processing Modality", choices = { CellViewImageProcessor.VIEW_RAW, CellViewImageProcessor.VIEW_PROCESSED_OVERLAY, CellViewImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
 	public String viewingModality = CellViewImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
@@ -113,6 +104,8 @@ public class CellViewProcessorCommand implements Command, Interactive
 	private transient String imagePathColumnName = "path";
 	private transient String imageFilePath;
 	private transient ArrayList< Integer > selectedGateIndices;
+	private transient CellViewImageProcessor imageProcessor = new CellViewImageProcessor();
+	private transient ArrayList< CellViewChannel > channels;
 
 	public static CellViewProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
 	{
@@ -367,37 +360,35 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 	private boolean setColorToSliceAndColorToRange()
 	{
-		final HashMap< String, Integer > colorToSlice = CellViewImageProcessor.getColorToSlice();
-		colorToSlice.clear();
-		final HashMap< String, double[] > colorToRange = CellViewImageProcessor.getColorToRange();
-		colorToRange.clear();
+		try
+		{
+			final int[] channelIndices = Arrays.stream( channelIndexCSV.split( "," ) ).mapToInt( x -> Integer.parseInt( x.trim() ) ).toArray();
 
-		if ( ! whiteIndexString.equals( NONE ) )
-		{
-			colorToSlice.put( CellViewImageProcessor.WHITE, Integer.parseInt( whiteIndexString ) );
-			colorToRange.put( CellViewImageProcessor.WHITE, new double[]{ minWhite, maxWhite} );
-		}
+			final double[] minValues = Arrays.stream( minimumGrayLevelCSV.split( "," ) ).mapToDouble( x -> Double.parseDouble( x.trim() ) ).toArray();
 
-		if ( ! greenIndexString.equals( NONE ) )
-		{
-			colorToSlice.put( CellViewImageProcessor.GREEN, Integer.parseInt( greenIndexString ) );
-			colorToRange.put( CellViewImageProcessor.GREEN, new double[]{ minGreen, maxGreen} );
-		}
+			final double[] maxValues = Arrays.stream( maximumGrayLevelCSV.split( "," ) ).mapToDouble( x -> Double.parseDouble( x.trim() ) ).toArray();
 
-		if ( ! magentaIndexString.equals( NONE ) )
-		{
-			colorToSlice.put( CellViewImageProcessor.MAGENTA, Integer.parseInt( magentaIndexString ) );
-			colorToRange.put( CellViewImageProcessor.MAGENTA, new double[]{ minMagenta, maxMagenta} );
-		}
+			final String[] colors = colorCSV.split( "," );
 
-		if ( CellViewImageProcessor.getColorToSlice().size() == 0 )
-		{
-			IJ.showMessage( "Please set at least two of the Channel Indices (Gray, Green, or Magenta)." );
-			return false;
-		}
-		else
-		{
+			if ( minValues.length != channelIndices.length )
+			{
+				// TODO: implement more error checking
+			}
+
+			channels = new ArrayList<>( );
+
+			for ( int i = 0; i < channelIndices.length; i++ )
+			{
+				channels.add( new CellViewChannel( channelIndices[ i ], colors[ i ], new double[]{ minValues[ i ], maxValues[ i ]} ) );
+			}
+
 			return true;
+		}
+		catch	( Exception e )
+		{
+			e.printStackTrace();
+			IJ.showMessage( "Error parsing the image conversion settings." );
+			return false;
 		}
 	}
 
@@ -508,7 +499,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 		final long currentTimeMillis = System.currentTimeMillis();
 
-		String relativeImageRootDirectory = "images-processed-" + Utils.getLocalDateAndHourAndMinute();
+		String relativeImageRootDirectory = "images-processed-" + CellViewUtils.getLocalDateAndHourAndMinute();
 		outputImagesRootDirectory = new File( experimentDirectory, relativeImageRootDirectory );
 		IJ.log( "Saving processed images to directory: " + outputImagesRootDirectory );
 		IJ.log( "Number of images to be processed: " + numImagesToBeProcessed );
@@ -617,7 +608,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 	private ImagePlus createProcessedImagePlus( String filePath, int horizontalCropNumPixels )
 	{
-		ImagePlus processedImp = CellViewImageProcessor.createProcessedImage( filePath, CellViewImageProcessor.getColorToRange(), CellViewImageProcessor.getColorToSlice(), horizontalCropNumPixels, viewingModality );
+		ImagePlus processedImp = imageProcessor.run( filePath, channels, horizontalCropNumPixels, viewingModality );
 
 		return processedImp;
 	}

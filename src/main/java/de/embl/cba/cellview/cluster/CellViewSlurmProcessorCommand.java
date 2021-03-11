@@ -1,8 +1,8 @@
 package de.embl.cba.cellview.cluster;
 
 import de.embl.cba.cluster.*;
-import de.embl.cba.cellview.CellViewHeadlessProcessorCommand;
-import de.embl.cba.cellview.CellViewProcessorCommand;
+import de.embl.cba.cellview.command.CellViewHeadlessProcessorCommand;
+import de.embl.cba.cellview.command.CellViewProcessorCommand;
 import de.embl.cba.log.IJLazySwingLogger;
 import de.embl.cba.morphometry.Utils;
 import de.embl.cba.util.PathMapper;
@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-@Plugin(type = Command.class, menuPath = "Plugins>EMBL>FCCF>BD>Process BD Vulcan Images on Slurm" )
-public class BDVulcanSlurmProcessorCommand implements Command
+@Plugin(type = Command.class, menuPath = "Plugins>CellView>Process CellView Images on Slurm Cluster" )
+public class CellViewSlurmProcessorCommand implements Command
 {
     @Parameter( label = "SSH accessible execution host" )
     private String executionHost = "login.cluster.embl.de";
@@ -134,6 +134,6 @@ public class BDVulcanSlurmProcessorCommand implements Command
         final ImageJ ij = new ImageJ();
         ij.ui().showUI();
 
-        ij.command().run( BDVulcanSlurmProcessorCommand.class, true );
+        ij.command().run( CellViewSlurmProcessorCommand.class, true );
     }
 }

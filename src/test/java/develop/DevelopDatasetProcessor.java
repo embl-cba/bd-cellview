@@ -1,9 +1,9 @@
 package develop;
 
-import de.embl.cba.cellview.CellViewProcessorCommand;
+import de.embl.cba.cellview.command.CellViewProcessorCommand;
 import net.imagej.ImageJ;
 
-public class DevelopBDVulcanDatasetProcessor
+public class DevelopDatasetProcessor
 {
 	public static void main( String[] args )
 	{
