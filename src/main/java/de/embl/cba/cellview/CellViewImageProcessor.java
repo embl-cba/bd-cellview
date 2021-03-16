@@ -5,11 +5,10 @@ import ij.ImagePlus;
 import ij.plugin.*;
 import ij.plugin.filter.Convolver;
 import ij.process.ColorProcessor;
+import ij.process.ImageProcessor;
 import ij.process.LUT;
 import loci.formats.FormatException;
 import loci.plugins.BF;
-import net.imglib2.type.numeric.ARGBType;
-import weka.Run;
 
 import java.awt.*;
 import java.io.File;
@@ -22,27 +21,22 @@ import java.util.stream.Collectors;
 public class CellViewImageProcessor
 {
 	public static final String MERGE = "Overlay";
-	public static final String FORWARD_SCATTER = "ForewardScatter";
-	public static final String SIDE_SCATTER = "SideScatter";
-	public static final String WHITE = "White";
 
-
-	public static final String VIEW_RAW = "Raw";
-	public static final String VIEW_PROCESSED_MONTAGE = "Processed Montage";
-	public static final String VIEW_PROCESSED_BF_GF_OVERLAY = "Processed BrightField GreenFluo Overlay";
-	public static final String VIEW_PROCESSED_OVERLAY = "Processed Overlay";
-	public static final String VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS = "Processed Overlay And Individual Channels";
-	public static final String VIEW_RAW_AND_MONTAGE = "Raw and Processed Montage";
+	// Viewing modalities
+	public static final String RAW = "Raw";
+	public static final String PROCESSED_MERGE = "Processed merge";
+	public static final String PROCESSED_MERGE_AND_INDIVIDUAL_CHANNELS = "Processed merge and individual channels";
 
 	public ImagePlus run(
 			String filePath,
 			ArrayList< CellViewChannel > channels,
 			int horizontalCropNumPixels,
-			String viewingModality )
+			String viewingModality,
+			boolean showOnlyMergeInColor )
 	{
 		ImagePlus imp = CellViewUtils.tryOpenImage( filePath );
 
-		if ( viewingModality.equals( CellViewImageProcessor.VIEW_RAW ) ) return imp;
+		if ( viewingModality.equals( CellViewImageProcessor.RAW ) ) return imp;
 
 		imp = processImage( imp );
 
@@ -54,7 +48,7 @@ public class CellViewImageProcessor
 
 		extractChannelsAsImagePlus( imp, channels );
 
-		addMergeAndConvertImagesToRGB( channels );
+		addMergeAndConvertImagesToRGB( channels, showOnlyMergeInColor );
 
 		imp = createOutputImp( channels, viewingModality );
 
@@ -111,7 +105,7 @@ public class CellViewImageProcessor
 		return imp;
 	}
 
-	private static void addMergeAndConvertImagesToRGB( ArrayList< CellViewChannel > channels )
+	private static void addMergeAndConvertImagesToRGB( ArrayList< CellViewChannel > channels, boolean showOnlyMergeInColor )
 	{
 		channels.add( createMergedImage( channels ) );
 
@@ -119,18 +113,26 @@ public class CellViewImageProcessor
 		{
 			if ( channel.color == MERGE ) continue;
 
-			channel.imagePlus = toRGB( channel.imagePlus );
+			channel.imagePlus = toRGB( channel.imagePlus, showOnlyMergeInColor );
 		}
 	}
 
-	public static ImagePlus toRGB( ImagePlus imp )
+	public static ImagePlus toRGB( ImagePlus imp, boolean applyGrayLUT )
 	{
-		return new ImagePlus( "", imp.getProcessor().convertToColorProcessor() );
+		final ImageProcessor processor = imp.getProcessor();
+
+		if ( applyGrayLUT )
+			processor.setLut( LUT.createLutFromColor( Color.WHITE ) );
+
+
+		final ImagePlus rgb = new ImagePlus( "", processor.convertToColorProcessor() );
+
+		return rgb;
 	}
 
 	public static ImagePlus createOutputImp( final ArrayList< CellViewChannel > channels, String viewingModality )
 	{
-		if ( viewingModality.equals( VIEW_PROCESSED_OVERLAY ) )
+		if ( viewingModality.equals( PROCESSED_MERGE ) )
 		{
 			for ( CellViewChannel channel : channels )
 			{
@@ -140,7 +142,7 @@ public class CellViewImageProcessor
 
 			throw new RuntimeException( "MERGE channel not found!" + viewingModality );
 		}
-		else if ( viewingModality.equals( VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS ))
+		else if ( viewingModality.equals( PROCESSED_MERGE_AND_INDIVIDUAL_CHANNELS ))
 		{
 			// make montage
 			final int width = channels.get( 0 ).imagePlus.getWidth();
@@ -202,7 +204,7 @@ public class CellViewImageProcessor
 			}
 		}
 
-		merge.duplicate().show();
+		// merge.duplicate().show(); // for debugging only
 		RGBStackConverter.convertToRGB( merge );
 
 		final CellViewChannel mergedChannel = new CellViewChannel( -1, MERGE, null );

@@ -1,17 +1,23 @@
 package de.embl.cba.cellview;
 
+import de.embl.cba.tables.Tables;
 import ij.IJ;
 import ij.ImagePlus;
+import ij.gui.GenericDialog;
 import loci.formats.FormatException;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
-public class CellViewUtils
+public abstract class CellViewUtils
 {
 	public static String getLocalDateAndHourAndMinute()
 	{
@@ -30,8 +36,10 @@ public class CellViewUtils
 		}
 	}
 
-	public static boolean checkFileSize( String filePath, double minimumFileSizeKiloBytes, double maximumFileSizeKiloBytes )
+	public static boolean checkFileSize( String filePath, String fileSizeRangeCSV )
 	{
+		final double[] fileSizeMinMax = Arrays.stream( fileSizeRangeCSV.split( "," ) ).mapToDouble( x -> Double.parseDouble( x.trim() ) ).toArray();
+
 		final File file = new File( filePath );
 
 		if ( ! file.exists() )
@@ -41,12 +49,12 @@ public class CellViewUtils
 
 		final double fileSizeKiloBytes = getFileSizeKiloBytes( file );
 
-		if ( fileSizeKiloBytes < minimumFileSizeKiloBytes )
+		if ( fileSizeKiloBytes < fileSizeMinMax[ 0 ] )
 		{
 			IJ.log( "Skipped too small file: " + file.getName() + "; size [kB]: " + fileSizeKiloBytes);
 			return false;
 		}
-		else if ( fileSizeKiloBytes > maximumFileSizeKiloBytes )
+		else if ( fileSizeKiloBytes > fileSizeMinMax[ 1 ] )
 		{
 			IJ.log( "Skipped too large file: " + file.getName() + "; size [kB]: " + fileSizeKiloBytes);
 			return false;
@@ -89,5 +97,70 @@ public class CellViewUtils
 			e.printStackTrace();
 		}
 		return inputImp;
+	}
+
+	public static void glimpseTable( JTable jTable )
+	{
+		IJ.log( "# Table Info"  );
+		IJ.log( "Number of rows: " + jTable.getRowCount() );
+		final List< String > columnNames = Tables.getColumnNames( jTable );
+		for ( String columnName : columnNames )
+		{
+			final int columnIndex = jTable.getColumnModel().getColumnIndex( columnName );
+
+			String firstRows = "";
+			for ( int rowIndex = 0; rowIndex < 5; rowIndex++ )
+			{
+				firstRows += jTable.getValueAt( rowIndex, columnIndex );
+				firstRows += ", ";
+			}
+			firstRows += "...";
+
+			IJ.log( columnName + ": " + firstRows );
+		}
+	}
+
+	public static File selectTableDialog( File[] tableFiles )
+	{
+		final GenericDialog gd = new GenericDialog( "Please select table for image preview" );
+		final String[] tablePaths = Arrays.stream( tableFiles ).map( x -> x.toString() ).toArray( String[]::new );
+		gd.addChoice( "Table", tablePaths, tablePaths[ 0 ] );
+		gd.showDialog();
+		if ( gd.wasCanceled() ) return null;
+		File selectedTableFile = new File( gd.getNextChoice() );
+		IJ.log( "Selected Table: " + selectedTableFile );
+		return selectedTableFile;
+	}
+
+	public static String selectGateDialog( String currentSelectedGate, Set< String > gates )
+	{
+		final GenericDialog gd = new GenericDialog( "Please select gate for image preview" );
+		final String[] choices = gates.stream().toArray( String[]::new );
+
+		gd.addChoice( "Gate", choices, currentSelectedGate );
+		gd.showDialog();
+
+		if ( gd.wasCanceled() )
+			return currentSelectedGate;
+
+		String selectedGate = gd.getNextChoice();
+
+		return selectedGate;
+	}
+
+	public static String selectGateColumnDialog( JTable jTable )
+	{
+		final List< String > columnNames = Tables.getColumnNames( jTable );
+		columnNames.add( "There is no gate column" );
+		final GenericDialog gd = new GenericDialog( "Please select gate column" );
+		final String[] items = columnNames.stream().toArray( String[]::new );
+		gd.addChoice( "Gate colum", items, items[ 0 ] );
+		gd.showDialog();
+		final String selectedColumn = gd.getNextChoice();
+
+		if ( selectedColumn.equals( "There is no gate column" ) )
+			return null;
+		else
+			return selectedColumn;
 	}
 }

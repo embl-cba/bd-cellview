@@ -14,7 +14,6 @@ import de.embl.cba.tables.FileAndUrlUtils;
 import de.embl.cba.tables.Tables;
 import ij.IJ;
 import ij.ImagePlus;
-import ij.gui.GenericDialog;
 import ij.io.FileSaver;
 import loci.common.DebugTools;
 import net.imagej.ImageJ;
@@ -37,56 +36,59 @@ public class CellViewProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
 
-	@Parameter ( label = "Image Tables", persist = true, required = false )
+	@Parameter ( label = "Please read the usage instructions", callback = "helpButtonCallback" )
+	public transient Button helpButton;
+
+	@Parameter ( label = "Image tables", persist = true, required = false )
 	public transient File[] tableFiles;
 
-	@Parameter ( label = "Minimum File Size [kb]" )
-	public double minimumFileSizeKiloBytes = 10;
+	@Parameter ( label = "Image file size filter (min, max) [kb]" )
+	public String fileSizeRangeCSV = "10,100000";
 
-	@Parameter ( label = "Maximum File Size [kb]" )
-	public double maximumFileSizeKiloBytes = 100000;
-
-	@Parameter ( label = "Horizontal Crop [pixels]", callback = "processAndShowImageFromFilePath" )
-	public int horizontalCropPixels = 0;
-
-	@Parameter ( label = "Channel Indices" )
+	@Parameter ( label = "Channel indices" )
 	public String channelIndexCSV = "1,2,4,3,5";
 
-	@Parameter ( label = "Colors (* : include in merge)" )
+	@Parameter ( label = "Colors (*: include in merge)" )
 	public String colorCSV = "White*,Green*,Magenta*,White,White";
 
-	@Parameter ( label = "Minimum Gray Levels" )
+	@Parameter ( label = "Show only merge in color" )
+	public boolean showOnlyMergeInColor = false;
+
+	@Parameter ( label = "Minimum gray levels" )
 	public String minimumGrayLevelCSV = "0.0,0.0,0.0,0.0,0.0";
 
-	@Parameter ( label = "Maximum Gray Levels" )
+	@Parameter ( label = "Maximum gray levels" )
 	public String maximumGrayLevelCSV = "1.0,1.0,1.0,1.0,1.0";
 
-	@Parameter( label = "Update Current Image", callback = "processAndShowImageFromFilePath" )
-	public Button updateButton;
+	@Parameter ( label = "Horizontal crop [pixels]" )
+	public int horizontalCropPixels = 0;
 
-	@Parameter ( label = "Processing Modality", choices = { CellViewImageProcessor.VIEW_RAW, CellViewImageProcessor.VIEW_PROCESSED_OVERLAY, CellViewImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS } )
-	public String viewingModality = CellViewImageProcessor.VIEW_PROCESSED_OVERLAY_AND_INDIVIDUAL_CHANNELS;
+	@Parameter( label = "Update current image", callback = "processAndShowImageFromFilePath" )
+	public transient Button updateButton;
 
-	@Parameter ( label = "Process Image File", callback = "processImageFileButtonCallback", required = false )
+	@Parameter ( label = "Processing modality", choices = { CellViewImageProcessor.RAW, CellViewImageProcessor.PROCESSED_MERGE, CellViewImageProcessor.PROCESSED_MERGE_AND_INDIVIDUAL_CHANNELS } )
+	public String viewingModality = CellViewImageProcessor.PROCESSED_MERGE_AND_INDIVIDUAL_CHANNELS;
+
+	@Parameter ( label = "Process and show image file", callback = "processImageFileButtonCallback", required = false )
 	private transient File imageFile;
 
-	@Parameter ( label = "Select Table", callback = "selectTableButtonCallback" )
+	@Parameter ( label = "Select table", callback = "selectTableButtonCallback" )
 	public transient Button selectTableButton;
 
-	@Parameter ( label = "Select Gate", callback = "selectGateButtonCallback" )
+	@Parameter ( label = "Select gate", callback = "selectGateButtonCallback" )
 	public transient Button selectGateButton;
 
-	@Parameter ( label = "Process Random Image of Selected Gate from Selected Table", callback = "processAndShowRandomImageFromSelectedGateButtonCallback" )
+	@Parameter ( label = "Process random image of selected gate from selected table", callback = "processAndShowRandomImageFromSelectedGateButtonCallback" )
 	private transient Button processAndShowRandomImageButton;
 
-	@Parameter ( label = "Process All Images of Selected Gate from All Tables ", callback = "processImagesButtonCallback" )
+	@Parameter ( label = "Maximum number of files to batch process [-1 = all]" )
+	public int maxNumFiles = -1;
+
+	@Parameter ( label = "Batch process images of selected gate from all tables ", callback = "processImagesButtonCallback" )
 	private transient Button processAllImagesButton;
 
-	@Parameter ( label = "Save Settings for Headless Processing", callback = "saveSettingsButtonCallback" )
+	@Parameter ( label = "Save settings for headless batch processing", callback = "saveSettingsButtonCallback" )
 	private transient Button saveHeadlessSettingsButton;
-
-	@Parameter ( label = "Maximum Number of Files to Process [-1 = all]" )
-	public int maxNumFiles = -1;
 
 	public String experimentDirectory;
 	public File selectedTableFile;
@@ -122,6 +124,10 @@ public class CellViewProcessorCommand implements Command, Interactive
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 	}
 
+	private void helpButtonCallback()
+	{
+		FileAndUrlUtils.openURI( "https://github.com/tischi/fccf/blob/master/README.md#cellview-image-processing" );
+	}
 	private void processImageFileButtonCallback()
 	{
 		imageFilePath = imageFile.getPath();
@@ -138,16 +144,16 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 		if ( selectedTableFile == null )
 		{
-			selectedTableFile = selectTableDialog( tableFiles );
+			selectedTableFile = CellViewUtils.selectTableDialog( tableFiles );
 			jTable = null; // force table loading;
 		}
 
 		if ( jTable == null )
 		{
 			loadTableAndUpdateRelatedFields( selectedTableFile );
-			gateColumnName = selectGateColumnDialog( jTable );
+			gateColumnName = CellViewUtils.selectGateColumnDialog( jTable );
 			setGatesIndices();
-			selectedGate = selectGateDialog( selectedGate, gateToRows.keySet() );
+			selectedGate = CellViewUtils.selectGateDialog( selectedGate, gateToRows.keySet() );
 			setSelectedGateIndices();
 		}
 
@@ -156,7 +162,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 		imageFilePath = getRandomFilePath();
 		if ( imageFilePath == null ) return;
 
-		if ( ! checkFileSize( imageFilePath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) ) return;
+		if ( ! checkFileSize( imageFilePath, fileSizeRangeCSV ) ) return;
 
 		processAndShowImageFromFilePath();
 	}
@@ -190,7 +196,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 			if ( selectedGate == null || ! gateToRows.keySet().contains( selectedGate ) )
 			{
-				selectedGate = selectGateDialog( selectedGate, gateToRows.keySet() );
+				selectedGate = CellViewUtils.selectGateDialog( selectedGate, gateToRows.keySet() );
 				setSelectedGateIndices();
 			}
 
@@ -231,21 +237,9 @@ public class CellViewProcessorCommand implements Command, Interactive
 			return;
 		}
 
-		selectedTableFile = selectTableDialog( tableFiles );
+		selectedTableFile = CellViewUtils.selectTableDialog( tableFiles );
 	}
 
-
-	private static File selectTableDialog( File[] tableFiles )
-	{
-		final GenericDialog gd = new GenericDialog( "Please select table for image preview" );
-		final String[] tablePaths = Arrays.stream( tableFiles ).map( x -> x.toString() ).toArray( String[]::new );
-		gd.addChoice( "Table", tablePaths, tablePaths[ 0 ] );
-		gd.showDialog();
-		if ( gd.wasCanceled() ) return null;
-		File selectedTableFile = new File( gd.getNextChoice() );
-		IJ.log( "Selected Table: " + selectedTableFile );
-		return selectedTableFile;
-	}
 
 	private void selectGateButtonCallback()
 	{
@@ -253,32 +247,16 @@ public class CellViewProcessorCommand implements Command, Interactive
 		{
 			if ( selectedTableFile == null )
 			{
-				selectedTableFile = selectTableDialog( tableFiles );
+				selectedTableFile = CellViewUtils.selectTableDialog( tableFiles );
 			}
 
 			loadTableAndUpdateRelatedFields( selectedTableFile );
-			gateColumnName = selectGateColumnDialog( jTable );
+			gateColumnName = CellViewUtils.selectGateColumnDialog( jTable );
 			setGatesIndices();
 		}
 
-		selectedGate = selectGateDialog( selectedGate, gateToRows.keySet() );
+		selectedGate = CellViewUtils.selectGateDialog( selectedGate, gateToRows.keySet() );
 		setSelectedGateIndices();
-	}
-
-	private static String selectGateDialog( String currentSelectedGate, Set< String > gates )
-	{
-		final GenericDialog gd = new GenericDialog( "Please select gate for image preview" );
-		final String[] choices = gates.stream().toArray( String[]::new );
-
-		gd.addChoice( "Gate", choices, currentSelectedGate );
-		gd.showDialog();
-
-		if ( gd.wasCanceled() )
-			return currentSelectedGate;
-
-		String selectedGate = gd.getNextChoice();
-
-		return selectedGate;
 	}
 
 	/**
@@ -392,7 +370,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 		}
 	}
 
-	public void loadTableAndUpdateRelatedFields( File selectedTableFile )
+	private void loadTableAndUpdateRelatedFields( File selectedTableFile )
 	{
 		if ( ! selectedTableFile.exists()  )
 		{
@@ -409,7 +387,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 		inputImagesDirectory = new File( experimentDirectory, "images" );
 		pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
 
-		glimpseTable( jTable );
+		CellViewUtils.glimpseTable( jTable );
 	}
 
 	private void loadTable( String absolutePath )
@@ -420,45 +398,9 @@ public class CellViewProcessorCommand implements Command, Interactive
 		IJ.log( "Loaded table in " + ( System.currentTimeMillis() - currentTimeMillis ) + " ms." );
 	}
 
-	private static String selectGateColumnDialog( JTable jTable )
-	{
-		final List< String > columnNames = Tables.getColumnNames( jTable );
-		columnNames.add( "There is no gate column" );
-		final GenericDialog gd = new GenericDialog( "Please select gate column" );
-		final String[] items = columnNames.stream().toArray( String[]::new );
-		gd.addChoice( "Gate colum", items, items[ 0 ] );
-		gd.showDialog();
-		final String selectedColumn = gd.getNextChoice();
-
-		if ( selectedColumn.equals( "There is no gate column" ) )
-			return null;
-		else
-			return selectedColumn;
-	}
-
-	public static void glimpseTable( JTable jTable )
-	{
-		IJ.log( "# Table Info"  );
-		IJ.log( "Number of rows: " + jTable.getRowCount() );
-		final List< String > columnNames = Tables.getColumnNames( jTable );
-		for ( String columnName : columnNames )
-		{
-			final int columnIndex = jTable.getColumnModel().getColumnIndex( columnName );
-
-			String firstRows = "";
-			for ( int rowIndex = 0; rowIndex < 5; rowIndex++ )
-			{
-				firstRows += jTable.getValueAt( rowIndex, columnIndex );
-				firstRows += ", ";
-			}
-			firstRows += "...";
-
-			IJ.log( columnName + ": " + firstRows );
-		}
-	}
-
 	private String saveProcessedImage( int maxNumItems, long currentTimeMillis, int i, String inputPath ) throws IOException
 	{
+		// log progress
 		new Thread( () -> {
 			if ( (i+1) % 100 == 0 || i + 1 == 1 || i + 1 == maxNumItems )
 				Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
@@ -466,12 +408,11 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 		final String absoluteInputPath = new File( inputPath ).getCanonicalPath();
 
-		if ( checkFileSize( absoluteInputPath, minimumFileSizeKiloBytes, maximumFileSizeKiloBytes ) )
+		if ( checkFileSize( absoluteInputPath, fileSizeRangeCSV ) )
 		{
 			processedImp = createProcessedImagePlus( inputPath, horizontalCropPixels );
 
-			// Images can be in subfolders, thus we only
-			// replace the root path
+			// Images can be in sub-folders, thus we only replace the root path
 			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
 			final String absoluteOutputRootDirectory = outputImagesRootDirectory.getCanonicalPath();
 			String outputImagePath = absoluteInputPath.replace(
@@ -491,12 +432,6 @@ public class CellViewProcessorCommand implements Command, Interactive
 	{
 		DebugTools.setRootLevel("OFF"); // Bio-Formats
 
-//		Tables.addColumn( jTable, QC, "Passed" );
-//		final int columnIndexQC = jTable.getColumnModel().getColumnIndex( QC );
-//
-//		Tables.addColumn( jTable, PATH_PROCESSED_JPEG, "None" );
-//		final int columnIndexPath = jTable.getColumnModel().getColumnIndex( PATH_PROCESSED_JPEG );
-
 		final long currentTimeMillis = System.currentTimeMillis();
 
 		String relativeImageRootDirectory = "images-processed-" + CellViewUtils.getLocalDateAndHourAndMinute();
@@ -512,26 +447,14 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 			try
 			{
-				String outputImagePath = saveProcessedImage( numImagesToBeProcessed, currentTimeMillis, i, inputImagePath );
+				saveProcessedImage( numImagesToBeProcessed, currentTimeMillis, i, inputImagePath );
 			}
 			catch ( IOException e )
 			{
 				e.printStackTrace();
 				throw new RuntimeException( "Error during saving of image: " + inputImagePath );
 			}
-
-//			if ( outputImagePath != null )
-//			{
-//				final String pathRelativeToTable = outputImagePath.replace( experimentDirectory, ".." );
-//				jTable.setValueAt( pathRelativeToTable , rowIndex, columnIndexPath );
-//			}
-//			else
-//			{
-//				jTable.setValueAt( "Failed_FileSizeTooSmall", rowIndex, columnIndexQC );
-//			}
 		}
-
-//		saveTableWithAdditionalColumns();
 	}
 
 	private void setSelectedGateIndices()
@@ -549,37 +472,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 			numImagesToBeProcessed = Math.min( maxNumFiles, selectedGateIndices.size() );
 	}
 
-	public void saveTableWithAdditionalColumns()
-	{
-		IJ.log( "\nSaving table with additional columns..." );
-		final File tableOutputFile = new File( selectedTableFile.getAbsolutePath().replace( ".csv", "-processed-images.csv" ) );
-		Tables.saveTable( jTable, tableOutputFile );
-		IJ.log( "...done: " + tableOutputFile );
-		IJ.log( " " );
-		glimpseTable( jTable );
-	}
-
-//	@Override
-//	public void initialize()
-//	{
-//		getInfo(); // HACK: Workaround for bug in SJC.
-//
-//		if ( jTable != null )
-//		{
-//			setGates();
-//			initProcessedJpegImagesOutputDirectory();
-//			pathColumnIndex = jTable.getColumnModel().getColumnIndex( imagePathColumnName );
-//		}
-//		else
-//		{
-//			setNoGateChoice();
-//			fetchFiles();
-//			maxNumFiles = files.size();
-//		}
-//	}
-
-
-	public void setGatesIndices()
+	private void setGatesIndices()
 	{
 		try
 		{
@@ -593,22 +486,11 @@ public class CellViewProcessorCommand implements Command, Interactive
 			IJ.showMessage( "Gate column not found in table: " + gateColumnName );
 			gateToRows = null;
 		}
-		//setGatesDropdown();
-	}
-
-	private void setGatesDropdown()
-	{
-//		final MutableModuleItem<String> gateChoiceItem = getInfo().getMutableInput("gateChoice", String.class);
-//
-//		final ArrayList< String > gates = new ArrayList<>( gateToRows.keySet() );
-//		gateChoiceItem.setChoices( gates );
-//		final String next = gates.iterator().next();
-//		gateChoiceItem.setValue( this, next );
 	}
 
 	private ImagePlus createProcessedImagePlus( String filePath, int horizontalCropNumPixels )
 	{
-		ImagePlus processedImp = imageProcessor.run( filePath, channels, horizontalCropNumPixels, viewingModality );
+		ImagePlus processedImp = imageProcessor.run( filePath, channels, horizontalCropNumPixels, viewingModality, showOnlyMergeInColor );
 
 		return processedImp;
 	}
@@ -628,12 +510,6 @@ public class CellViewProcessorCommand implements Command, Interactive
 		return absoluteImagePath;
 	}
 
-	/**
-	 *
-	 * @param jTable
-	 * @param rowIndex
-	 * @return
-	 */
 	private String getInputImagePath( JTable jTable, Integer rowIndex )
 	{
 		final String relativeImagePath = ( String ) jTable.getValueAt( rowIndex, pathColumnIndex );

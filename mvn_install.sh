@@ -1,7 +1,9 @@
 #!/bin/sh
 
+echo "Copying jars to almf and cba server..."
+
 IJ_UTILS="0.6.1"
-IMFLOW="0.2.2"
+IMFLOW="0.2.3"
 IJ_CLUSTER="0.6.7"
 
 mvn clean package
@@ -20,3 +22,4 @@ cp /Users/tischer/Documents/fccf/target/imflow-$IMFLOW.jar /g/cba/exchange/imflo
 cp /Users/tischer/.m2/repository/de/embl/cba/imagej-cluster/$IJ_CLUSTER/imagej-cluster-$IJ_CLUSTER.jar /g/cba/exchange/imflow/jars/
 cp /Users/tischer/.m2/repository/de/embl/cba/imagej-utils/$IJ_UTILS/imagej-utils-$IJ_UTILS.jar /g/cba/exchange/imflow/jars/
 
+echo "...done."
