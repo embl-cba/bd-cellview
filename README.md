@@ -1,4 +1,4 @@
-# BD Vulcan Image Processing
+# CellView Image Processing
 
 ## Installation
 
@@ -10,6 +10,10 @@
 The folder structure must be as shown below:
 
 <img src="https://user-images.githubusercontent.com/2157566/93058267-71d7eb00-f66f-11ea-9254-0e4ec986931c.png">
+
+### Available Channel Colors
+
+Please see the Java AWT [Color specifications](https://docs.oracle.com/javase/7/docs/api/java/awt/Color.html). 
 
 ### Table
 
