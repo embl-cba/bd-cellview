@@ -22,8 +22,8 @@ import java.util.Map;
 @Plugin(type = Command.class, menuPath = "Plugins>CellView>Process CellView Images on Slurm Cluster" )
 public class CellViewSlurmProcessorCommand implements Command
 {
-    @Parameter( label = "SSH accessible execution host" )
-    private String executionHost = "login.cluster.embl.de";
+    @Parameter( label = "Execution host" )
+    private String hostName = "login.cluster.embl.de";
 
     @Parameter( label = "Username" )
     private String userName = "tischer";
@@ -31,7 +31,7 @@ public class CellViewSlurmProcessorCommand implements Command
     @Parameter( label = "Password", style = TextWidget.PASSWORD_STYLE, persist = false )
     private String password;
 
-    @Parameter( label = "Path to Fiji from execution host")
+    @Parameter( label = "Path to Fiji on execution host")
     public String clusterFijiPath = "/g/almf/software/Fiji-versions/Fiji-BDVulcan.app/ImageJ-linux64";
 
     @Parameter( label = "Number of CPUs per job" )
@@ -53,7 +53,7 @@ public class CellViewSlurmProcessorCommand implements Command
 
     public void run()
     {
-        String jobDirectory = "/g/cba/cluster/" + executionHost;
+        String jobDirectory = "/g/cba/cluster/" + hostName;
 
         ArrayList< JobFuture > jobFutures = submitJobsOnSlurm( clusterFijiPath + FIJI_OPTIONS, jobDirectory, settingsFiles );
 
@@ -64,14 +64,14 @@ public class CellViewSlurmProcessorCommand implements Command
     private ArrayList< JobFuture > submitJobsOnSlurm( String imageJ, String jobDirectory, File[] batchFiles )
     {
         final JobExecutor jobExecutor = new JobExecutor();
-        jobExecutor.hostName = executionHost;
+        jobExecutor.hostName = hostName;
         jobExecutor.scriptType = JobExecutor.ScriptType.SlurmJob;
 
         JobSubmitter commandsSubmitter = new JobSubmitter(
                 jobExecutor,
                 jobDirectory ,
                 imageJ,
-                executionHost,
+                userName,
                 password );
 
         ArrayList< JobFuture > jobFutures = new ArrayList<>( );
