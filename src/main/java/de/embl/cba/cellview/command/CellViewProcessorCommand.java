@@ -30,8 +30,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static de.embl.cba.cellview.CellViewUtils.checkFileSize;
+import static de.embl.cba.cellview.CellViewUtils.localDateAndHourAndMinute;
 
-@Plugin( type = Command.class, menuPath = "Plugins>CellView>Process CellView Images"  )
+@Plugin( type = Command.class, menuPath = "Plugins>BD CellView>Process BD CellView Images"  )
 public class CellViewProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
@@ -320,7 +321,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 		setSelectedGateIndices();
 		setNumImagesToBeProcessed();
 
-		final File settingsFile = new File( experimentDirectory, "batchProcess.json" );
+		final File settingsFile = new File( experimentDirectory, "batch-process-" + localDateAndHourAndMinute() + ".json" );
 
 		// adapt fields for the specific table file
 		this.selectedTableFile = new File( PathMapper.asEMBLClusterMounted( tableFile ) );
@@ -434,7 +435,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 		final long currentTimeMillis = System.currentTimeMillis();
 
-		String relativeImageRootDirectory = "images-processed-" + CellViewUtils.getLocalDateAndHourAndMinute();
+		String relativeImageRootDirectory = "images-processed-" + CellViewUtils.localDateAndHourAndMinute();
 		outputImagesRootDirectory = new File( experimentDirectory, relativeImageRootDirectory );
 		IJ.log( "Saving processed images to directory: " + outputImagesRootDirectory );
 		IJ.log( "Number of images to be processed: " + numImagesToBeProcessed );

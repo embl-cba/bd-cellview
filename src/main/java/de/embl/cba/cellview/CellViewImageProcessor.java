@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 public class CellViewImageProcessor
 {
-	public static final String MERGE = "Overlay";
+	public static final String MERGE = "Merge";
 
 	// Viewing modalities
 	public static final String RAW = "Raw";
@@ -29,11 +29,14 @@ public class CellViewImageProcessor
 
 	public ImagePlus run(
 			String filePath,
-			ArrayList< CellViewChannel > channels,
+			ArrayList< CellViewChannel > inputChannels,
 			int horizontalCropNumPixels,
 			String viewingModality,
 			boolean showOnlyMergeInColor )
 	{
+		// create a copy because the list will be modified
+		final ArrayList< CellViewChannel > channels = new ArrayList<>( inputChannels );
+
 		ImagePlus imp = CellViewUtils.tryOpenImage( filePath );
 
 		if ( viewingModality.equals( CellViewImageProcessor.RAW ) ) return imp;
@@ -61,8 +64,6 @@ public class CellViewImageProcessor
 			ImagePlus inputImp,
 			ArrayList< CellViewChannel > channels )
 	{
-		final Map< String, ImagePlus > colorToImagePlus = new LinkedHashMap<>();
-
 		for ( CellViewChannel channel : channels )
 		{
 			final ImagePlus imagePlus =
@@ -77,12 +78,6 @@ public class CellViewImageProcessor
 			imagePlus.setLut( LUT.createLutFromColor( color ) );
 			channel.imagePlus = imagePlus;
 		}
-	}
-
-	public static ImagePlus openImage( String filePath ) throws FormatException, IOException
-	{
-		final ImagePlus[] imps = BF.openImagePlus( filePath );
-		return imps[ 0 ];
 	}
 
 	public static ImagePlus processImage( ImagePlus imp )

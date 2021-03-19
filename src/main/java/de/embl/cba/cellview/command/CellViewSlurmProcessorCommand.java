@@ -1,8 +1,6 @@
-package de.embl.cba.cellview.cluster;
+package de.embl.cba.cellview.command;
 
 import de.embl.cba.cluster.*;
-import de.embl.cba.cellview.command.CellViewHeadlessProcessorCommand;
-import de.embl.cba.cellview.command.CellViewProcessorCommand;
 import de.embl.cba.log.IJLazySwingLogger;
 import de.embl.cba.morphometry.Utils;
 import de.embl.cba.util.PathMapper;
@@ -19,7 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-@Plugin(type = Command.class, menuPath = "Plugins>CellView>Process CellView Images on Slurm Cluster" )
+@Plugin(type = Command.class, menuPath = "Plugins>BD CellView>Process BD CellView Images on Slurm Cluster" )
 public class CellViewSlurmProcessorCommand implements Command
 {
     @Parameter( label = "Execution host" )

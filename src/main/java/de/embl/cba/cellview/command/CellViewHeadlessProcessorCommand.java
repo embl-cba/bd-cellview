@@ -9,10 +9,10 @@ import org.scijava.plugin.Plugin;
 
 import java.io.*;
 
-@Plugin( type = Command.class, menuPath = "Plugins>CellView>" + CellViewHeadlessProcessorCommand.COMMAND_NAME )
+@Plugin( type = Command.class, menuPath = "Plugins>BD CellView>" + CellViewHeadlessProcessorCommand.COMMAND_NAME )
 public class CellViewHeadlessProcessorCommand implements Command
 {
-	public static final String COMMAND_NAME = "Process CellView Images Headless";
+	public static final String COMMAND_NAME = "Process BD CellView Images Headless";
 	private transient static final String NONE = "None";
 
 	@Parameter

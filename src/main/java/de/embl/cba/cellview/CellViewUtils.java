@@ -5,6 +5,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import loci.formats.FormatException;
+import loci.plugins.BF;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,7 +20,7 @@ import java.util.Set;
 
 public abstract class CellViewUtils
 {
-	public static String getLocalDateAndHourAndMinute()
+	public static String localDateAndHourAndMinute()
 	{
 		final LocalDate localDate = LocalDate.now();
 		final LocalTime localTime = LocalTime.now();
@@ -85,18 +86,14 @@ public abstract class CellViewUtils
 
 	public static ImagePlus tryOpenImage( String filePath )
 	{
-		ImagePlus inputImp = null;
 		try
 		{
-			inputImp = CellViewImageProcessor.openImage( filePath );
-		} catch ( FormatException e )
-		{
-			e.printStackTrace();
-		} catch ( IOException e )
-		{
-			e.printStackTrace();
+			return openImage( filePath );
 		}
-		return inputImp;
+		catch ( Exception e )
+		{
+			throw new RuntimeException( e );
+		}
 	}
 
 	public static void glimpseTable( JTable jTable )
@@ -162,5 +159,11 @@ public abstract class CellViewUtils
 			return null;
 		else
 			return selectedColumn;
+	}
+
+	public static ImagePlus openImage( String filePath ) throws FormatException, IOException
+	{
+		final ImagePlus[] imps = BF.openImagePlus( filePath );
+		return imps[ 0 ];
 	}
 }
