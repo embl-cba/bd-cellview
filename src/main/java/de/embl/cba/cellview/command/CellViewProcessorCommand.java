@@ -36,6 +36,7 @@ import static de.embl.cba.cellview.CellViewUtils.localDateAndHourAndMinute;
 public class CellViewProcessorCommand implements Command, Interactive
 {
 	private transient static final String NONE = "None";
+	public static final String PROCESS_RANDOM_IMAGE = "Process random image of selected gate from selected table";
 
 	@Parameter ( label = "Please read the usage instructions", callback = "helpButtonCallback" )
 	public transient Button helpButton;
@@ -79,7 +80,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Select gate", callback = "selectGateButtonCallback" )
 	public transient Button selectGateButton;
 
-	@Parameter ( label = "Process random image of selected gate from selected table", callback = "processAndShowRandomImageFromSelectedGateButtonCallback" )
+	@Parameter ( label = PROCESS_RANDOM_IMAGE, callback = "processAndShowRandomImageFromSelectedGateButtonCallback" )
 	private transient Button processAndShowRandomImageButton;
 
 	@Parameter ( label = "Maximum number of files to batch process [-1 = all]" )
@@ -129,6 +130,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 	{
 		FileAndUrlUtils.openURI( "https://github.com/tischi/fccf/blob/master/README.md#cellview-image-processing" );
 	}
+
 	private void processImageFileButtonCallback()
 	{
 		imageFilePath = imageFile.getPath();
@@ -173,7 +175,11 @@ public class CellViewProcessorCommand implements Command, Interactive
 		DebugTools.setRootLevel( "OFF" ); // Bio-Formats
 		IJ.log( "Preview image. Table: " + selectedTableFile + "; Gate: " + selectedGate );
 		if ( ! setColorToSliceAndColorToRange() ) return;
-		if ( imageFilePath == null ) return;
+		if ( imageFilePath == null )
+		{
+			IJ.log("[ERROR] No image found. Please click ["+PROCESS_RANDOM_IMAGE+"]");
+			return;
+		}
 		if ( processedImp != null ) processedImp.close();
 		processedImp = createProcessedImagePlus( imageFilePath, horizontalCropPixels );
 		processedImp.show();

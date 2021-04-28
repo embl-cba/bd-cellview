@@ -1,6 +1,7 @@
 package de.embl.cba.cellview;
 
 import ij.CompositeImage;
+import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.*;
 import ij.plugin.filter.Convolver;
@@ -102,7 +103,9 @@ public class CellViewImageProcessor
 
 	private static void addMergeAndConvertImagesToRGB( ArrayList< CellViewChannel > channels, boolean showOnlyMergeInColor )
 	{
-		channels.add( createMergedImage( channels ) );
+		final CellViewChannel mergedImage = createMergedImage( channels );
+		if ( mergedImage != null )
+			channels.add( mergedImage );
 
 		for ( CellViewChannel channel : channels )
 		{
@@ -177,6 +180,12 @@ public class CellViewImageProcessor
 	{
 		final ArrayList< CellViewChannel > mergeChannels = ( ArrayList ) channels.stream().filter( c -> c.color.contains( "*" ) ).collect( Collectors.toList() );
 
+		if ( mergeChannels.size() < 2 )
+		{
+			IJ.log("[WARN] Did not create merged image, because at least 2 channels need to be selected; i.e. the Colors marked with a *.");
+			return null;
+		}
+
 		final ImagePlus[] imagePluses = mergeChannels.stream().map( c -> c.imagePlus ).toArray( ImagePlus[]::new );
 
 		final CompositeImage merge = ( CompositeImage ) RGBStackMerge.mergeChannels( imagePluses, true );
@@ -204,6 +213,7 @@ public class CellViewImageProcessor
 
 		final CellViewChannel mergedChannel = new CellViewChannel( -1, MERGE, null );
 		mergedChannel.imagePlus = merge;
+
 		return mergedChannel;
 	}
 
