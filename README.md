@@ -1,9 +1,15 @@
-# CellView Image Processing
+# BD CellView Image Processing
 
 ## Installation
 
-- Download a fresh Fiji
-- Copy the jars from `/g/cba/exchange/imflow/jars/` to the `Fiji.app/jars` folder
+1. Please [install Fiji](https://fiji.sc) on your computer.
+2. Restart Fiji and install the BD CellView update site ([how to install an update site](https://imagej.net/Following_an_update_site#Introduction)).
+    - [X] `BD CellView`
+3. Restart Fiji
+
+## Publication and usage instructions
+
+Please see the supplemental material in XYZ.
 
 ### Folder Structure 
 
