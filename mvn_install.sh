@@ -17,10 +17,10 @@ rm /g/cba/exchange/imflow/jars/bd-cellview-*
 rm /g/cba/exchange/imflow/jars/imagej-utils-*
 rm /g/cba/exchange/imflow/jars/imagej-cluster-*
 
-cp /Users/tischer/Documents/fccf/target/bd-cellview-$IMFLOW.jar /g/almf/software/Fiji-versions/Fiji-BDVulcan.app/jars/ 
+cp /Users/tischer/Documents/bd-cellview/target/bd-cellview-$IMFLOW.jar /g/almf/software/Fiji-versions/Fiji-BDVulcan.app/jars/ 
 cp /Users/tischer/.m2/repository/de/embl/cba/imagej-utils/$IJ_UTILS/imagej-utils-$IJ_UTILS.jar /g/almf/software/Fiji-versions/Fiji-BDVulcan.app/jars/
 
-cp /Users/tischer/Documents/fccf/target/bd-cellview-$IMFLOW.jar /g/cba/exchange/imflow/jars/ 
+cp /Users/tischer/Documents/bd-cellview/target/bd-cellview-$IMFLOW.jar /g/cba/exchange/imflow/jars/ 
 cp /Users/tischer/.m2/repository/de/embl/cba/imagej-cluster/$IJ_CLUSTER/imagej-cluster-$IJ_CLUSTER.jar /g/cba/exchange/imflow/jars/
 cp /Users/tischer/.m2/repository/de/embl/cba/imagej-utils/$IJ_UTILS/imagej-utils-$IJ_UTILS.jar /g/cba/exchange/imflow/jars/
 

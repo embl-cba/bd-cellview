@@ -47,7 +47,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Image file size filter (min, max) [kb]" )
 	public String fileSizeRangeCSV = "10,100000";
 
-	@Parameter ( label = "Channel indices" )
+	@Parameter ( label = "Selected channel indices in the raw image" )
 	public String channelIndexCSV = "1,2,4,3,5";
 
 	@Parameter ( label = "Colors (*: include in merge)" )
@@ -86,7 +86,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 	@Parameter ( label = "Maximum number of files to batch process [-1 = all]" )
 	public int maxNumFiles = -1;
 
-	@Parameter ( label = "Batch process images of selected gate from all tables ", callback = "processImagesButtonCallback" )
+	@Parameter ( label = "Batch process images of selected gate from all tables", callback = "processImagesButtonCallback" )
 	private transient Button processAllImagesButton;
 
 	@Parameter ( label = "Save settings for headless batch processing", callback = "saveSettingsButtonCallback" )
@@ -128,7 +128,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 	private void helpButtonCallback()
 	{
-		FileAndUrlUtils.openURI( "https://github.com/tischi/fccf/blob/master/README.md#cellview-image-processing" );
+		FileAndUrlUtils.openURI( "https://github.com/embl-cba/ICS/blob/master/README.md#cellview-image-processing" );
 	}
 
 	private void processImageFileButtonCallback()
