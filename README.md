@@ -9,7 +9,7 @@
 
 ## Publication and usage instructions
 
-Please see the supplemental material in XYZ.
+Please see the supplemental material in: Schraivogel, D. et al. High-speed fluorescence image-enabled cell sorting. Science 375, 315-320 (2022). doi: [10.1126/science.abj3013](https://www.science.org/doi/10.1126/science.abj3013).
 
 ### Folder Structure 
 
