@@ -21,6 +21,12 @@ The folder structure must be as shown below:
 
 Please see the Java AWT [Color specifications](https://docs.oracle.com/javase/7/docs/api/java/awt/Color.html). 
 
+### Channel indices
+
+The ICS generates multichannel TIFFs with 8 channels. You can select those channels 1-8 in the channel indices field of the Fiji Plugin. Here's an overview of different channels.
+
+<img width="372" alt="Screen Shot 2022-03-03 at 19 23 59" src="https://user-images.githubusercontent.com/17741956/156627967-10fa87dc-4933-4cd9-bd46-27c215081488.png">
+
 ### Table
 
 The table must look like this (the column name of `gate` may be changed as this can be specified in the user interface):
