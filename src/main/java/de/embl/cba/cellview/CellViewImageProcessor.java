@@ -182,7 +182,7 @@ public class CellViewImageProcessor
 
 		if ( mergeChannels.size() < 2 )
 		{
-			IJ.log("[WARN] Did not create merged image, because at least 2 channels need to be selected; i.e. the Colors marked with a *.");
+			IJ.log("[WARN] Did not create merged image, because at least 2 channels need to be selected; i.e. at least two colors should be marked with *.");
 			return null;
 		}
 

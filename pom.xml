@@ -12,9 +12,9 @@
 
 	<groupId>de.embl.cba</groupId>
 	<artifactId>bd-cellview</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 
-	<name>CellView Image Processor</name>
+	<name>BD-CellView Image Processor</name>
 	<description>Processing of images that are output of the BD-CellView imaging flow cytometer</description>
 	<inceptionYear>2020</inceptionYear>
 	<organization>
