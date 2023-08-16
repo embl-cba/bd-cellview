@@ -21,7 +21,7 @@ import java.util.Map;
 public class CellViewSlurmProcessorCommand implements Command
 {
     @Parameter( label = "Execution host" )
-    private String hostName = "login.cluster.embl.de";
+    private String hostName = "login01.cluster.embl.de";
 
     @Parameter( label = "Username" )
     private String userName = "tischer";
