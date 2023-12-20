@@ -1,9 +1,9 @@
-package develop;
+package run;
 
 import de.embl.cba.cellview.command.CellViewProcessorCommand;
 import net.imagej.ImageJ;
 
-public class DevelopDatasetProcessor
+public class RunEventProcessor
 {
 	public static void main( String[] args )
 	{

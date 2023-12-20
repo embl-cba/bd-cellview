@@ -101,12 +101,13 @@ public abstract class CellViewUtils
 		IJ.log( "# Table Info"  );
 		IJ.log( "Number of rows: " + jTable.getRowCount() );
 		final List< String > columnNames = Tables.getColumnNames( jTable );
+		int numRows = Math.min( jTable.getRowCount(), 5 );
 		for ( String columnName : columnNames )
 		{
 			final int columnIndex = jTable.getColumnModel().getColumnIndex( columnName );
 
 			String firstRows = "";
-			for ( int rowIndex = 0; rowIndex < 5; rowIndex++ )
+			for ( int rowIndex = 0; rowIndex < numRows; rowIndex++ )
 			{
 				firstRows += jTable.getValueAt( rowIndex, columnIndex );
 				firstRows += ", ";
