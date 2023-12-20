@@ -7,9 +7,13 @@
     - [X] `BD CellView`
 3. Restart Fiji
 
-## Publication and usage instructions
+## Cite
 
-Please see the supplemental material in: Schraivogel, D. et al. High-speed fluorescence image-enabled cell sorting. Science 375, 315-320 (2022). doi: [10.1126/science.abj3013](https://www.science.org/doi/10.1126/science.abj3013).
+When using this plugin please cite [Schraivogel, D. et al. High-speed fluorescence image-enabled cell sorting. Science 375, 315-320 (2022)](https://www.science.org/doi/10.1126/science.abj3013).
+
+## Use
+
+For detailed instructions please see the Supplemental Material in the above publication.
 
 ### Folder Structure 
 
@@ -44,3 +48,13 @@ id7;S;../images/Cell_Cycle_00014714.tiff
 id8;S;../images/Cell_Cycle_00016839.tiff
 id9;NA;../images/Cell_Cycle_00017276.tiff
 ```
+
+### Quick start
+
+1. Open Fiji
+2. `Plugins › BD CellView › Process BD CellView Images`
+3. `Add files...` (open the table file, s.a.)
+4. `Select gate` (to select the table and gate)
+5. `Process random image of selected gate from selected table`
+6. Configure the visualisation settings (channels and min/max gray levels)
+7. When satisfied export all images using `Batch process images of selected gate from all tables` 
