@@ -1,5 +1,6 @@
 package de.embl.cba.cellview.command;
 
+import ij.IJ;
 import ij.plugin.frame.Recorder;
 import net.imagej.ImageJ;
 import org.scijava.command.Command;
@@ -28,7 +29,10 @@ public class CellViewHeadlessProcessorCommand implements Command
 		{
 			CellViewProcessorCommand command = CellViewProcessorCommand.createCellViewProcessorCommandFromJson( settingsFile );
 			command.processImagesHeadless();
-		} catch ( IOException e )
+			System.out.println("Waiting...");
+			System.out.println("Done waiting.");
+		}
+		catch ( IOException e )
 		{
 			e.printStackTrace();
 		}

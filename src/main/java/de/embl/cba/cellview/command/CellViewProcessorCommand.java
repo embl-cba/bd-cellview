@@ -220,11 +220,8 @@ public class CellViewProcessorCommand implements Command, Interactive
 	// this public function is only for the headless (cluster) batch processing
 	public void processImagesHeadless()
 	{
-		new Thread( () ->
-		{
-			processImagesFromSelectedTableFile();
-			if ( quitAfterRun ) Commands.quitImageJ();
-		}).start();
+		processImagesFromSelectedTableFile();
+		if ( quitAfterRun ) Commands.quitImageJ();
 	}
 
 	private void processImagesFromSelectedTableFile()
