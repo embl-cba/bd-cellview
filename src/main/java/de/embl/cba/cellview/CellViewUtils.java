@@ -37,7 +37,7 @@ public abstract class CellViewUtils
 		}
 	}
 
-	public static boolean checkFileSize( String filePath, String fileSizeRangeCSV )
+	public static boolean checkFileSize( String filePath, String fileSizeRangeCSV, boolean verbose )
 	{
 		final double[] fileSizeMinMax = Arrays.stream( fileSizeRangeCSV.split( "," ) ).mapToDouble( x -> Double.parseDouble( x.trim() ) ).toArray();
 
@@ -62,6 +62,7 @@ public abstract class CellViewUtils
 		}
 		else
 		{
+			if ( verbose ) IJ.log( "Accepted: " + file.getName() + "; size [kB]: " + fileSizeKiloBytes);
 			return true;
 		}
 	}

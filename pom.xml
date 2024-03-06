@@ -8,7 +8,7 @@
 		<version>36.0.0</version>
 	</parent>
 
-	<!-- mvn clean install -Dscijava.app.directory=/Users/tischer/Desktop/Fiji/Fiji-BD-CellView.app -->
+	<!-- mvn clean install -Dscijava.app.directory=/Users/tischer/Desktop/Fiji/Fiji.app -->
 
 	<groupId>de.embl.cba</groupId>
 	<artifactId>bd-cellview</artifactId>

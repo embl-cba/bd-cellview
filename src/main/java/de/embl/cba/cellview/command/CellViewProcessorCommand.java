@@ -99,6 +99,8 @@ public class CellViewProcessorCommand implements Command, Interactive
 	public String selectedGate;
 	public int numImagesToBeProcessed;
 
+	public static boolean verbose = true; // TODO: make this configurable! Maybe static getter method?
+
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
 	private transient int pathColumnIndex;
@@ -111,7 +113,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 	private transient CellViewImageProcessor imageProcessor = new CellViewImageProcessor();
 	private transient ArrayList< CellViewChannel > channels;
 
-	public static CellViewProcessorCommand createBdVulcanProcessorCommandFromJson( File jsonFile ) throws IOException
+	public static CellViewProcessorCommand createCellViewProcessorCommandFromJson( File jsonFile ) throws IOException
 	{
 		InputStream inputStream = FileAndUrlUtils.getInputStream( jsonFile.getAbsolutePath() );
 		final JsonReader reader = new JsonReader( new InputStreamReader( inputStream, "UTF-8" ) );
@@ -165,7 +167,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 		imageFilePath = getRandomFilePath();
 		if ( imageFilePath == null ) return;
 
-		if ( ! checkFileSize( imageFilePath, fileSizeRangeCSV ) ) return;
+		if ( ! checkFileSize( imageFilePath, fileSizeRangeCSV, verbose ) ) return;
 
 		processAndShowImageFromFilePath();
 	}
@@ -379,6 +381,8 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 	private void loadTableAndUpdateRelatedFields( File selectedTableFile )
 	{
+		final String absolutePath = selectedTableFile.toString();
+
 		if ( ! selectedTableFile.exists()  )
 		{
 			Logger.log( "Table file does not exist: " + selectedTableFile );
@@ -386,8 +390,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 		}
 
 		// final String absolutePath = tableFile.getAbsolutePath(); this does not work when loading from json for some reason...
-		final String absolutePath = selectedTableFile.toString();
-
+		//final String absolutePath = selectedTableFile.toString();
 		loadTable( absolutePath );
 
 		experimentDirectory = new File( selectedTableFile.getParent() ).getParent();
@@ -407,32 +410,48 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 	private String saveProcessedImage( int maxNumItems, long currentTimeMillis, int i, String inputPath ) throws IOException
 	{
-		// log progress
-		new Thread( () -> {
-			if ( (i+1) % 100 == 0 || i + 1 == 1 || i + 1 == maxNumItems )
-				Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
-		}).start();
 
 		final String absoluteInputPath = new File( inputPath ).getCanonicalPath();
 
-		if ( checkFileSize( absoluteInputPath, fileSizeRangeCSV ) )
-		{
-			processedImp = createProcessedImagePlus( inputPath, horizontalCropPixels );
+		if ( verbose ) IJ.log( "\nAnalyzing " + absoluteInputPath );
 
-			// Images can be in sub-folders, thus we only replace the root path
-			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
-			final String absoluteOutputRootDirectory = outputImagesRootDirectory.getCanonicalPath();
-			String outputImagePath = absoluteInputPath.replace(
-					absoluteInputRootDirectory,
-					absoluteOutputRootDirectory );
-			saveImageAsJpeg( outputImagePath, processedImp );
+		if ( verbose ) IJ.log( "Memory " + IJ.freeMemory() );
 
-			return outputImagePath;
-		}
-		else
-		{
-			return null;
-		}
+		if ( verbose ) IJ.log( "Checking..." );
+
+		IJ.wait( 100 );
+
+		return null;
+
+//		if ( checkFileSize( absoluteInputPath, fileSizeRangeCSV, verbose ) )
+//		{
+//			if ( verbose ) IJ.log( "Processing..."  );
+//			processedImp = createProcessedImagePlus( inputPath, horizontalCropPixels );
+//
+//			// Images can be in sub-folders, thus we only replace the root path
+//			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
+//			final String absoluteOutputRootDirectory = outputImagesRootDirectory.getCanonicalPath();
+//			String outputImagePath = absoluteInputPath.replace(
+//					absoluteInputRootDirectory,
+//					absoluteOutputRootDirectory );
+//
+//			if ( verbose ) IJ.log( "Saving..." );
+//			saveImageAsJpeg( outputImagePath, processedImp );
+//
+//			// log progress
+//			new Thread( () -> {
+//				if ( ( i + 1 ) % 100 == 0 || i == 0 || i + 1 == maxNumItems )
+//				{
+//					Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
+//				}
+//			}).start();
+//
+//			return outputImagePath;
+//		}
+//		else
+//		{
+//			return null;
+//		}
 	}
 
 	private void processAndSaveImages()

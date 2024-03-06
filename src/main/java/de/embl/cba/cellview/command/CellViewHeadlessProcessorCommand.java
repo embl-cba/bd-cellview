@@ -26,7 +26,7 @@ public class CellViewHeadlessProcessorCommand implements Command
 	{
 		try
 		{
-			CellViewProcessorCommand command = CellViewProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
+			CellViewProcessorCommand command = CellViewProcessorCommand.createCellViewProcessorCommandFromJson( settingsFile );
 			command.processImagesHeadless();
 		} catch ( IOException e )
 		{
@@ -44,7 +44,7 @@ public class CellViewHeadlessProcessorCommand implements Command
 		imageJ.command().run( CellViewHeadlessProcessorCommand.class, true );
 
 		/**
-		 *  /Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run "Batch Process BD Vulcan Dataset" "settingsFile='/Users/tischer/Documents/fccf/src/test/resources/minimalgated/batchProcess.json'"
+		 *  /Users/tischer/Desktop/Fiji-imflow.app/Contents/MacOS/ImageJ-macosx --headless --run "Process BD CellView Images Headless" "settingsFile='/Users/tischer/Documents/fccf/src/test/resources/minimalgated/batchProcess.json'"
 		 */
 	}
 }

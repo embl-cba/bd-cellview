@@ -91,7 +91,7 @@ public class CellViewSlurmProcessorCommand implements Command
     {
         try
         {
-            CellViewProcessorCommand command = CellViewProcessorCommand.createBdVulcanProcessorCommandFromJson( settingsFile );
+            CellViewProcessorCommand command = CellViewProcessorCommand.createCellViewProcessorCommandFromJson( settingsFile );
 
             IJ.log( "Table: " + command.selectedTableFile );
             IJ.log( "Gate: " + command.selectedGate );

@@ -1,5 +1,6 @@
 package de.embl.cba.cellview;
 
+import de.embl.cba.cellview.command.CellViewProcessorCommand;
 import ij.CompositeImage;
 import ij.IJ;
 import ij.ImagePlus;
@@ -38,22 +39,28 @@ public class CellViewImageProcessor
 		// create a copy because the list will be modified
 		final ArrayList< CellViewChannel > channels = new ArrayList<>( inputChannels );
 
+		if ( CellViewProcessorCommand.verbose ) IJ.log( "Opening... " );
 		ImagePlus imp = CellViewUtils.tryOpenImage( filePath );
 
 		if ( viewingModality.equals( CellViewImageProcessor.RAW ) ) return imp;
 
+		if ( CellViewProcessorCommand.verbose ) IJ.log( "Processing... " );
 		imp = processImage( imp );
 
 		if ( horizontalCropNumPixels > 0 )
 		{
+			if ( CellViewProcessorCommand.verbose ) IJ.log( "Cropping... " );
 			imp.setRoi( new Rectangle( horizontalCropNumPixels, 0, imp.getWidth() - 2 * horizontalCropNumPixels, imp.getHeight() ) );
 			imp = imp.crop( "stack" );
 		}
 
+		if ( CellViewProcessorCommand.verbose ) IJ.log( "Extracting channels... " );
 		extractChannelsAsImagePlus( imp, channels );
 
+		if ( CellViewProcessorCommand.verbose ) IJ.log( "Converting to RGB... " );
 		addMergeAndConvertImagesToRGB( channels, showOnlyMergeInColor );
 
+		if ( CellViewProcessorCommand.verbose ) IJ.log( "Creating output... " );
 		imp = createOutputImp( channels, viewingModality );
 
 		imp.setTitle( new File( filePath ).getName() );
