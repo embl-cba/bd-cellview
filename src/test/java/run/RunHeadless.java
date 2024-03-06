@@ -17,7 +17,6 @@ public class RunHeadless
 		command.settingsFile =  new File("/Users/tischer/Downloads/demo_data/json/batch_2channels.json");
 		command.run();
 
-		// /Users/tischer/Desktop/Fiji/Fiji.app/Contents/MacOS/ImageJ-macosx --headless --run "Debug Headless" "text='hello world'"
-		//  /Users/tischer/Desktop/Fiji/Fiji.app/Contents/MacOS/ImageJ-macosx --run "Process BD CellView Images Headless" "settingsFile='/Users/tischer/Downloads/demo_data/json/batch_2channels.json'"
+		//  /Users/tischer/Desktop/Fiji/Fiji.app/Contents/MacOS/ImageJ-macosx --headless --run "Process BD CellView Images Headless" "settingsFile='/Users/tischer/Downloads/demo_data/json/batch_2channels.json'"
 	}
 }

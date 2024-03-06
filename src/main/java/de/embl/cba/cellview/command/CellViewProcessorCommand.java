@@ -99,7 +99,7 @@ public class CellViewProcessorCommand implements Command, Interactive
 	public String selectedGate;
 	public int numImagesToBeProcessed;
 
-	public static boolean verbose = true; // TODO: make this configurable! Maybe static getter method?
+	public static boolean verbose = false; // for debugging
 
 	private transient HashMap< String, ArrayList< Integer > > gateToRows;
 	private transient ImagePlus processedImp;
@@ -414,41 +414,35 @@ public class CellViewProcessorCommand implements Command, Interactive
 
 		if ( verbose ) IJ.log( "Memory " + IJ.freeMemory() );
 
-		if ( verbose ) IJ.log( "Checking..." );
+		if ( checkFileSize( absoluteInputPath, fileSizeRangeCSV, verbose ) )
+		{
+			if ( verbose ) IJ.log( "Processing..."  );
+			processedImp = createProcessedImagePlus( inputPath, horizontalCropPixels );
 
-		IJ.wait( 100 );
+			// Images can be in sub-folders, thus we only replace the root path
+			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
+			final String absoluteOutputRootDirectory = outputImagesRootDirectory.getCanonicalPath();
+			String outputImagePath = absoluteInputPath.replace(
+					absoluteInputRootDirectory,
+					absoluteOutputRootDirectory );
 
-		return null;
+			if ( verbose ) IJ.log( "Saving..." );
+			saveImageAsJpeg( outputImagePath, processedImp );
 
-//		if ( checkFileSize( absoluteInputPath, fileSizeRangeCSV, verbose ) )
-//		{
-//			if ( verbose ) IJ.log( "Processing..."  );
-//			processedImp = createProcessedImagePlus( inputPath, horizontalCropPixels );
-//
-//			// Images can be in sub-folders, thus we only replace the root path
-//			final String absoluteInputRootDirectory = inputImagesDirectory.getCanonicalPath();
-//			final String absoluteOutputRootDirectory = outputImagesRootDirectory.getCanonicalPath();
-//			String outputImagePath = absoluteInputPath.replace(
-//					absoluteInputRootDirectory,
-//					absoluteOutputRootDirectory );
-//
-//			if ( verbose ) IJ.log( "Saving..." );
-//			saveImageAsJpeg( outputImagePath, processedImp );
-//
-//			// log progress
-//			new Thread( () -> {
-//				if ( ( i + 1 ) % 100 == 0 || i == 0 || i + 1 == maxNumItems )
-//				{
-//					Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
-//				}
-//			}).start();
-//
-//			return outputImagePath;
-//		}
-//		else
-//		{
-//			return null;
-//		}
+			// log progress
+			new Thread( () -> {
+				if ( ( i + 1 ) % 100 == 0 || i == 0 || i + 1 == maxNumItems )
+				{
+					Logger.progress( maxNumItems, i + 1, currentTimeMillis, "Files processed" );
+				}
+			}).start();
+
+			return outputImagePath;
+		}
+		else
+		{
+			return null;
+		}
 	}
 
 	private void processAndSaveImages()

@@ -8,11 +8,11 @@
 		<version>36.0.0</version>
 	</parent>
 
-	<!-- mvn clean install -Dscijava.app.directory=/Users/tischer/Desktop/Fiji/Fiji.app -->
+	<!-- mvn clean install -Dscijava.app.directory=/Users/tischer/Desktop/Fiji/Fiji-BD-CellView.app -->
 
 	<groupId>de.embl.cba</groupId>
 	<artifactId>bd-cellview</artifactId>
-	<version>1.1.0-SNAPSHOT</version>
+	<version>1.2.0</version>
 
 	<name>BD-CellView Image Processor</name>
 	<description>Processing of images that are output of the BD-CellView imaging flow cytometer</description>
